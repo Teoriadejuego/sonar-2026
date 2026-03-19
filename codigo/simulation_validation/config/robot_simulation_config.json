@@ -1,0 +1,52 @@
+{
+  "random_seed": 20260319,
+  "participants_valid_completed": 6000,
+  "phase_key": "phase_1_main",
+  "series_participant_limit": 250,
+  "window_size": 100,
+  "max_attempts": 10,
+  "backend_flow_default_participants": 600,
+  "treatment_weights": {
+    "control": 0.1,
+    "seed_17": 0.45,
+    "seed_83": 0.45
+  },
+  "robot_mix": {
+    "type_a_norm_imitator": 0.35,
+    "type_b_mixed_random_honest": 0.2,
+    "type_c_prudent_five": 0.2,
+    "type_d_honest": 0.25
+  },
+  "language_weights": {
+    "es": 0.55,
+    "ca": 0.15,
+    "en": 0.15,
+    "fr": 0.1,
+    "pt": 0.05
+  },
+  "robot_behavior": {
+    "type_a_norm_imitator": {
+      "control_truth_probability": 0.92,
+      "control_report_six_probability": 0.08,
+      "reroll_probabilities": [0.8, 0.15, 0.05]
+    },
+    "type_b_mixed_random_honest": {
+      "truth_probability": 0.5,
+      "reroll_probabilities": [0.55, 0.25, 0.2]
+    },
+    "type_c_prudent_five": {
+      "reroll_probabilities": [0.7, 0.2, 0.1]
+    },
+    "type_d_honest": {
+      "reroll_probabilities": [0.9, 0.08, 0.02]
+    }
+  },
+  "context": {
+    "referral_rate": 0.22,
+    "network_error_rate": 0.015,
+    "technical_error_rate": 0.004,
+    "quality_fast_report_rate": 0.035,
+    "focus_loss_rate": 0.12,
+    "reload_rate": 0.03
+  }
+}

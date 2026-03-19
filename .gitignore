@@ -1,0 +1,58 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Root local env and secrets
+.env
+.env.local
+.env.classroom
+.env.production
+!.env.local.example
+!.env.classroom.example
+!.env.production.example
+
+# Python
+.venv/
+venv/
+**/.venv/
+**/venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Databases and local runtime data
+*.db
+*.sqlite
+*.sqlite3
+database.db
+*.pid
+*.log
+
+# Frontend build artifacts
+node_modules/
+**/node_modules/
+sorteo-sonar-main/build/
+sorteo-sonar-main/.react-router/
+
+# Python and research generated outputs
+codigo/**/data/
+codigo/**/outputs/
+!codigo/**/README.md
+api-sonar-main/api-sonar-main/tests/.pytest_cache/
+
+# Local generated caches
+ops/__pycache__/
+
+# Coverage / reports
+coverage/
+htmlcov/
+.coverage
+
+# Docker override files
+docker-compose.override.yml

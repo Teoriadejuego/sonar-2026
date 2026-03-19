@@ -1,0 +1,12 @@
+.git
+.venv
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/node_modules/
+**/build/
+**/.react-router/
+**/.pnpm-store/
+codigo/outputs/
+codigo/simulation_validation/data/
+codigo/simulation_validation/outputs/
