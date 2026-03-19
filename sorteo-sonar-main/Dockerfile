@@ -15,9 +15,11 @@ RUN pnpm run build
 
 FROM base AS production
 ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOST=0.0.0.0
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 COPY --from=build-env /app/build /app/build
 EXPOSE 3000
-HEALTHCHECK --interval=20s --timeout=5s --start-period=20s --retries=5 CMD node -e "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-CMD ["pnpm", "run", "start"]
+HEALTHCHECK --interval=20s --timeout=5s --start-period=20s --retries=5 CMD sh -c "node -e \"fetch('http://127.0.0.1:' + (process.env.PORT || '3000')).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""
+CMD ["sh", "-c", "PORT=${PORT:-3000} HOST=${HOST:-0.0.0.0} pnpm run start"]
