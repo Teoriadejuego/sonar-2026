@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import statsmodels.formula.api as smf
 
-from config_analysis import DATA_DIR, MAIN_COMPARISON
+from config_analysis import DATA_DIR, EARLY_SEGMENT, LATE_SEGMENT, MAIN_COMPARISON
 from utils import append_log, ensure_directories, save_dataframe, save_markdown_table
 
 
@@ -30,12 +30,14 @@ def model_row(frame: pd.DataFrame, outcome: str, label: str) -> dict[str, object
 
 
 def table_4_reported_5(frame: pd.DataFrame) -> pd.DataFrame:
-    early = frame.loc[frame["position_index"].between(1, 100)].copy()
-    late = frame.loc[frame["position_index"].between(101, 250)].copy()
+    early_start, early_end = EARLY_SEGMENT
+    late_start, late_end = LATE_SEGMENT
+    early = frame.loc[frame["position_index"].between(early_start, early_end)].copy()
+    late = frame.loc[frame["position_index"].between(late_start, late_end)].copy()
     rows = [
         model_row(frame, "reported_5", "Full sample"),
-        model_row(early, "reported_5", "Positions 1-100"),
-        model_row(late, "reported_5", "Positions 101-250"),
+        model_row(early, "reported_5", f"Positions {early_start}-{early_end}"),
+        model_row(late, "reported_5", f"Positions {late_start}-{late_end}"),
         model_row(frame, "reported_5_or_6", "Full sample: reported 5 or 6"),
     ]
     return pd.DataFrame(rows).round(4)

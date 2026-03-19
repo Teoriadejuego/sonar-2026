@@ -25,8 +25,8 @@ Leyenda:
 - `IMPLEMENTADO` `AUTO` Posicion dentro de serie definida e inmutable.
 - `IMPLEMENTADO` `AUTO` Sincronizacion correcta con series espejo por `root + position_index`.
 - `IMPLEMENTADO` `AUTO` `control` sin norma social.
-- `IMPLEMENTADO` `AUTO` `seed_17` mostrando norma adecuada.
-- `IMPLEMENTADO` `AUTO` `seed_83` mostrando norma adecuada.
+- `IMPLEMENTADO` `AUTO` `seed_low` mostrando norma adecuada.
+- `IMPLEMENTADO` `AUTO` `seed_high` mostrando norma adecuada.
 
 ## C. Mazo balanceado
 - `IMPLEMENTADO` `AUTO` Existe una raiz comun.
@@ -52,8 +52,8 @@ Leyenda:
 
 ## E. Tratamiento social
 - `IMPLEMENTADO` `AUTO` `control`: no se muestra norma.
-- `IMPLEMENTADO` `AUTO` `seed_17`: mensaje correcto.
-- `IMPLEMENTADO` `AUTO` `seed_83`: mensaje correcto.
+- `IMPLEMENTADO` `AUTO` `seed_low`: mensaje correcto.
+- `IMPLEMENTADO` `AUTO` `seed_high`: mensaje correcto.
 - `IMPLEMENTADO` `AUTO` Texto consistente con el dato mostrado.
 - `IMPLEMENTADO` `AUTO` Tratamiento aparece solo justo antes del claim.
 - `IMPLEMENTADO` `AUTO` El valor mostrado corresponde al estado previo a insertar el claim actual.
@@ -151,8 +151,8 @@ Leyenda:
 - `AUTO` El usuario siempre cae en el estado correcto al reentrar.
 - `AUTO` El tratamiento queda fijado y no cambia.
 - `AUTO` El control no muestra norma.
-- `AUTO` `seed_17` muestra el tratamiento correcto.
-- `AUTO` `seed_83` muestra el tratamiento correcto.
+- `AUTO` `seed_low` muestra el tratamiento correcto.
+- `AUTO` `seed_high` muestra el tratamiento correcto.
 - `AUTO` El primer resultado viene del servidor.
 - `AUTO` Los rerolls se registran correctamente.
 - `AUTO` El claim solo puede enviarse una vez.
@@ -215,8 +215,8 @@ npx pnpm@latest dev
 
 ### Pulseras demo recomendadas
 - `10000001` -> `control`
-- `10000002` -> `seed_17`
-- `10000003` -> `seed_83`
+- `10000002` -> `seed_low`
+- `10000003` -> `seed_high`
 
 ### Endpoints de inspeccion
 - `http://127.0.0.1:8000/admin/roots`

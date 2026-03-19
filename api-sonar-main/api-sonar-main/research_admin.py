@@ -34,6 +34,7 @@ from models import (
     ExperimentState,
     FraudFlag,
     InterestSignup,
+    OperationalNote,
     Payment,
     PayoutRequest,
     Series,
@@ -131,6 +132,11 @@ DATASET_DESCRIPTIONS: dict[str, dict[str, str]] = {
     "audit_events": {
         "category": "operational",
         "description": "Trazabilidad de acciones y transiciones criticas.",
+        "sensitivity": "media",
+    },
+    "operational_notes": {
+        "category": "operational",
+        "description": "Notas operativas activadas desde soporte y su momento efectivo.",
         "sensitivity": "media",
     },
 }
@@ -337,8 +343,11 @@ def analytic_sessions_rows(db: Session) -> list[dict[str, Any]]:
                 "referral_medium": record.referral_medium,
                 "referral_campaign": record.referral_campaign,
                 "referral_link_id": record.referral_link_id,
+                "qr_entry_code": record.qr_entry_code,
                 "referral_arrived_at": isoformat_or_none(record.referral_arrived_at),
                 "referral_depth": referral_depths.get(record.id, 0),
+                "operational_note_id": record.operational_note_id,
+                "operational_note_text": record.operational_note_text,
                 "browser_family": client_context.browser_family if client_context else None,
                 "browser_version": client_context.browser_version if client_context else None,
                 "os_family": client_context.os_family if client_context else None,
@@ -432,6 +441,8 @@ def claims_rows(db: Session) -> list[dict[str, Any]]:
             "displayed_window_version": claim.displayed_window_version,
             "displayed_message": claim.displayed_message,
             "displayed_message_version": claim.displayed_message_version,
+            "operational_note_id": claim.operational_note_id,
+            "operational_note_text": claim.operational_note_text,
             "max_seen_value": claim.max_seen_value,
             "last_seen_value": claim.last_seen_value,
             "matches_last_seen": claim.matches_last_seen,
@@ -462,10 +473,14 @@ def payments_admin_rows(db: Session) -> list[dict[str, Any]]:
                 "amount_eur": int(payment.amount_cents / 100),
                 "status": payment.status,
                 "payout_reference": payment.payout_reference,
+                "operational_note_id": payment.operational_note_id,
+                "operational_note_text": payment.operational_note_text,
                 "requested_phone": request.requested_phone if request else None,
                 "donation_requested": request.donation_requested if request else None,
                 "request_language": request.language_used if request else None,
                 "request_message_text": request.message_text if request else None,
+                "request_operational_note_id": request.operational_note_id if request else None,
+                "request_operational_note_text": request.operational_note_text if request else None,
                 "request_created_at": isoformat_or_none(request.created_at) if request else None,
                 "created_at": isoformat_or_none(payment.created_at),
                 "paid_at": isoformat_or_none(payment.paid_at),
@@ -508,6 +523,8 @@ def telemetry_rows(db: Session) -> list[dict[str, Any]]:
             "error_name": event.error_name,
             "network_status": event.network_status,
             "visibility_state": event.visibility_state,
+            "operational_note_id": event.operational_note_id,
+            "operational_note_text": event.operational_note_text,
             "payload_json": event.payload_json,
             "server_ts": isoformat_or_none(event.server_ts),
         }
@@ -544,6 +561,8 @@ def technical_events_rows(db: Session) -> list[dict[str, Any]]:
             "is_retry": event.is_retry,
             "error_name": event.error_name,
             "network_status": event.network_status,
+            "operational_note_id": event.operational_note_id,
+            "operational_note_text": event.operational_note_text,
             "payload_json": event.payload_json,
             "server_ts": isoformat_or_none(event.server_ts),
         }
@@ -553,6 +572,7 @@ def technical_events_rows(db: Session) -> list[dict[str, Any]]:
 
 def screen_events_rows(db: Session) -> list[dict[str, Any]]:
     spells = db.exec(select(ScreenSpell).order_by(ScreenSpell.entered_server_ts)).all()
+    session_map = load_lookup_table(db, SessionRecord, "id")
     return [
         {
             "session_id": spell.session_id,
@@ -583,6 +603,12 @@ def screen_events_rows(db: Session) -> list[dict[str, Any]]:
             "language_changed_during_spell": spell.language_changed_during_spell,
             "event_sequence_start": spell.event_sequence_start,
             "event_sequence_end": spell.event_sequence_end,
+            "operational_note_id": session_map[spell.session_id].operational_note_id
+            if spell.session_id in session_map
+            else None,
+            "operational_note_text": session_map[spell.session_id].operational_note_text
+            if spell.session_id in session_map
+            else None,
         }
         for spell in spells
     ]
@@ -641,9 +667,12 @@ def referrals_rows(db: Session) -> list[dict[str, Any]]:
             "referral_medium": record.referral_medium,
             "referral_campaign": record.referral_campaign,
             "referral_link_id": record.referral_link_id,
+            "qr_entry_code": record.qr_entry_code,
             "referral_landing_path": record.referral_landing_path,
             "referral_arrived_at": isoformat_or_none(record.referral_arrived_at),
             "referral_depth": depths.get(record.id, 0),
+            "operational_note_id": record.operational_note_id,
+            "operational_note_text": record.operational_note_text,
             "experiment_phase": record.experiment_phase,
             "treatment_key": record.treatment_key,
             "created_at": isoformat_or_none(record.created_at),
@@ -702,10 +731,28 @@ def interest_signups_rows(db: Session) -> list[dict[str, Any]]:
             "site_code": signup.site_code,
             "campaign_code": signup.campaign_code,
             "environment_label": signup.environment_label,
+            "operational_note_id": signup.operational_note_id,
+            "operational_note_text": signup.operational_note_text,
             "created_at": isoformat_or_none(signup.created_at),
             "updated_at": isoformat_or_none(signup.updated_at),
         }
         for signup in signups
+    ]
+
+
+def operational_notes_rows(db: Session) -> list[dict[str, Any]]:
+    notes = db.exec(select(OperationalNote).order_by(OperationalNote.effective_from)).all()
+    return [
+        {
+            "operational_note_id": note.id,
+            "note_text": note.note_text,
+            "status": note.status,
+            "effective_from": isoformat_or_none(note.effective_from),
+            "cleared_at": isoformat_or_none(note.cleared_at),
+            "created_at": isoformat_or_none(note.created_at),
+            "updated_at": isoformat_or_none(note.updated_at),
+        }
+        for note in notes
     ]
 
 
@@ -856,6 +903,7 @@ DATASET_BUILDERS = {
     "consent_records": consent_records_rows,
     "snapshot_records": snapshot_records_rows,
     "audit_events": audit_events_rows,
+    "operational_notes": operational_notes_rows,
 }
 
 
@@ -904,6 +952,7 @@ def bundle_datasets(bundle_name: str) -> list[str]:
             "client_contexts",
             "fraud_flags",
             "audit_events",
+            "operational_notes",
         ]
     if bundle_name == "all":
         return list(DATASET_BUILDERS.keys())
@@ -1099,6 +1148,11 @@ def exports_page_html(
 
 def dashboard_page_html(db: Session) -> str:
     state = db.get(ExperimentState, "global")
+    active_operational_note = db.exec(
+        select(OperationalNote)
+        .where(OperationalNote.status == "active")
+        .order_by(OperationalNote.effective_from.desc())
+    ).first()
     sessions = db.exec(select(SessionRecord).order_by(SessionRecord.created_at)).all()
     claims = db.exec(select(Claim)).all()
     payments = db.exec(select(Payment)).all()
@@ -1129,6 +1183,12 @@ def dashboard_page_html(db: Session) -> str:
         2,
     )
     escaped_pause_reason = escape(state.pause_reason) if state and state.pause_reason else ""
+    escaped_operational_note = (
+        escape(active_operational_note.note_text) if active_operational_note else ""
+    )
+    escaped_operational_note_since = (
+        active_operational_note.effective_from.isoformat() if active_operational_note else ""
+    )
 
     for session_record in sessions:
         treatment_balance[session_record.treatment_key] = (
@@ -1192,7 +1252,8 @@ def dashboard_page_html(db: Session) -> str:
       .controls {{ display:grid; gap:12px; }}
       .control-row {{ display:flex; gap:12px; flex-wrap:wrap; }}
       .status {{ font-size:14px; color:#555; }}
-      input {{ width:100%; box-sizing:border-box; padding:12px 14px; border-radius:14px; border:1px solid rgba(0,0,0,.12); font-size:14px; }}
+      input, textarea {{ width:100%; box-sizing:border-box; padding:12px 14px; border-radius:14px; border:1px solid rgba(0,0,0,.12); font-size:14px; }}
+      textarea {{ min-height:110px; resize:vertical; }}
       button {{ padding:12px 18px; border:none; border-radius:999px; background:#111; color:white; font-weight:700; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; }}
       button.secondary {{ background:white; color:#111; border:1px solid rgba(0,0,0,.12); }}
     </style>
@@ -1232,6 +1293,19 @@ def dashboard_page_html(db: Session) -> str:
           <button id="resume-button" class="secondary">Reactivar experimento</button>
         </div>
         <div id="control-status" class="status"></div>
+      </div>
+      <div class="card controls">
+        <h2>Contexto operativo</h2>
+        <div class="status">
+          {"Nota activa desde: <strong>" + escaped_operational_note_since + "</strong>" if escaped_operational_note_since else "No hay nota operativa activa."}
+        </div>
+        {"<div class='status'><strong>Nota actual:</strong> " + escaped_operational_note + "</div>" if escaped_operational_note else ""}
+        <textarea id="operational-note-text" placeholder="Escribe aqui incidencias operativas, cambio de localizacion, ajuste de carteles, pausa de premios, etc. Todo lo nuevo quedara trazado desde este momento.">{escaped_operational_note}</textarea>
+        <div class="control-row">
+          <button id="operational-note-save">Guardar nota activa</button>
+          <button id="operational-note-clear" class="secondary">Cerrar nota activa</button>
+        </div>
+        <div id="operational-note-status" class="status"></div>
       </div>
       <div class="two">
         <div><h2>Balance por tratamiento</h2><table><tbody>{rows_from_counter(treatment_balance)}</tbody></table></div>
@@ -1280,8 +1354,35 @@ def dashboard_page_html(db: Session) -> str:
           status.textContent = error.message || 'No se pudo actualizar el estado';
         }}
       }}
+      async function postOperationalNote(path, body) {{
+        const status = document.getElementById('operational-note-status');
+        status.textContent = 'Actualizando contexto operativo...';
+        try {{
+          const response = await fetch(path, {{
+            method: 'POST',
+            headers: {{ 'Content-Type': 'application/json' }},
+            body: body ? JSON.stringify(body) : null,
+          }});
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.detail || 'No se pudo actualizar la nota operativa');
+          const note = data.active_operational_note?.note_text || 'Sin nota activa';
+          status.textContent = `Contexto operativo actualizado. Nota activa: ${{note}}`;
+          window.setTimeout(() => window.location.reload(), 700);
+        }} catch (error) {{
+          status.textContent = error.message || 'No se pudo actualizar la nota operativa';
+        }}
+      }}
       document.getElementById('pause-button').addEventListener('click', () => postExperimentControl('/admin/experiment/pause'));
       document.getElementById('resume-button').addEventListener('click', () => postExperimentControl('/admin/experiment/resume'));
+      document.getElementById('operational-note-save').addEventListener('click', () => {{
+        const noteText = document.getElementById('operational-note-text').value.trim();
+        if (!noteText) {{
+          document.getElementById('operational-note-status').textContent = 'Escribe una nota antes de guardarla.';
+          return;
+        }}
+        postOperationalNote('/admin/operational-notes/activate', {{ note_text: noteText }});
+      }});
+      document.getElementById('operational-note-clear').addEventListener('click', () => postOperationalNote('/admin/operational-notes/clear'));
     </script>
   </body>
 </html>

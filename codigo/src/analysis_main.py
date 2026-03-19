@@ -5,7 +5,13 @@ import json
 import pandas as pd
 import statsmodels.formula.api as smf
 
-from config_analysis import DATA_DIR, MAIN_COMPARISON
+from config_analysis import (
+    DATA_DIR,
+    EARLY_SEGMENT,
+    FULL_SEGMENT,
+    LATE_SEGMENT,
+    MAIN_COMPARISON,
+)
 from utils import (
     append_log,
     bootstrap_cluster_difference,
@@ -112,16 +118,19 @@ def build_table_1(frame: pd.DataFrame) -> pd.DataFrame:
 
 def build_main_results(frame: pd.DataFrame, outcome: str) -> pd.DataFrame:
     seed_sample = frame.loc[frame["treatment_key"].isin(list(MAIN_COMPARISON))].copy()
+    early_start, early_end = EARLY_SEGMENT
+    late_start, late_end = LATE_SEGMENT
+    full_start, full_end = FULL_SEGMENT
     rows = [
-        diff_in_means_row(seed_sample, outcome, "Main sample", 1, 250),
-        diff_in_means_row(seed_sample, outcome, "Early positions", 1, 100),
-        diff_in_means_row(seed_sample, outcome, "Late positions", 101, 250),
-        regression_row(seed_sample, outcome, "Model B", 1, 250, with_truth_control=False),
-        regression_row(seed_sample, outcome, "Model B early", 1, 100, with_truth_control=False),
-        regression_row(seed_sample, outcome, "Model B late", 101, 250, with_truth_control=False),
-        regression_row(seed_sample, outcome, "Model C", 1, 250, with_truth_control=True),
-        regression_row(seed_sample, outcome, "Model C early", 1, 100, with_truth_control=True),
-        regression_row(seed_sample, outcome, "Model C late", 101, 250, with_truth_control=True),
+        diff_in_means_row(seed_sample, outcome, "Main sample", full_start, full_end),
+        diff_in_means_row(seed_sample, outcome, "Early positions", early_start, early_end),
+        diff_in_means_row(seed_sample, outcome, "Late positions", late_start, late_end),
+        regression_row(seed_sample, outcome, "Model B", full_start, full_end, with_truth_control=False),
+        regression_row(seed_sample, outcome, "Model B early", early_start, early_end, with_truth_control=False),
+        regression_row(seed_sample, outcome, "Model B late", late_start, late_end, with_truth_control=False),
+        regression_row(seed_sample, outcome, "Model C", full_start, full_end, with_truth_control=True),
+        regression_row(seed_sample, outcome, "Model C early", early_start, early_end, with_truth_control=True),
+        regression_row(seed_sample, outcome, "Model C late", late_start, late_end, with_truth_control=True),
     ]
     result = pd.DataFrame(rows)
     float_cols = ["estimate", "std_error", "ci_lower", "ci_upper", "p_value"]

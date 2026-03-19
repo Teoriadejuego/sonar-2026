@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "schema_version": "sonar-2026-v6",
-    "experiment_version": "sonar-2026-field-v2",
+    "schema_version": "sonar-2026-v8",
+    "experiment_version": "sonar-2026-field-v4",
     "ui_version": "ui-v6",
     "consent_version": "consent-v2",
     "deck_version": "balanced-deck-v2",
@@ -14,9 +14,9 @@
     "environment_label": "local"
   },
   "experiment": {
-    "window_size": 100,
+    "window_size": 60,
     "max_attempts": 10,
-    "participant_limit": 250,
+    "participant_limit": 180,
     "deck_block_size": 24,
     "demo_pulsera_count": 12000,
     "payout_rate_denominator": 100,
@@ -34,10 +34,10 @@
     "phases": {
       "phase_1_main": {
         "label": "Fase 1 principal",
-        "phase_version": "phase_1_main_v1",
-        "treatment_version": "phase_1_six_norms_v1",
-        "allocation_version": "phase_1_10_45_45_v1",
-        "displayed_message_version": "phase_1_messages_v1",
+        "phase_version": "phase_1_main_v3",
+        "treatment_version": "phase_1_six_norms_v3",
+        "allocation_version": "phase_1_10_45_45_v3",
+        "displayed_message_version": "phase_1_messages_v3",
         "treatments": {
           "control": {
             "label": "Control",
@@ -46,28 +46,30 @@
             "norm_target_value": null,
             "seed_initial_count": null
           },
-          "seed_17": {
-            "label": "Seed 17 sobre 6",
+          "seed_low": {
+            "label": "Seed low sobre 6",
             "assignment_weight": 0.45,
             "treatment_family": "six_norm",
             "norm_target_value": 6,
-            "seed_initial_count": 17
+            "seed_initial_count": 10,
+            "seed_fill_order": "target_last"
           },
-          "seed_83": {
-            "label": "Seed 83 sobre 6",
+          "seed_high": {
+            "label": "Seed high sobre 6",
             "assignment_weight": 0.45,
             "treatment_family": "six_norm",
             "norm_target_value": 6,
-            "seed_initial_count": 83
+            "seed_initial_count": 50,
+            "seed_fill_order": "target_first"
           }
         }
       },
       "phase_2_robustness": {
         "label": "Fase 2 robustez",
-        "phase_version": "phase_2_robustness_v1",
-        "treatment_version": "phase_2_five_norms_v1",
-        "allocation_version": "phase_2_10_20_20_25_25_v1",
-        "displayed_message_version": "phase_2_messages_v1",
+        "phase_version": "phase_2_robustness_v3",
+        "treatment_version": "phase_2_five_norms_v3",
+        "allocation_version": "phase_2_10_20_20_25_25_v3",
+        "displayed_message_version": "phase_2_messages_v3",
         "treatments": {
           "control": {
             "label": "Control",
@@ -76,33 +78,37 @@
             "norm_target_value": null,
             "seed_initial_count": null
           },
-          "seed_17": {
-            "label": "Seed 17 sobre 6",
+          "seed_low": {
+            "label": "Seed low sobre 6",
             "assignment_weight": 0.2,
             "treatment_family": "six_norm",
             "norm_target_value": 6,
-            "seed_initial_count": 17
+            "seed_initial_count": 10,
+            "seed_fill_order": "target_last"
           },
-          "seed_83": {
-            "label": "Seed 83 sobre 6",
+          "seed_high": {
+            "label": "Seed high sobre 6",
             "assignment_weight": 0.2,
             "treatment_family": "six_norm",
             "norm_target_value": 6,
-            "seed_initial_count": 83
+            "seed_initial_count": 50,
+            "seed_fill_order": "target_first"
           },
-          "seed_17_5": {
-            "label": "Seed 17 sobre 5",
+          "seed_low_5": {
+            "label": "Seed low sobre 5",
             "assignment_weight": 0.25,
             "treatment_family": "five_norm",
             "norm_target_value": 5,
-            "seed_initial_count": 17
+            "seed_initial_count": 10,
+            "seed_fill_order": "target_last"
           },
-          "seed_83_5": {
-            "label": "Seed 83 sobre 5",
+          "seed_high_5": {
+            "label": "Seed high sobre 5",
             "assignment_weight": 0.25,
             "treatment_family": "five_norm",
             "norm_target_value": 5,
-            "seed_initial_count": 83
+            "seed_initial_count": 50,
+            "seed_fill_order": "target_first"
           }
         }
       }

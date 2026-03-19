@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import math
@@ -46,7 +46,17 @@ ROBOT_LABELS = {
     "type_d_honest": "Tipo D",
 }
 
-TREATMENT_ORDER = ["control", "seed_17", "seed_83"]
+TREATMENT_ORDER = ["control"] + sorted(
+    [key for key in assignment_weights_for_phase(PHASE_1_MAIN) if key != "control"],
+    key=lambda key: int(treatment_config(PHASE_1_MAIN, key)["seed_initial_count"] or 0),
+)
+LOW_TREATMENT_KEY = TREATMENT_ORDER[1]
+HIGH_TREATMENT_KEY = TREATMENT_ORDER[2]
+TREATMENT_COLORS = {
+    "control": "#7f8c8d",
+    LOW_TREATMENT_KEY: "#1f77b4",
+    HIGH_TREATMENT_KEY: "#d62728",
+}
 
 
 @dataclass
@@ -216,10 +226,7 @@ def displayed_message(
 ) -> str:
     if treatment_key == "control":
         return "Tu respuesta es anónima. Selecciona tu número."
-    return (
-        f"{displayed_count_target} de cada {denominator} personas "
-        f"eligieron {target_value}"
-    )
+    return f"{displayed_count_target} de cada {denominator} personas eligieron {target_value}"
 
 
 def draw_from_probabilities(probabilities: list[float], rng: random.Random) -> int:
@@ -372,3 +379,4 @@ def validation_row(check_name: str, passed: bool, detail: str) -> dict[str, Any]
         "status": "PASS" if passed else "FAIL",
         "detail": detail,
     }
+

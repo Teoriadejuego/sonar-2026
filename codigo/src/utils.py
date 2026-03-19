@@ -49,7 +49,10 @@ def save_markdown_table(frame: pd.DataFrame, path: Path, title: str | None = Non
     if title:
         lines.append(f"# {title}")
         lines.append("")
-    lines.append(frame.to_markdown(index=False))
+    try:
+        lines.append(frame.to_markdown(index=False))
+    except ImportError:
+        lines.append(frame.to_string(index=False))
     lines.append("")
     path.write_text("\n".join(lines), encoding="utf-8")
 
@@ -186,4 +189,3 @@ def load_csv(path: Path) -> pd.DataFrame:
 
 def relative_to_base(path: Path) -> str:
     return str(path.relative_to(BASE_DIR))
-

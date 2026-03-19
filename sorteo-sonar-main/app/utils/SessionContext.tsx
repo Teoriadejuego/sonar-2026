@@ -102,56 +102,13 @@ const DEMO_SESSION_PREFIX = "demo-session-";
 
 type DemoScenario = {
   braceletId: string;
-  treatmentKey: "control" | "seed_17" | "seed_83";
-  treatmentFamily: "control" | "six_norm";
+  treatmentKey: string;
+  treatmentFamily: string;
   countTarget: number | null;
   targetValue: number | null;
   selectedForPayment: boolean;
   throwSequence: number[];
   referenceCode: string | null;
-};
-
-const DEMO_SCENARIOS: Record<string, DemoScenario> = {
-  "1234": {
-    braceletId: "1234",
-    treatmentKey: "control",
-    treatmentFamily: "control",
-    countTarget: null,
-    targetValue: null,
-    selectedForPayment: true,
-    throwSequence: [6, 4, 5, 3, 6, 2, 4, 5, 1, 6],
-    referenceCode: "#demo60",
-  },
-  "12341": {
-    braceletId: "12341",
-    treatmentKey: "control",
-    treatmentFamily: "control",
-    countTarget: null,
-    targetValue: null,
-    selectedForPayment: false,
-    throwSequence: [4, 2, 5, 3, 1, 4, 6, 2, 5, 3],
-    referenceCode: null,
-  },
-  "12342": {
-    braceletId: "12342",
-    treatmentKey: "seed_17",
-    treatmentFamily: "six_norm",
-    countTarget: 17,
-    targetValue: 6,
-    selectedForPayment: false,
-    throwSequence: [4, 5, 2, 3, 6, 4, 1, 2, 5, 6],
-    referenceCode: null,
-  },
-  "12343": {
-    braceletId: "12343",
-    treatmentKey: "seed_83",
-    treatmentFamily: "six_norm",
-    countTarget: 83,
-    targetValue: 6,
-    selectedForPayment: false,
-    throwSequence: [4, 6, 5, 6, 3, 4, 6, 2, 5, 6],
-    referenceCode: null,
-  },
 };
 
 function readJson<T>(key: string, fallback: T): T {
@@ -225,18 +182,29 @@ function readReferralParams() {
       referralMedium: null,
       referralCampaign: null,
       referralLinkId: null,
+      qrEntryCode: null,
       referralPath: null,
     };
   }
   const url = new URL(window.location.href);
+  const qrEntryCode =
+    url.searchParams.get("qr") ??
+    url.searchParams.get("qr_id") ??
+    url.searchParams.get("poster") ??
+    url.searchParams.get("poster_id") ??
+    url.searchParams.get("cartel") ??
+    url.searchParams.get("cartel_id");
+  const explicitSource = url.searchParams.get("src");
+  const explicitMedium =
+    url.searchParams.get("utm_medium") ?? url.searchParams.get("medium");
   return {
     referralCode: url.searchParams.get("ref"),
-    referralSource: url.searchParams.get("src"),
-    referralMedium:
-      url.searchParams.get("utm_medium") ?? url.searchParams.get("medium"),
+    referralSource: explicitSource ?? (qrEntryCode ? "qr" : null),
+    referralMedium: explicitMedium ?? (qrEntryCode ? "offline_poster" : null),
     referralCampaign:
       url.searchParams.get("utm_campaign") ?? url.searchParams.get("campaign"),
-    referralLinkId: url.searchParams.get("link_id"),
+    referralLinkId: url.searchParams.get("link_id") ?? qrEntryCode,
+    qrEntryCode,
     referralPath: `${url.pathname}${url.search}`,
   };
 }
@@ -245,8 +213,80 @@ function isExperimentPausedError(message: string) {
   return /temporalmente detenido/i.test(message);
 }
 
-function getDemoScenario(braceletId: string): DemoScenario | null {
-  return DEMO_SCENARIOS[braceletId.trim().toUpperCase()] ?? null;
+function resolveDemoTreatment(
+  publicConfig: PublicConfig,
+  braceletId: string,
+): Pick<DemoScenario, "treatmentKey" | "treatmentFamily" | "countTarget" | "targetValue"> | null {
+  const normalized = braceletId.trim().toUpperCase();
+  const nonControlTreatments = publicConfig.treatments.filter(
+    (item) => item !== "control",
+  );
+
+  if (normalized === "12341") {
+    return {
+      treatmentKey: "control",
+      treatmentFamily: "control",
+      countTarget: null,
+      targetValue: null,
+    };
+  }
+  if (normalized === "12342" || normalized === "12343") {
+    const index = normalized === "12342" ? 0 : 1;
+    const treatmentKey =
+      nonControlTreatments[index] ??
+      nonControlTreatments[0] ??
+      "control";
+    const targetValue = publicConfig.treatment_targets[treatmentKey] ?? null;
+    return {
+      treatmentKey,
+      treatmentFamily:
+        treatmentKey === "control"
+          ? "control"
+          : targetValue === 5
+            ? "five_norm"
+            : "six_norm",
+      countTarget: publicConfig.seed_initial_counts[treatmentKey] ?? null,
+      targetValue,
+    };
+  }
+  return null;
+}
+
+function getDemoScenario(
+  publicConfig: PublicConfig,
+  braceletId: string,
+): DemoScenario | null {
+  const normalized = braceletId.trim().toUpperCase();
+  if (normalized === "1234") {
+    return {
+      braceletId: normalized,
+      treatmentKey: "control",
+      treatmentFamily: "control",
+      countTarget: null,
+      targetValue: null,
+      selectedForPayment: true,
+      throwSequence: [6, 4, 5, 3, 6, 2, 4, 5, 1, 6],
+      referenceCode: "#demo60",
+    };
+  }
+
+  const treatment = resolveDemoTreatment(publicConfig, normalized);
+  if (!treatment) {
+    return null;
+  }
+
+  return {
+    braceletId: normalized,
+    ...treatment,
+    selectedForPayment: false,
+    throwSequence:
+      normalized === "12341"
+        ? [4, 2, 5, 3, 1, 4, 6, 2, 5, 3]
+        : normalized === "12342"
+          ? [4, 5, 2, 3, 6, 4, 1, 2, 5, 6]
+          : [4, 6, 5, 6, 3, 4, 6, 2, 5, 6],
+    referenceCode: null,
+  };
 }
 
 function isDemoSession(session: SessionPayload | null | undefined) {
@@ -254,12 +294,13 @@ function isDemoSession(session: SessionPayload | null | undefined) {
 }
 
 function getDemoScenarioForSession(
+  publicConfig: PublicConfig,
   session: SessionPayload,
   braceletIdValue?: string,
 ) {
   const resolvedBraceletId =
     braceletIdValue ?? session.session_id.replace(DEMO_SESSION_PREFIX, "");
-  return getDemoScenario(resolvedBraceletId);
+  return getDemoScenario(publicConfig, resolvedBraceletId);
 }
 
 function toClientContextSummary(context: ClientContext): ClientContextSummary {
@@ -324,6 +365,7 @@ function buildDemoSnapshotRecord(
 }
 
 function buildDemoReportSnapshot(
+  publicConfig: PublicConfig,
   language: AppLanguage,
   scenario: DemoScenario,
 ) {
@@ -332,14 +374,15 @@ function buildDemoReportSnapshot(
     ? `${copy.treatment.controlTitle}. ${copy.treatment.controlBody}`
     : formatCopy(copy.treatment.socialMessageTemplate, {
         count: scenario.countTarget ?? "-",
-        denominator: 100,
+        denominator: publicConfig.window_size,
         target: scenario.targetValue ?? "-",
       });
 
   return {
     treatment_key: scenario.treatmentKey,
     count_target: scenario.countTarget,
-    denominator: scenario.treatmentKey === "control" ? null : 100,
+    denominator:
+      scenario.treatmentKey === "control" ? null : publicConfig.window_size,
     target_value: scenario.targetValue,
     window_version: 1,
     message,
@@ -396,8 +439,10 @@ function buildDemoSession(
     referral_medium: null,
     referral_campaign: null,
     referral_link_id: null,
+    qr_entry_code: null,
     referral_landing_path: null,
     referral_arrived_at: null,
+    operational_note: null,
     position_index: 0,
     root_sequence: 0,
     selected_for_payment: scenario.selectedForPayment,
@@ -815,7 +860,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     ): Promise<AccessResult> => {
       setIsLoading(true);
       try {
-        const demoScenario = getDemoScenario(nextBraceletId);
+        const referral = readReferralParams();
+        const demoScenario = getDemoScenario(
+          publicConfigRef.current,
+          nextBraceletId,
+        );
         if (demoScenario) {
           const demoSession = buildDemoSession(
             publicConfigRef.current,
@@ -838,6 +887,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           demoSession.client_context = toClientContextSummary(
             currentClientContext(),
           );
+          demoSession.referral_source = referral.referralSource;
+          demoSession.referral_medium = referral.referralMedium;
+          demoSession.referral_campaign = referral.referralCampaign;
+          demoSession.referral_link_id = referral.referralLinkId;
+          demoSession.qr_entry_code = referral.qrEntryCode;
+          demoSession.referral_landing_path = referral.referralPath;
           demoSession.consent_record = {
             language_at_access: language,
             landing_visible_ms: metrics?.landingVisibleMs ?? null,
@@ -856,7 +911,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           return { success: true, session: demoSession };
         }
 
-        const referral = readReferralParams();
         const response = await accessSession(
           nextBraceletId,
           consents.participationAccepted &&
@@ -872,6 +926,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           referral.referralMedium,
           referral.referralCampaign,
           referral.referralLinkId,
+          referral.qrEntryCode,
           referral.referralPath,
           consents.ageConfirmed,
           consents.participationAccepted,
@@ -978,7 +1033,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       throw new Error("No hay sesion activa");
     }
     if (isDemoSession(current)) {
-      const scenario = getDemoScenarioForSession(current, braceletId);
+      const scenario = getDemoScenarioForSession(
+        publicConfigRef.current,
+        current,
+        braceletId,
+      );
       if (!scenario) {
         throw new Error("Accion no disponible");
       }
@@ -1047,11 +1106,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       throw new Error("No hay sesion activa");
     }
     if (isDemoSession(current)) {
-      const scenario = getDemoScenarioForSession(current, braceletId);
+      const scenario = getDemoScenarioForSession(
+        publicConfigRef.current,
+        current,
+        braceletId,
+      );
       if (!scenario) {
         throw new Error("Accion no disponible");
       }
-      const snapshot = buildDemoReportSnapshot(language, scenario);
+      const snapshot = buildDemoReportSnapshot(
+        publicConfigRef.current,
+        language,
+        scenario,
+      );
       commitSession({
         ...current,
         screen: "report",

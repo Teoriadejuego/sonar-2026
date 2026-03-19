@@ -73,12 +73,20 @@ def validate_project_parameters(payload: dict[str, Any]) -> None:
         for treatment_key, treatment in treatments.items():
             target_value = treatment["norm_target_value"]
             seed_initial_count = treatment["seed_initial_count"]
+            seed_fill_order = treatment.get("seed_fill_order")
             if target_value is not None and int(target_value) not in {1, 2, 3, 4, 5, 6}:
                 raise ValueError(f"{phase_key}.{treatment_key}.norm_target_value no es valido")
             if seed_initial_count is not None:
                 if int(seed_initial_count) < 0 or int(seed_initial_count) > window_size:
                     raise ValueError(
                         f"{phase_key}.{treatment_key}.seed_initial_count debe estar entre 0 y window_size"
+                    )
+                if seed_fill_order is not None and str(seed_fill_order) not in {
+                    "target_first",
+                    "target_last",
+                }:
+                    raise ValueError(
+                        f"{phase_key}.{treatment_key}.seed_fill_order debe ser target_first o target_last"
                     )
             if treatment["treatment_family"] not in {"control", "six_norm", "five_norm"}:
                 raise ValueError(
@@ -266,6 +274,10 @@ def non_target_seed_pattern(target_value: int) -> list[int]:
     return [value for value in range(1, 7) if value != target_value]
 
 
+def infer_seed_fill_order(seed_initial_count: int) -> str:
+    return "target_last" if seed_initial_count <= WINDOW_SIZE / 2 else "target_first"
+
+
 def seed_window_values(phase_key: str, treatment_key: str) -> list[int]:
     treatment = treatment_config(phase_key, treatment_key)
     target_value = treatment["norm_target_value"]
@@ -281,8 +293,12 @@ def seed_window_values(phase_key: str, treatment_key: str) -> list[int]:
         pattern[index % len(pattern)] for index in range(non_target_count)
     ]
     target_values = [int(target_value)] * initial_target_count
+    seed_fill_order = str(
+        treatment.get("seed_fill_order")
+        or infer_seed_fill_order(initial_target_count)
+    )
 
-    if "seed_17" in treatment_key:
+    if seed_fill_order == "target_last":
         return non_target_values + target_values
     return target_values + non_target_values
 

@@ -1,6 +1,6 @@
 # Pre-Registered Analysis Plan
-**Project:** SONAR - System of Norms and Actions Reported
-**Version:** v1.0 (Pre-data)
+**Project:** SONAR - System of Norms and Actions Reported  
+**Version:** v1.1 (Pre-data)  
 **Date:** [AUTO-FILL]
 
 ---
@@ -11,9 +11,9 @@ This document specifies the pre-registered empirical strategy for the SONAR expe
 
 The goal is to study how initial descriptive norms affect the evolution of reporting behavior in sequential settings, with particular focus on:
 
-- maximum reporting behavior (reporting 6),
-- dynamic trajectories across ordered series,
-- magnitude of misreporting.
+- maximum reporting behavior (`reported_6`)
+- dynamic trajectories across ordered series
+- magnitude of misreporting
 
 All confirmatory analyses are defined ex ante. Exploratory analyses are clearly separated.
 
@@ -29,12 +29,12 @@ The main analysis uses the first:
 
 A session is considered valid if:
 
-- consent is accepted,
-- first draw is observed,
-- final report is submitted,
-- no technical corruption is detected,
-- no duplicate invalid participation,
-- no critical fraud flag.
+- consent is accepted
+- first draw is observed
+- final report is submitted
+- no technical corruption is detected
+- no duplicate invalid participation
+- no critical fraud flag
 
 ## 2.2 Exclusions
 
@@ -58,21 +58,28 @@ All exclusions are pre-specified and logged.
 Participants are assigned to one of three conditions:
 
 - `control` -> 10%
-- `seed_17` -> 45%
-- `seed_83` -> 45%
+- `seed_low` -> 45%
+- `seed_high` -> 45%
 
 ## 3.2 Interpretation
 
-- `seed_17`: low norm (17/100 reported 6)
-- `seed_83`: high norm (83/100 reported 6)
+- `seed_low`: low descriptive norm
+- `seed_high`: high descriptive norm
 - `control`: no social information
+
+In the current field configuration:
+
+- visible window size = 60
+- `seed_low` starts with 10 reports of the target value
+- `seed_high` starts with 50 reports of the target value
+- series length = 180
 
 ## 3.3 Series Structure
 
-- participants are embedded in sequential series
-- maximum series length: 250
-- social information based on last 100 reports
-- series are mirrored across treatments (shared underlying stochastic sequence)
+- participants are embedded in sequential mirrored series
+- maximum series length: 180
+- social information is based on the last 60 reports
+- mirrored series share the same underlying stochastic sequence of true outcomes
 
 ## 3.4 Stochastic Process
 
@@ -122,23 +129,23 @@ Individual session-level observations.
 
 ## H1 - Main effect
 
-> Series with high initial norm (`seed_83`) exhibit higher probability of reporting 6 than `seed_17`.
+> Series with high initial norm (`seed_high`) exhibit higher probability of reporting 6 than `seed_low`.
 
 ## H2 - Early effect
 
-> The difference between treatments emerges in early positions (1-100).
+> The difference between treatments emerges during the early part of the series (positions 1-60).
 
 ## H3 - Persistence
 
-> The difference persists in later positions (101-250).
+> The difference persists during the later part of the series (positions 61-180).
 
 ## H4 - Control benchmark
 
-> Control lies between seed_17 and seed_83 (descriptive).
+> Control lies between `seed_low` and `seed_high` descriptively.
 
 ## H5 - Magnitude
 
-> High norm increases not only probability of lying but magnitude of misreporting.
+> High norm increases not only the probability of reporting 6 but also the magnitude of misreporting.
 
 ---
 
@@ -148,13 +155,13 @@ Individual session-level observations.
 
 Primary estimand:
 
-`E[reported_6 | seed_83] - E[reported_6 | seed_17]`
+`E[reported_6 | seed_high] - E[reported_6 | seed_low]`
 
 Estimated for:
 
-- positions 1-250
-- positions 1-100
-- positions 101-250
+- positions 1-180
+- positions 1-60
+- positions 61-180
 
 ## 7.2 Regression specification
 
@@ -190,7 +197,7 @@ Additional robustness:
 # 8. Inference
 
 - standard errors clustered at root level
-- bootstrap by root used if number of clusters is small
+- bootstrap by root used if the number of clusters is small
 
 ---
 
@@ -236,15 +243,15 @@ These are pre-specified but not confirmatory.
 
 ## Main figures
 
-1. Trajectory of reported_6 over position
-2. Difference (seed_83 - seed_17)
+1. Trajectory of `reported_6` over position
+2. Difference (`seed_high - seed_low`)
 3. Mean outcomes by segment
 
 ## Exploratory figures
 
 4. Distribution of reports
 5. Heatmap truth vs report
-6. Dynamics of lie_amount
+6. Dynamics of `lie_amount`
 7. Time-of-day variation
 
 ---
@@ -273,8 +280,8 @@ The study focuses on:
 
 We interpret results as:
 
-- conditional behavioral responses,
-- not fixed moral types.
+- conditional behavioral responses
+- not fixed moral types
 
 ---
 
@@ -283,7 +290,7 @@ We interpret results as:
 - balanced deck is not IID
 - single observation per participant
 - contextual variation uncontrolled
-- external validity context-dependent
+- external validity is context-dependent
 
 ---
 
@@ -292,7 +299,7 @@ We interpret results as:
 All results will report:
 
 - experiment_version
-- ux_version
+- ui_version
 - treatment_version
 - data_schema_version
 

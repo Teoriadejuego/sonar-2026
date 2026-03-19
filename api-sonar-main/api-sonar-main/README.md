@@ -1,19 +1,19 @@
 # API Sonar 2026
 
-Backend experimental en **FastAPI + SQLModel** para el estudio de honestidad de Sónar 2026.
+Backend experimental en FastAPI + SQLModel para el estudio de honestidad de Sonar 2026.
 
-## Qué implementa
+## Que implementa
 
-- Sesión única persistente por pulsera.
-- Tres condiciones: `control`, `seed_17`, `seed_83`.
+- Sesion unica persistente por pulsera.
+- Tres condiciones configurables: `control`, `seed_low`, `seed_high`.
 - Series espejo agrupadas por `root`.
-- Mazo balanceado preasignado por posición y por intento.
+- Mazo balanceado preasignado por posicion y por intento.
 - Pago preasignado por backend.
 - Rerolls registrados.
 - Snapshot de tratamiento congelado justo antes del claim.
-- Ventana social visible de 100 observaciones.
-- Ventana real de claims para integridad y stopping rules.
-- Telemetría pasiva y flags básicos de calidad/antifraude.
+- Ventana social visible configurable, actualmente de 60 observaciones.
+- Longitud de serie configurable, actualmente 180 participantes por serie.
+- Telemetria pasiva y flags basicos de calidad y antifraude.
 
 ## Arranque
 
@@ -57,4 +57,4 @@ python seed.py
 
 ## Datos demo
 
-Si la base está vacía, el backend crea automáticamente pulseras demo desde `10000001` en adelante y un `root` activo inicial.
+Si la base esta vacia, el backend crea automaticamente pulseras demo desde `10000001` en adelante y un `root` activo inicial.

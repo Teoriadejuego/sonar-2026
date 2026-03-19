@@ -14,6 +14,7 @@ export type PublicConfig = {
   prize_eur: Record<string, number>;
   treatments: string[];
   seed_initial_counts: Record<string, number>;
+  treatment_targets: Record<string, number | null>;
   collapse_consecutive_claims: number;
   treatment_version: string;
   allocation_version: string;
@@ -129,22 +130,27 @@ export type PublicConfig = {
 };
 
 export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
-  schema_version: "sonar-2026-v6",
-  experiment_version: "sonar-2026-field-v2",
+  schema_version: "sonar-2026-v8",
+  experiment_version: "sonar-2026-field-v4",
   current_phase: "phase_1_main",
   phase_transition_threshold: 6000,
   max_attempts: 10,
-  participant_limit: 250,
-  window_size: 100,
+  participant_limit: 180,
+  window_size: 60,
   prize_eur: { "1": 10, "2": 20, "3": 30, "4": 40, "5": 50, "6": 60 },
-  treatments: ["control", "seed_17", "seed_83"],
+  treatments: ["control", "seed_low", "seed_high"],
   seed_initial_counts: {
-    seed_17: 17,
-    seed_83: 83,
+    seed_low: 10,
+    seed_high: 50,
+  },
+  treatment_targets: {
+    control: null,
+    seed_low: 6,
+    seed_high: 6,
   },
   collapse_consecutive_claims: 10,
-  treatment_version: "phase_1_six_norms_v1",
-  allocation_version: "phase_1_10_45_45_v1",
+  treatment_version: "phase_1_six_norms_v3",
+  allocation_version: "phase_1_10_45_45_v3",
   deployment_context: "main_event",
   site_code: "SONAR2026",
   campaign_code: "festival_main",
@@ -435,8 +441,13 @@ export type SessionPayload = {
   referral_medium?: string | null;
   referral_campaign?: string | null;
   referral_link_id?: string | null;
+  qr_entry_code?: string | null;
   referral_landing_path: string | null;
   referral_arrived_at?: string | null;
+  operational_note?: {
+    id: string | null;
+    note_text: string | null;
+  } | null;
   position_index: number;
   root_sequence: number;
   selected_for_payment: boolean;
@@ -677,6 +688,7 @@ export async function accessSession(
   referralMedium?: string | null,
   referralCampaign?: string | null,
   referralLinkId?: string | null,
+  qrEntryCode?: string | null,
   referralPath?: string | null,
   consentAgeConfirmed?: boolean,
   consentInfoAccepted?: boolean,
@@ -705,6 +717,7 @@ export async function accessSession(
       referral_medium: referralMedium,
       referral_campaign: referralCampaign,
       referral_link_id: referralLinkId,
+      qr_entry_code: qrEntryCode,
       referral_path: referralPath,
       consent_checkbox_order: consentCheckboxOrder ?? [],
       consent_checkbox_timestamps_ms: consentCheckboxTimestampsMs ?? {},

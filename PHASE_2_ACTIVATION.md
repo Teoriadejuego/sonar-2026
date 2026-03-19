@@ -14,15 +14,15 @@ Cuenta como válida una sesión que cumple:
 ## Tratamientos
 ### Fase 1
 - `control`
-- `seed_17`
-- `seed_83`
+- `seed_low`
+- `seed_high`
 
 ### Fase 2
 - `control`
-- `seed_17`
-- `seed_83`
-- `seed_17_5`
-- `seed_83_5`
+- `seed_low`
+- `seed_high`
+- `seed_low_5`
+- `seed_high_5`
 
 ## Persistencia
 La activación queda guardada en `experiment_state`:

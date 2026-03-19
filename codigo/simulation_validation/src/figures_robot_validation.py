@@ -8,14 +8,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from utils import DATA_DIR, FIGURES_DIR, ROBOT_LABELS, ensure_directories
-
-
-COLORS = {
-    "control": "#7f8c8d",
-    "seed_17": "#1f77b4",
-    "seed_83": "#d62728",
-}
+from utils import (
+    DATA_DIR,
+    FIGURES_DIR,
+    ROBOT_LABELS,
+    TREATMENT_COLORS,
+    TREATMENT_ORDER,
+    ensure_directories,
+)
 
 
 def trajectory_by_position(
@@ -31,7 +31,7 @@ def trajectory_by_position(
         .reset_index()
     )
     fig, ax = plt.subplots(figsize=(10, 5))
-    for treatment_key in ["seed_17", "seed_83", "control"]:
+    for treatment_key in [TREATMENT_ORDER[1], TREATMENT_ORDER[2], "control"]:
         subset = grouped[grouped["treatment_key"] == treatment_key].sort_values("position_index")
         if subset.empty:
             continue
@@ -44,7 +44,7 @@ def trajectory_by_position(
             subset["position_index"],
             rolling,
             label=treatment_key,
-            color=COLORS[treatment_key],
+            color=TREATMENT_COLORS[treatment_key],
             linewidth=2.2,
         )
     ax.set_title(title)
@@ -107,7 +107,14 @@ def heatmap_truth_vs_report(df: pd.DataFrame) -> None:
     ax.set_yticks(range(6), labels=[1, 2, 3, 4, 5, 6])
     for row_index in range(6):
         for col_index in range(6):
-            ax.text(col_index, row_index, int(pivot.iloc[row_index, col_index]), ha="center", va="center", fontsize=8)
+            ax.text(
+                col_index,
+                row_index,
+                int(pivot.iloc[row_index, col_index]),
+                ha="center",
+                va="center",
+                fontsize=8,
+            )
     fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
     fig.tight_layout()
     fig.savefig(FIGURES_DIR / "figure_4_truth_by_report_heatmap.png", dpi=220)
@@ -140,7 +147,7 @@ def lie_amount_by_robot_and_treatment(df: pd.DataFrame) -> None:
         df.groupby(["robot_type", "treatment_key"])["lie_amount"]
         .mean()
         .unstack(fill_value=0)
-        .reindex(index=list(ROBOT_LABELS), columns=["control", "seed_17", "seed_83"], fill_value=0)
+        .reindex(index=list(ROBOT_LABELS), columns=TREATMENT_ORDER, fill_value=0)
     )
     fig, ax = plt.subplots(figsize=(10, 5))
     x = np.arange(len(summary.index))
@@ -151,7 +158,7 @@ def lie_amount_by_robot_and_treatment(df: pd.DataFrame) -> None:
             summary[treatment_key].to_numpy(),
             width=width,
             label=treatment_key,
-            color=COLORS[treatment_key],
+            color=TREATMENT_COLORS[treatment_key],
         )
     ax.set_xticks(x, [ROBOT_LABELS[item] for item in summary.index])
     ax.set_ylabel("Lie amount medio")

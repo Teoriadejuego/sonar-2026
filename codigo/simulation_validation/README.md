@@ -7,25 +7,26 @@ Validación sintética integral de SONAR con dos modos:
 
 ## Robots
 
-### Tipo A — Imitador de norma
+### Tipo A - Imitador de norma
 
-- en `seed_17` reporta `6` con probabilidad `0.17`
-- en `seed_83` reporta `6` con probabilidad `0.83`
+- en `seed_low` reporta `6` con probabilidad igual al seed visible
+- en `seed_high` reporta `6` con probabilidad igual al seed visible
+- con la configuración actual eso equivale a `10/60` frente a `50/60`
 - si no reporta `6`, reporta la verdad
 - en control sigue una regla neutra: alta probabilidad de verdad y baja probabilidad base de `6`
 
-### Tipo B — Mixto aleatorio / honesto
+### Tipo B - Mixto aleatorio / honesto
 
 - 50% dice la verdad
 - 50% reporta un número uniforme entre `1` y `6`
 - el aleatorio sí puede coincidir con el valor verdadero
 
-### Tipo C — Mentiroso prudente 5
+### Tipo C - Mentiroso prudente 5
 
 - si la verdad es `1` o `2`, reporta `5`
 - en cualquier otro caso, reporta la verdad
 
-### Tipo D — Honesto puro
+### Tipo D - Honesto puro
 
 - siempre reporta la verdad
 
@@ -43,6 +44,8 @@ Parámetros principales:
 - idiomas
 - propensión a rerolls
 - ruido técnico básico
+
+La lógica experimental de ventana, seeds y longitud de serie se sincroniza con `project_parameters.json`.
 
 ## Cómo ejecutar
 
@@ -108,9 +111,9 @@ Para lanzarla a 6000:
 
 ## Qué patrones esperamos observar
 
-- Tipo A reporta más `6` en `seed_83` que en `seed_17`
+- Tipo A reporta más `6` en `seed_high` que en `seed_low`
 - Tipo C produce exceso de `5` cuando la verdad es `1` o `2`
 - Tipo D es completamente honesto
-- `seed_83` muestra más `reported_6` que `seed_17`
+- `seed_high` muestra más `reported_6` que `seed_low`
 - las series espejo comparten la misma verdad por posición
 - el backend flow produce sesiones completadas sin corrupción de estado

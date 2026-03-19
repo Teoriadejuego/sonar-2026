@@ -6,6 +6,8 @@ import pandas as pd
 
 from utils import (
     DATA_DIR,
+    HIGH_TREATMENT_KEY,
+    LOW_TREATMENT_KEY,
     LOGS_DIR,
     TABLES_DIR,
     exact_counts,
@@ -77,13 +79,19 @@ def run_validation() -> pd.DataFrame:
     )
 
     type_a = sessions[sessions["robot_type"] == "type_a_norm_imitator"]
-    type_a_seed17 = type_a.loc[type_a["treatment_key"] == "seed_17", "reported_6"].mean()
-    type_a_seed83 = type_a.loc[type_a["treatment_key"] == "seed_83", "reported_6"].mean()
+    type_a_seed_low = type_a.loc[
+        type_a["treatment_key"] == LOW_TREATMENT_KEY,
+        "reported_6",
+    ].mean()
+    type_a_seed_high = type_a.loc[
+        type_a["treatment_key"] == HIGH_TREATMENT_KEY,
+        "reported_6",
+    ].mean()
     checks.append(
         validation_row(
-            "type_a_reports_more_6_in_seed_83_than_seed_17",
-            bool(type_a_seed83 > type_a_seed17),
-            f"seed_83={type_a_seed83:.3f} seed_17={type_a_seed17:.3f}",
+            "type_a_reports_more_6_in_seed_high_than_seed_low",
+            bool(type_a_seed_high > type_a_seed_low),
+            f"seed_high={type_a_seed_high:.3f} seed_low={type_a_seed_low:.3f}",
         )
     )
 
@@ -121,10 +129,11 @@ def run_validation() -> pd.DataFrame:
     control_mean = treatment_means.get("control", 0.0)
     checks.append(
         validation_row(
-            "series_evolution_seed83_above_seed17_with_control_reference",
+            "series_evolution_seed_high_above_seed_low_with_control_reference",
             bool(
-                treatment_means.get("seed_83", 0.0) > treatment_means.get("seed_17", 1.0)
-                and treatment_means.get("seed_83", 0.0) > control_mean
+                treatment_means.get(HIGH_TREATMENT_KEY, 0.0)
+                > treatment_means.get(LOW_TREATMENT_KEY, 1.0)
+                and treatment_means.get(HIGH_TREATMENT_KEY, 0.0) > control_mean
             ),
             json.dumps(treatment_means, ensure_ascii=False),
         )

@@ -20,8 +20,11 @@ from experiment import (
     PHASE_1_MAIN,
     PHASE_2_ROBUSTNESS,
     PHASE_TRANSITION_VALID_COMPLETED_THRESHOLD,
+    WINDOW_SIZE,
     allocation_version_for_phase,
+    phase_treatments,
     seed_window_values,
+    treatment_config,
     treatment_version_for_phase,
 )
 from main import app, bootstrap_demo_data, get_or_create_experiment_state
@@ -150,37 +153,55 @@ class PhaseTransitionTests(unittest.TestCase):
     def test_phase_2_uses_new_roots_and_phase_2_treatment_set(self) -> None:
         self.activate_phase_2_manually()
         session = self.access_session("10000004")
+        expected_treatments = set(phase_treatments(PHASE_2_ROBUSTNESS).keys())
 
         with Session(engine) as db:
             persisted = db.get(SessionRecord, session["session_id"])
             root = db.get(SeriesRoot, persisted.root_id)
             self.assertEqual(persisted.experiment_phase, PHASE_2_ROBUSTNESS)
             self.assertEqual(root.experiment_phase, PHASE_2_ROBUSTNESS)
-            self.assertIn(
-                persisted.treatment_key,
-                {"control", "seed_17", "seed_83", "seed_17_5", "seed_83_5"},
-            )
+            self.assertIn(persisted.treatment_key, expected_treatments)
 
     def test_seed_windows_for_five_norm_treatments_are_initialized_correctly(self) -> None:
-        values_17_5 = seed_window_values(PHASE_2_ROBUSTNESS, "seed_17_5")
-        values_83_5 = seed_window_values(PHASE_2_ROBUSTNESS, "seed_83_5")
+        five_norm_keys = [
+            treatment_key
+            for treatment_key, config in phase_treatments(PHASE_2_ROBUSTNESS).items()
+            if config["treatment_family"] == "five_norm"
+        ]
 
-        self.assertEqual(len(values_17_5), 100)
-        self.assertEqual(len(values_83_5), 100)
-        self.assertEqual(sum(1 for value in values_17_5 if value == 5), 17)
-        self.assertEqual(sum(1 for value in values_83_5 if value == 5), 83)
-        self.assertNotEqual(values_17_5[:5], [5, 5, 5, 5, 5])
-        self.assertEqual(values_83_5[:5], [5, 5, 5, 5, 5])
+        for treatment_key in five_norm_keys:
+            config = treatment_config(PHASE_2_ROBUSTNESS, treatment_key)
+            values = seed_window_values(PHASE_2_ROBUSTNESS, treatment_key)
+            target_value = int(config["norm_target_value"])
+            seed_count = int(config["seed_initial_count"])
+            fill_order = str(config.get("seed_fill_order"))
+
+            self.assertEqual(len(values), WINDOW_SIZE)
+            self.assertEqual(sum(1 for value in values if value == target_value), seed_count)
+            if fill_order == "target_first":
+                self.assertEqual(values[:5], [target_value] * 5)
+            else:
+                self.assertNotEqual(values[:5], [target_value] * 5)
 
     def test_phase_2_snapshot_can_show_norms_over_five(self) -> None:
         self.activate_phase_2_manually()
         target_session = None
         bracelet_seed = 10000020
+        five_norm_keys = {
+            treatment_key
+            for treatment_key, config in phase_treatments(PHASE_2_ROBUSTNESS).items()
+            if config["treatment_family"] == "five_norm"
+        }
+        expected_counts = {
+            int(config["seed_initial_count"])
+            for config in phase_treatments(PHASE_2_ROBUSTNESS).values()
+            if config["treatment_family"] == "five_norm"
+        }
 
         while target_session is None:
             session = self.access_session(str(bracelet_seed))
             bracelet_seed += 1
-            if session["treatment_key"] in {"seed_17_5", "seed_83_5"}:
+            if session["treatment_key"] in five_norm_keys:
                 target_session = session
 
         roll_response = self.client.post(
@@ -201,7 +222,7 @@ class PhaseTransitionTests(unittest.TestCase):
         snapshot = prepare_response.json()["session"]["report_snapshot"]
 
         self.assertEqual(snapshot["target_value"], 5)
-        self.assertIn(snapshot["count_target"], {17, 83})
+        self.assertIn(snapshot["count_target"], expected_counts)
         self.assertIn(" 5.", snapshot["message"])
 
     def test_prepared_phase_1_sessions_do_not_reactivate_phase_2_twice(self) -> None:

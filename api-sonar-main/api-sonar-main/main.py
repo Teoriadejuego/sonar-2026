@@ -10,7 +10,7 @@ from typing import Any, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse, Response, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field as PydanticField
 from sqlalchemy import inspect, text
 from sqlmodel import Session, SQLModel, func, select
@@ -83,6 +83,7 @@ from models import (
     ExperimentState,
     FraudFlag,
     InterestSignup,
+    OperationalNote,
     Payment,
     PayoutRequest,
     Pulsera,
@@ -125,7 +126,25 @@ app.add_middleware(
 @app.middleware("http")
 async def admin_and_request_logging(request: Request, call_next):
     if request.url.path.startswith("/admin"):
-        check_admin_credentials(request)
+        try:
+            check_admin_credentials(request)
+        except HTTPException as exc:
+            response = JSONResponse(
+                status_code=exc.status_code,
+                content={"detail": exc.detail},
+                headers=exc.headers or {},
+            )
+            logger.info(
+                "http_request",
+                extra={
+                    "structured_payload": request_log_payload(
+                        request,
+                        status_code=response.status_code,
+                        duration_ms=0.0,
+                    )
+                },
+            )
+            return response
     start_time = time.perf_counter()
     response = await call_next(request)
     logger.info(
@@ -157,6 +176,7 @@ class AccessRequest(BaseModel):
     referral_medium: Optional[str] = None
     referral_campaign: Optional[str] = None
     referral_link_id: Optional[str] = None
+    qr_entry_code: Optional[str] = None
     referral_path: Optional[str] = None
     consent_checkbox_order: Optional[list[str]] = None
     consent_checkbox_timestamps_ms: Optional[dict[str, int]] = None
@@ -216,6 +236,10 @@ class InterestSignupRequest(BaseModel):
 
 class AdminExperimentControlRequest(BaseModel):
     reason: Optional[str] = None
+
+
+class AdminOperationalNoteRequest(BaseModel):
+    note_text: str = PydanticField(min_length=3, max_length=1000)
 
 
 class TelemetryItem(BaseModel):
@@ -784,6 +808,23 @@ def get_or_create_experiment_state(db: Session, *, for_update: bool = False) -> 
         )
     ).first()
     if state:
+        expected_treatment_version = treatment_version_for_phase(state.current_phase)
+        expected_allocation_version = allocation_version_for_phase(state.current_phase)
+        changed = False
+        if state.phase_transition_threshold != PHASE_TRANSITION_VALID_COMPLETED_THRESHOLD:
+            state.phase_transition_threshold = PHASE_TRANSITION_VALID_COMPLETED_THRESHOLD
+            changed = True
+        if state.treatment_version != expected_treatment_version:
+            state.treatment_version = expected_treatment_version
+            changed = True
+        if state.allocation_version != expected_allocation_version:
+            state.allocation_version = expected_allocation_version
+            changed = True
+        if changed:
+            state.updated_at = utcnow()
+            db.add(state)
+            db.commit()
+            db.refresh(state)
         return state
 
     state = ExperimentState(
@@ -843,6 +884,88 @@ def prize_summary(db: Session) -> dict[str, Any]:
         "total_prize_amount_eur": round(total_amount_cents / 100, 2),
         "winner_count_by_status": by_status,
     }
+
+
+def get_active_operational_note(
+    db: Session, *, for_update: bool = False
+) -> Optional[OperationalNote]:
+    return db.exec(
+        with_optional_for_update(
+            select(OperationalNote)
+            .where(OperationalNote.status == "active")
+            .order_by(OperationalNote.effective_from.desc()),
+            for_update,
+        )
+    ).first()
+
+
+def operational_note_payload(note: Optional[OperationalNote]) -> dict[str, Any]:
+    if not note:
+        return {
+            "id": None,
+            "note_text": None,
+            "status": "inactive",
+            "effective_from": None,
+            "cleared_at": None,
+        }
+    return {
+        "id": note.id,
+        "note_text": note.note_text,
+        "status": note.status,
+        "effective_from": note.effective_from.isoformat(),
+        "cleared_at": note.cleared_at.isoformat() if note.cleared_at else None,
+    }
+
+
+def activate_operational_note(db: Session, *, note_text: str) -> OperationalNote:
+    now = utcnow()
+    previous = get_active_operational_note(db, for_update=True)
+    if previous:
+        previous.status = "ended"
+        previous.cleared_at = now
+        previous.updated_at = now
+        db.add(previous)
+
+    note = OperationalNote(
+        note_text=note_text.strip(),
+        status="active",
+        effective_from=now,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(note)
+    db.flush()
+    create_audit(
+        db,
+        entity_type="operational_note",
+        entity_id=note.id,
+        action="operational_note_activated",
+        payload={"note_text": note.note_text, "effective_from": note.effective_from.isoformat()},
+    )
+    db.commit()
+    db.refresh(note)
+    return note
+
+
+def clear_operational_note(db: Session) -> Optional[OperationalNote]:
+    note = get_active_operational_note(db, for_update=True)
+    if not note:
+        return None
+    now = utcnow()
+    note.status = "ended"
+    note.cleared_at = now
+    note.updated_at = now
+    db.add(note)
+    create_audit(
+        db,
+        entity_type="operational_note",
+        entity_id=note.id,
+        action="operational_note_cleared",
+        payload={"cleared_at": now.isoformat()},
+    )
+    db.commit()
+    db.refresh(note)
+    return note
 
 
 def pause_experiment(
@@ -995,6 +1118,46 @@ def create_root_with_series(db: Session, phase_key: str) -> SeriesRoot:
     return root
 
 
+def root_matches_phase_configuration(db: Session, root: SeriesRoot) -> bool:
+    expected_treatments = phase_treatments(root.experiment_phase)
+    series_items = db.exec(select(Series).where(Series.root_id == root.id)).all()
+    if len(series_items) != len(expected_treatments):
+        return False
+    if root.treatment_version != treatment_version_for_phase(root.experiment_phase):
+        return False
+    if root.allocation_version != allocation_version_for_phase(root.experiment_phase):
+        return False
+
+    for item in series_items:
+        expected = expected_treatments.get(item.treatment_key)
+        if expected is None:
+            return False
+        if item.participant_limit != PARTICIPANT_LIMIT:
+            return False
+        if item.sample_size != WINDOW_SIZE:
+            return False
+        if item.treatment_family != expected["treatment_family"]:
+            return False
+        if item.norm_target_value != expected["norm_target_value"]:
+            return False
+        if abs(item.assignment_weight - float(expected["assignment_weight"])) > 1e-9:
+            return False
+    return True
+
+
+def close_root_for_configuration_change(db: Session, root: SeriesRoot) -> None:
+    root.status = "closed"
+    root.close_reason = "config_changed"
+    root.closed_at = utcnow()
+    db.add(root)
+    series_items = db.exec(select(Series).where(Series.root_id == root.id)).all()
+    for item in series_items:
+        item.is_closed = True
+        item.close_reason = "config_changed"
+        db.add(item)
+    db.commit()
+
+
 def get_active_root(db: Session, phase_key: str, *, for_update: bool = False) -> SeriesRoot:
     root = db.exec(
         with_optional_for_update(
@@ -1008,6 +1171,9 @@ def get_active_root(db: Session, phase_key: str, *, for_update: bool = False) ->
         )
     ).first()
     if root:
+        if not root_matches_phase_configuration(db, root):
+            close_root_for_configuration_change(db, root)
+            return create_root_with_series(db, phase_key)
         return root
     return create_root_with_series(db, phase_key)
 
@@ -1541,10 +1707,15 @@ def build_session_payload(db: Session, record: SessionRecord) -> dict[str, Any]:
         "referral_medium": record.referral_medium,
         "referral_campaign": record.referral_campaign,
         "referral_link_id": record.referral_link_id,
+        "qr_entry_code": record.qr_entry_code,
         "referral_landing_path": record.referral_landing_path,
         "referral_arrived_at": (
             record.referral_arrived_at.isoformat() if record.referral_arrived_at else None
         ),
+        "operational_note": {
+            "id": record.operational_note_id,
+            "note_text": record.operational_note_text,
+        },
         "position_index": record.position_index,
         "root_sequence": root.root_sequence if root else None,
         "phase_root_sequence": root.root_sequence if root else None,
@@ -1715,6 +1886,7 @@ def ensure_user_and_session(
     referral_medium: Optional[str],
     referral_campaign: Optional[str],
     referral_link_id: Optional[str],
+    qr_entry_code: Optional[str],
     referral_path: Optional[str],
     consent_checkbox_order: Optional[list[str]],
     consent_checkbox_timestamps_ms: Optional[dict[str, int]],
@@ -1730,6 +1902,7 @@ def ensure_user_and_session(
     device_hash = stable_hash(device_basis)
     ip_hash = stable_hash(get_client_ip(request))
     user_agent_hash = stable_hash(request.headers.get("user-agent", "unknown-agent"))
+    active_operational_note = get_active_operational_note(db)
 
     user = db.exec(select(User).where(User.bracelet_id == bracelet_id)).first()
     created_now = False
@@ -1782,6 +1955,11 @@ def ensure_user_and_session(
             if referrer:
                 session_record.invited_by_session_id = referrer.id
             referral_attached = True
+        if qr_entry_code and not session_record.qr_entry_code:
+            session_record.qr_entry_code = qr_entry_code
+        if active_operational_note and not session_record.operational_note_id:
+            session_record.operational_note_id = active_operational_note.id
+            session_record.operational_note_text = active_operational_note.note_text
         db.add(user)
         db.add(session_record)
         upsert_session_client_context(
@@ -1834,8 +2012,11 @@ def ensure_user_and_session(
         referral_medium=referral_medium,
         referral_campaign=referral_campaign,
         referral_link_id=referral_link_id,
+        qr_entry_code=qr_entry_code,
         referral_landing_path=referral_path,
         referral_arrived_at=now if incoming_referral_code else None,
+        operational_note_id=active_operational_note.id if active_operational_note else None,
+        operational_note_text=active_operational_note.note_text if active_operational_note else None,
         experiment_version=EXPERIMENT_VERSION,
         experiment_phase=phase_key,
         phase_version=phase_version_for_phase(phase_key),
@@ -2072,6 +2253,10 @@ def config() -> dict[str, Any]:
         "prize_eur": PRIZE_EUR,
         "treatments": list(assignment_weights_for_phase(current_phase).keys()),
         "seed_initial_counts": seed_initial_counts_for_phase(current_phase),
+        "treatment_targets": {
+            treatment_key: treatment["norm_target_value"]
+            for treatment_key, treatment in phase_treatments(current_phase).items()
+        },
         "collapse_consecutive_claims": COLLAPSE_CONSECUTIVE_CLAIMS,
         "treatment_version": treatment_version_for_phase(current_phase),
         "allocation_version": allocation_version_for_phase(current_phase),
@@ -2099,6 +2284,7 @@ def interest_signup(
     db: Session = Depends(get_session),
 ) -> dict[str, Any]:
     state = get_or_create_experiment_state(db)
+    active_operational_note = get_active_operational_note(db)
     if not experiment_is_paused(state):
         raise HTTPException(
             status_code=409,
@@ -2121,10 +2307,14 @@ def interest_signup(
             site_code=SITE_CODE,
             campaign_code=CAMPAIGN_CODE,
             environment_label=ENVIRONMENT_LABEL,
+            operational_note_id=active_operational_note.id if active_operational_note else None,
+            operational_note_text=active_operational_note.note_text if active_operational_note else None,
         )
     else:
         existing.language_used = payload.language or existing.language_used
         existing.experiment_status = state.experiment_status
+        existing.operational_note_id = active_operational_note.id if active_operational_note else existing.operational_note_id
+        existing.operational_note_text = active_operational_note.note_text if active_operational_note else existing.operational_note_text
         existing.updated_at = utcnow()
     db.add(existing)
     create_audit(
@@ -2187,6 +2377,7 @@ def access_session(
                 referral_medium=payload.referral_medium,
                 referral_campaign=payload.referral_campaign,
                 referral_link_id=payload.referral_link_id,
+                qr_entry_code=payload.qr_entry_code,
                 referral_path=payload.referral_path,
                 consent_checkbox_order=payload.consent_checkbox_order,
                 consent_checkbox_timestamps_ms=payload.consent_checkbox_timestamps_ms,
@@ -2503,6 +2694,7 @@ def submit_report(
                 raise HTTPException(status_code=409, detail="La sesion ya tiene claim")
 
             series = get_series_or_404(db, record.series_id, for_update=True)
+            active_operational_note = get_active_operational_note(db)
             root = db.exec(
                 with_optional_for_update(
                     select(SeriesRoot).where(SeriesRoot.id == record.root_id),
@@ -2535,6 +2727,8 @@ def submit_report(
                 displayed_window_version=record.report_snapshot_version,
                 displayed_message=record.report_snapshot_message,
                 displayed_message_version=record.report_snapshot_message_version,
+                operational_note_id=active_operational_note.id if active_operational_note else None,
+                operational_note_text=active_operational_note.note_text if active_operational_note else None,
                 max_seen_value=record.max_seen_value,
                 last_seen_value=record.last_seen_value,
                 matches_last_seen=record.last_seen_value == payload.reported_value,
@@ -2658,6 +2852,8 @@ def submit_report(
                 if record.selected_for_payment
                 else None
             ),
+            operational_note_id=active_operational_note.id if active_operational_note else None,
+            operational_note_text=active_operational_note.note_text if active_operational_note else None,
         )
         db.add(payment)
 
@@ -2726,6 +2922,7 @@ def telemetry_batch(
 ) -> dict[str, Any]:
     with distributed_lock(f"session:{payload.session_id}:telemetry"):
         record = get_session_or_404(db, payload.session_id, for_update=True)
+        active_operational_note = get_active_operational_note(db)
         accepted = 0
         for item in payload.events:
             server_now = utcnow()
@@ -2759,6 +2956,8 @@ def telemetry_batch(
                     error_name=item.error_name,
                     network_status=item.network_status,
                     visibility_state=item.visibility_state,
+                    operational_note_id=active_operational_note.id if active_operational_note else None,
+                    operational_note_text=active_operational_note.note_text if active_operational_note else None,
                     payload_json=stable_json(item.payload)
                     if item.payload is not None
                     else None,
@@ -2906,6 +3105,7 @@ def payment_submit(
 ) -> dict[str, Any]:
     rate_limit(f"payment:{payload.code}", settings.payment_rate_limit_per_minute)
     with distributed_lock(f"payment:{payload.code}"):
+        active_operational_note = get_active_operational_note(db)
         normalized_phone = normalize_phone(payload.phone)
         payment = get_payment_by_reference(db, payload.code, for_update=True)
         if not payment.eligible:
@@ -2928,6 +3128,8 @@ def payment_submit(
             language_used=payload.language,
             message_text=payload.message_text,
             status="submitted",
+            operational_note_id=active_operational_note.id if active_operational_note else None,
+            operational_note_text=active_operational_note.note_text if active_operational_note else None,
         )
         db.add(payout_request)
         payment.status = "queued"
@@ -3033,6 +3235,7 @@ def payout_page(code: Optional[str] = None) -> HTMLResponse:
 def admin_experiment(db: Session = Depends(get_session)) -> dict[str, Any]:
     state = get_or_create_experiment_state(db)
     prizes = prize_summary(db)
+    active_operational_note = get_active_operational_note(db)
     return {
         "schema_version": SCHEMA_VERSION,
         "experiment_version": EXPERIMENT_VERSION,
@@ -3061,7 +3264,29 @@ def admin_experiment(db: Session = Depends(get_session)) -> dict[str, Any]:
         "campaign_code": CAMPAIGN_CODE,
         "environment_label": ENVIRONMENT_LABEL,
         "prizes": prizes,
+        "active_operational_note": operational_note_payload(active_operational_note),
     }
+
+
+@app.post("/admin/operational-notes/activate")
+def admin_activate_operational_note(
+    payload: AdminOperationalNoteRequest,
+    db: Session = Depends(get_session),
+) -> dict[str, Any]:
+    with distributed_lock("operational-note"):
+        note = activate_operational_note(db, note_text=payload.note_text)
+        return {"ok": True, "active_operational_note": operational_note_payload(note)}
+
+
+@app.post("/admin/operational-notes/clear")
+def admin_clear_operational_note(db: Session = Depends(get_session)) -> dict[str, Any]:
+    with distributed_lock("operational-note"):
+        cleared = clear_operational_note(db)
+        return {
+            "ok": True,
+            "cleared_operational_note": operational_note_payload(cleared),
+            "active_operational_note": operational_note_payload(None),
+        }
 
 
 @app.post("/admin/experiment/pause")

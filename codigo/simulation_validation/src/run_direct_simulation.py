@@ -22,6 +22,7 @@ from utils import (
     build_root_state,
     displayed_message,
     ensure_directories,
+    exact_counts,
     hour_of_day,
     load_config,
     make_population_table,
@@ -86,13 +87,7 @@ def simulate_direct_dataset() -> dict[str, Path]:
     context_config = config["context"]
     robot_behavior = config["robot_behavior"]
     treatment_weights = assignment_weights_for_phase(PHASE_1_MAIN)
-    treatment_targets = {
-        key: int(total_participants * weight)
-        for key, weight in treatment_weights.items()
-    }
-    treatment_targets["control"] = total_participants - (
-        treatment_targets["seed_17"] + treatment_targets["seed_83"]
-    )
+    treatment_targets = exact_counts(total_participants, treatment_weights)
     treatment_progress = {key: 0 for key in treatment_targets}
 
     population = make_population_table(config)

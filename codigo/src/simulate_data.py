@@ -13,6 +13,7 @@ from config_analysis import (
     BASE_START_UTC,
     DECK_BLOCK_SIZE,
     DECK_VERSION,
+    EARLY_SEGMENT,
     EXPERIMENT_PHASE,
     EXPERIMENT_VERSION,
     FESTIVAL_DAYS,
@@ -25,11 +26,13 @@ from config_analysis import (
     ROOT_COUNT,
     ROOT_IDS,
     SEED_INITIAL_COUNTS,
+    SEED_FILL_ORDERS,
     SERIES_MAX_LENGTH,
     TARGET_VALUES,
     TREATMENT_COUNTS,
     TREATMENT_FAMILIES,
     TREATMENT_LABELS,
+    TREATMENT_ORDER,
     TREATMENT_VERSION,
     UI_VERSION,
     VALID_COMPLETED_SESSIONS,
@@ -134,7 +137,7 @@ def choose_reported_value(
         else 0.30
     )
     evening_bump = 0.08 if hour_of_day >= 21 or hour_of_day <= 1 else 0.0
-    early_series = 0.12 if position_index <= 100 else -0.02
+    early_series = 0.12 if position_index <= EARLY_SEGMENT[1] else -0.02
     p_report_6 = logistic(
         -3.10
         + 2.15 * norm_share
@@ -159,7 +162,7 @@ def choose_reported_value(
         + 0.44 * (5 in seen_values[1:])
         + 0.16 * (max_seen >= 5)
         + 0.14 * opportunity
-        + 0.10 * (position_index <= 100)
+        + 0.10 * (position_index <= EARLY_SEGMENT[1])
         + root_effect * 0.4
         + rng.normal(0.0, 0.08)
     )
@@ -237,7 +240,7 @@ def build_series_and_sessions(position_plan: pd.DataFrame, rng: np.random.Genera
     session_counter = 0
 
     for root_sequence, root_id in enumerate(ROOT_IDS, start=1):
-        for treatment_key in ("control", "seed_17", "seed_83"):
+        for treatment_key in TREATMENT_ORDER:
             series_id = f"series_{root_sequence:02d}_{treatment_key}"
             treatment_family = TREATMENT_FAMILIES[treatment_key]
             norm_target_value = TARGET_VALUES[treatment_key]
@@ -245,8 +248,14 @@ def build_series_and_sessions(position_plan: pd.DataFrame, rng: np.random.Genera
             visible_window: deque[int] | None = None
             if treatment_key != "control":
                 seed_count = int(SEED_INITIAL_COUNTS[treatment_key] or 0)
+                non_target_count = VISIBLE_WINDOW - seed_count
+                seed_fill_order = SEED_FILL_ORDERS[treatment_key]
                 visible_window = deque(
-                    [1] * seed_count + [0] * (VISIBLE_WINDOW - seed_count),
+                    (
+                        [0] * non_target_count + [1] * seed_count
+                        if seed_fill_order == "target_last"
+                        else [1] * seed_count + [0] * non_target_count
+                    ),
                     maxlen=VISIBLE_WINDOW,
                 )
 

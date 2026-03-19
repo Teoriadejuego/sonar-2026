@@ -32,6 +32,18 @@ class ExperimentState(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=utcnow)
 
 
+class OperationalNote(SQLModel, table=True):
+    __tablename__ = "operational_notes"
+
+    id: str = Field(default_factory=make_uuid, primary_key=True)
+    note_text: str = Field(sa_column=Column(Text, nullable=False))
+    status: str = Field(default="active", index=True)
+    effective_from: datetime = Field(default_factory=utcnow, index=True)
+    cleared_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
 class Pulsera(SQLModel, table=True):
     __tablename__ = "pulsera"
 
@@ -178,8 +190,11 @@ class SessionRecord(SQLModel, table=True):
     referral_medium: Optional[str] = Field(default=None, index=True)
     referral_campaign: Optional[str] = Field(default=None, index=True)
     referral_link_id: Optional[str] = Field(default=None, index=True)
+    qr_entry_code: Optional[str] = Field(default=None, index=True)
     referral_landing_path: Optional[str] = None
     referral_arrived_at: Optional[datetime] = None
+    operational_note_id: Optional[str] = Field(default=None, index=True)
+    operational_note_text: Optional[str] = Field(default=None, sa_column=Column(Text))
     position_index: int = Field(index=True)
     state: str = Field(default="assigned", index=True)
     screen_cursor: str = Field(default="instructions", index=True)
@@ -397,6 +412,8 @@ class Claim(SQLModel, table=True):
     displayed_window_version: Optional[int] = None
     displayed_message: Optional[str] = None
     displayed_message_version: Optional[str] = None
+    operational_note_id: Optional[str] = Field(default=None, index=True)
+    operational_note_text: Optional[str] = Field(default=None, sa_column=Column(Text))
     max_seen_value: Optional[int] = None
     last_seen_value: Optional[int] = None
     matches_last_seen: bool = Field(default=False)
@@ -417,6 +434,8 @@ class Payment(SQLModel, table=True):
     amount_cents: int
     status: str = Field(default="pending", index=True)
     payout_reference: Optional[str] = Field(default=None, unique=True, index=True)
+    operational_note_id: Optional[str] = Field(default=None, index=True)
+    operational_note_text: Optional[str] = Field(default=None, sa_column=Column(Text))
     created_at: datetime = Field(default_factory=utcnow)
     paid_at: Optional[datetime] = None
 
@@ -433,6 +452,8 @@ class PayoutRequest(SQLModel, table=True):
     language_used: Optional[str] = Field(default=None, index=True)
     message_text: Optional[str] = Field(default=None, sa_column=Column(Text))
     status: str = Field(default="submitted", index=True)
+    operational_note_id: Optional[str] = Field(default=None, index=True)
+    operational_note_text: Optional[str] = Field(default=None, sa_column=Column(Text))
     created_at: datetime = Field(default_factory=utcnow)
     processed_at: Optional[datetime] = None
 
@@ -453,6 +474,8 @@ class InterestSignup(SQLModel, table=True):
     site_code: str = Field(index=True)
     campaign_code: str = Field(index=True)
     environment_label: str = Field(index=True)
+    operational_note_id: Optional[str] = Field(default=None, index=True)
+    operational_note_text: Optional[str] = Field(default=None, sa_column=Column(Text))
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
 
@@ -486,6 +509,8 @@ class TelemetryEvent(SQLModel, table=True):
     error_name: Optional[str] = None
     network_status: Optional[str] = None
     visibility_state: Optional[str] = None
+    operational_note_id: Optional[str] = Field(default=None, index=True)
+    operational_note_text: Optional[str] = Field(default=None, sa_column=Column(Text))
     payload_json: Optional[str] = Field(default=None, sa_column=Column(Text))
     server_ts: datetime = Field(default_factory=utcnow)
 

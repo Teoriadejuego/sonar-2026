@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from config_analysis import DATA_DIR, LINE_SMOOTHING_WINDOW, TREATMENT_COLORS
+from config_analysis import DATA_DIR, LINE_SMOOTHING_WINDOW, TREATMENT_COLORS, TREATMENT_ORDER
 from utils import append_log, configure_matplotlib, ensure_directories, moving_average_by_position
 
 
@@ -21,7 +21,7 @@ def figure_path(file_name: str):
 def trajectory_reported_5(frame: pd.DataFrame) -> None:
     means = moving_average_by_position(frame, "reported_5", window=LINE_SMOOTHING_WINDOW)
     fig, ax = plt.subplots(figsize=(8, 4.8))
-    for treatment_key in ["control", "seed_17", "seed_83"]:
+    for treatment_key in TREATMENT_ORDER:
         subset = means.loc[means["treatment_key"] == treatment_key]
         ax.plot(
             subset["position_index"],
@@ -43,7 +43,7 @@ def trajectory_reported_5(frame: pd.DataFrame) -> None:
 def trajectory_lie_amount(frame: pd.DataFrame) -> None:
     means = moving_average_by_position(frame, "lie_amount", window=LINE_SMOOTHING_WINDOW)
     fig, ax = plt.subplots(figsize=(8, 4.8))
-    for treatment_key in ["control", "seed_17", "seed_83"]:
+    for treatment_key in TREATMENT_ORDER:
         subset = means.loc[means["treatment_key"] == treatment_key]
         ax.plot(
             subset["position_index"],
@@ -64,7 +64,7 @@ def trajectory_lie_amount(frame: pd.DataFrame) -> None:
 def distribution_relative_lie(frame: pd.DataFrame) -> None:
     fig, ax = plt.subplots(figsize=(8, 4.8))
     bins = np.linspace(0, 1, 11)
-    for treatment_key in ["control", "seed_17", "seed_83"]:
+    for treatment_key in TREATMENT_ORDER:
         subset = frame.loc[frame["treatment_key"] == treatment_key, "relative_lie"]
         ax.hist(
             subset,
@@ -98,7 +98,7 @@ def time_block_results(frame: pd.DataFrame) -> None:
     fig, axes = plt.subplots(1, 3, figsize=(13, 4.5), sharex=True)
     for axis, metric in zip(axes, metrics, strict=False):
         pivot = summary.pivot(index="time_block", columns="treatment_key", values=metric)
-        for treatment_key in ["control", "seed_17", "seed_83"]:
+        for treatment_key in TREATMENT_ORDER:
             axis.plot(
                 pivot.index,
                 pivot[treatment_key],

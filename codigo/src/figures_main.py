@@ -4,7 +4,19 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from config_analysis import DATA_DIR, LINE_SMOOTHING_WINDOW, MAIN_COMPARISON, TREATMENT_COLORS
+from config_analysis import (
+    DATA_DIR,
+    EARLY_SEGMENT,
+    FULL_SEGMENT,
+    HIGH_TREATMENT_KEY,
+    LATE_SEGMENT,
+    LINE_SMOOTHING_WINDOW,
+    LOW_TREATMENT_KEY,
+    MAIN_COMPARISON,
+    TREATMENT_COLORS,
+    TREATMENT_LABELS,
+    TREATMENT_ORDER,
+)
 from utils import append_log, configure_matplotlib, ensure_directories, moving_average_by_position
 
 
@@ -21,7 +33,7 @@ def figure_path(file_name: str):
 def trajectory_reported_6(frame: pd.DataFrame) -> None:
     position_means = moving_average_by_position(frame, "reported_6", window=LINE_SMOOTHING_WINDOW)
     fig, ax = plt.subplots(figsize=(8, 4.8))
-    for treatment_key in ["seed_17", "seed_83", "control"]:
+    for treatment_key in [LOW_TREATMENT_KEY, HIGH_TREATMENT_KEY, "control"]:
         subset = position_means.loc[position_means["treatment_key"] == treatment_key]
         if subset.empty:
             continue
@@ -50,13 +62,15 @@ def difference_reported_6(frame: pd.DataFrame) -> None:
         .pivot(index="position_index", columns="treatment_key", values="reported_6")
         .sort_index()
     )
-    pivot["difference"] = pivot["seed_83"] - pivot["seed_17"]
+    pivot["difference"] = pivot[HIGH_TREATMENT_KEY] - pivot[LOW_TREATMENT_KEY]
     pivot["smoothed"] = pivot["difference"].rolling(LINE_SMOOTHING_WINDOW, min_periods=1, center=True).mean()
 
     fig, ax = plt.subplots(figsize=(8, 4.4))
     ax.axhline(0, color="#999999", linewidth=1)
     ax.plot(pivot.index, pivot["smoothed"], color="#6a1b9a", linewidth=2.2)
-    ax.set_title("Figure 2. Seed 83 minus Seed 17")
+    ax.set_title(
+        f"Figure 2. {TREATMENT_LABELS[HIGH_TREATMENT_KEY]} minus {TREATMENT_LABELS[LOW_TREATMENT_KEY]}"
+    )
     ax.set_xlabel("Position in series")
     ax.set_ylabel("Difference in reported 6")
     fig.tight_layout()
@@ -65,12 +79,15 @@ def difference_reported_6(frame: pd.DataFrame) -> None:
 
 
 def segment_bars(frame: pd.DataFrame) -> None:
+    early_start, early_end = EARLY_SEGMENT
+    late_start, late_end = LATE_SEGMENT
+    full_start, full_end = FULL_SEGMENT
     segments = {
-        "1-100": frame.loc[frame["position_index"].between(1, 100)],
-        "101-250": frame.loc[frame["position_index"].between(101, 250)],
-        "1-250": frame.loc[frame["position_index"].between(1, 250)],
+        f"{early_start}-{early_end}": frame.loc[frame["position_index"].between(early_start, early_end)],
+        f"{late_start}-{late_end}": frame.loc[frame["position_index"].between(late_start, late_end)],
+        f"{full_start}-{full_end}": frame.loc[frame["position_index"].between(full_start, full_end)],
     }
-    treatments = ["control", "seed_17", "seed_83"]
+    treatments = TREATMENT_ORDER
     x = np.arange(len(segments))
     width = 0.23
 
@@ -110,7 +127,7 @@ def distribution_reported_value(frame: pd.DataFrame) -> None:
     values = distribution.index.to_numpy(dtype=float)
     width = 0.22
     fig, ax = plt.subplots(figsize=(8, 4.8))
-    for offset, treatment_key in enumerate(["control", "seed_17", "seed_83"]):
+    for offset, treatment_key in enumerate(TREATMENT_ORDER):
         ax.bar(
             values + (offset - 1) * width,
             distribution[treatment_key],

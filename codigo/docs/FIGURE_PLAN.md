@@ -3,13 +3,13 @@
 ## Main figures
 1. `figure_1_reported_6_trajectory.png`
    - Smoothed trajectory of `reported_6` by position
-   - Treatments: `seed_17`, `seed_83`, optional `control`
+   - Treatments: `seed_low`, `seed_high`, optional `control`
 
 2. `figure_2_reported_6_difference.png`
-   - Smoothed difference `seed_83 - seed_17` in `reported_6`
+   - Smoothed difference `seed_high - seed_low` in `reported_6`
 
 3. `figure_3_reported_6_segments.png`
-   - Bars for positions `1-100`, `101-250`, `1-250`
+   - Bars for the early segment, late segment and full segment derived from the current configuration
 
 4. `figure_4_report_distribution.png`
    - Distribution of `reported_value` by treatment

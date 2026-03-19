@@ -5,7 +5,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from config_analysis import DATA_DIR, RANDOM_SEED, SERIES_MAX_LENGTH
+from config_analysis import (
+    DATA_DIR,
+    HIGH_TREATMENT_KEY,
+    RANDOM_SEED,
+    SEED_INITIAL_COUNTS,
+    SERIES_MAX_LENGTH,
+)
 from utils import append_log, ensure_directories, position_segment, save_dataframe
 
 
@@ -44,9 +50,14 @@ def main() -> None:
 
     analysis["position_segment"] = analysis["position_index"].map(position_segment)
     analysis["series_progress_share"] = analysis["position_index"] / SERIES_MAX_LENGTH
-    analysis["treated_high_norm"] = (analysis["treatment_key"] == "seed_83").astype(int)
-    analysis["treatment_seed_level"] = analysis["treatment_key"].map(
-        {"control": 0, "seed_17": 17, "seed_83": 83}
+    analysis["treated_high_norm"] = (
+        analysis["treatment_key"] == HIGH_TREATMENT_KEY
+    ).astype(int)
+    analysis["treatment_seed_level"] = (
+        analysis["treatment_key"]
+        .map({key: value or 0 for key, value in SEED_INITIAL_COUNTS.items()})
+        .fillna(0)
+        .astype(int)
     )
     analysis["reported_matches_max_seen"] = (
         analysis["reported_value"] == analysis["max_seen_value"]

@@ -2,14 +2,14 @@
   "random_seed": 20260319,
   "participants_valid_completed": 6000,
   "phase_key": "phase_1_main",
-  "series_participant_limit": 250,
-  "window_size": 100,
+  "series_participant_limit": 180,
+  "window_size": 60,
   "max_attempts": 10,
   "backend_flow_default_participants": 600,
   "treatment_weights": {
     "control": 0.1,
-    "seed_17": 0.45,
-    "seed_83": 0.45
+    "seed_low": 0.45,
+    "seed_high": 0.45
   },
   "robot_mix": {
     "type_a_norm_imitator": 0.35,

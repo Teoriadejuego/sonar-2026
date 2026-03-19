@@ -12,6 +12,7 @@ Core identifiers:
 
 Experimental variables:
 - `treatment_key`
+  Current phase-1 values are `control`, `seed_low` and `seed_high`.
 - `treatment_family`
 - `experiment_phase`
 - `experiment_version`
@@ -156,6 +157,7 @@ Clean analytic dataset built from the simulated raw files.
 
 Extra derived variables:
 - `position_segment`
+  Early, late and full segments are derived from the current configured window and series length.
 - `series_progress_share`
 - `treated_high_norm`
 - `treatment_seed_level`
