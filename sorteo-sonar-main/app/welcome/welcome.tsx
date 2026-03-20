@@ -5,11 +5,13 @@ import { ExitScreen } from "../components/ExitScreen";
 import { GameScreen } from "../components/GameScreen";
 import { InstructionsScreen } from "../components/InstructionsScreen";
 import { LanguageEntryScreen } from "../components/LanguageEntryScreen";
+import { PrizeRevealScreen } from "../components/PrizeRevealScreen";
 import { ReportScreen } from "../components/ReportScreen";
 import { ScreenFrame } from "../components/ScreenFrame";
 import { WelcomeScreen } from "../components/WelcomeScreen";
 import { useLanguage } from "../utils/LanguageContext";
 import { useSession } from "../utils/SessionContext";
+import { hasCompletedPrizeReveal } from "../utils/prizeReveal";
 
 function LoadingScreen({ label }: { label: string }) {
   return (
@@ -27,6 +29,7 @@ function LoadingScreen({ label }: { label: string }) {
 export function Welcome() {
   const { copy } = useLanguage();
   const [showConsentScreen, setShowConsentScreen] = useState(false);
+  const [prizeRevealCompleted, setPrizeRevealCompleted] = useState(false);
   const {
     publicConfig,
     session,
@@ -52,6 +55,14 @@ export function Welcome() {
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, [session]);
+
+  useEffect(() => {
+    if (!session || session.screen !== "exit") {
+      setPrizeRevealCompleted(false);
+      return;
+    }
+    setPrizeRevealCompleted(hasCompletedPrizeReveal(session.session_id));
+  }, [session?.screen, session?.session_id]);
 
   const handleStart = async (
     braceletId: string,
@@ -104,7 +115,13 @@ export function Welcome() {
     case "report":
       return <ReportScreen onSubmitReport={() => undefined} />;
     case "exit":
-      return <ExitScreen />;
+      return prizeRevealCompleted ? (
+        <ExitScreen />
+      ) : (
+        <PrizeRevealScreen
+          onComplete={() => setPrizeRevealCompleted(true)}
+        />
+      );
     default:
       return <LoadingScreen label={copy.common.loadingPrepare} />;
   }

@@ -79,6 +79,15 @@ export type UiCopy = {
     body: string;
     errorSave: string;
   };
+  prizeReveal: {
+    eyebrow: string;
+    title: string;
+    helper: string;
+    winnerResult: string;
+    loserResult: string;
+    optionLabel: string;
+    footer: string;
+  };
   treatment: {
     controlTitle: string;
     controlBody: string;
@@ -274,7 +283,7 @@ const es = withServerErrors({
   comprehension: {
     eyebrow: "Antes de seguir",
     title: "¿Qué número es el que nos tienes que decir?",
-    options: ["Primera tirada", "Ãšltima tirada", "La mÃ¡s alta"],
+    options: ["Primera tirada", "Última tirada", "La más alta"],
     errorEmpty: "Selecciona una opción",
     errorWrong: "Recuerda: cuenta la primera tirada",
     cta: "Seguir",
@@ -299,6 +308,15 @@ const es = withServerErrors({
     title: "Indica tu número",
     body: "Indica el primer número que salió al lanzar el dado.",
     errorSave: "No se pudo guardar la respuesta",
+  },
+  prizeReveal: {
+    eyebrow: "Selección final",
+    title: "Clica una",
+    helper: "Elige una ficha para descubrir el resultado.",
+    winnerResult: "Esta era la premiada.",
+    loserResult: "La premiada era otra.",
+    optionLabel: "Ficha",
+    footer: "100 iconos equilibrados en 6 categorías.",
   },
   treatment: {
     controlTitle: "Tu respuesta es anónima",
@@ -447,7 +465,7 @@ const ca = withServerErrors({
   comprehension: {
     eyebrow: "Abans de seguir",
     title: "Quin número és el que ens has de dir?",
-    options: ["Primera tirada", "Ãšltima tirada", "La mÃ©s alta"],
+    options: ["Primera tirada", "Última tirada", "La més alta"],
     errorEmpty: "Selecciona una opció",
     errorWrong: "Recorda: compta la primera tirada",
     cta: "Seguir",
@@ -472,6 +490,15 @@ const ca = withServerErrors({
     title: "Indica el teu número",
     body: "Indica el primer número que va sortir en llançar el dau.",
     errorSave: "No s'ha pogut guardar la resposta",
+  },
+  prizeReveal: {
+    eyebrow: "Selecció final",
+    title: "Tria'n una",
+    helper: "Escull una fitxa per descobrir el resultat.",
+    winnerResult: "Aquesta era la premiada.",
+    loserResult: "La premiada era una altra.",
+    optionLabel: "Fitxa",
+    footer: "100 icones equilibrades en 6 categories.",
   },
   treatment: {
     controlTitle: "La teva resposta és anònima",
@@ -644,6 +671,15 @@ const en = withServerErrors({
     title: "Enter your number",
     body: "Enter the first number that came up when you rolled the die.",
     errorSave: "Could not save your response",
+  },
+  prizeReveal: {
+    eyebrow: "Final selection",
+    title: "Pick one",
+    helper: "Choose one tile to reveal the outcome.",
+    winnerResult: "This was the winning tile.",
+    loserResult: "A different tile was the winning one.",
+    optionLabel: "Tile",
+    footer: "100 balanced icons across 6 categories.",
   },
   treatment: {
     controlTitle: "Your response is anonymous",
@@ -818,6 +854,15 @@ const fr = withServerErrors({
     body: "Indiquez le premier nombre apparu lorsque vous avez lancé le dé.",
     errorSave: "Impossible d'enregistrer la réponse",
   },
+  prizeReveal: {
+    eyebrow: "Sélection finale",
+    title: "Choisissez-en une",
+    helper: "Choisissez une case pour révéler le résultat.",
+    winnerResult: "C'était la case gagnante.",
+    loserResult: "La case gagnante était une autre.",
+    optionLabel: "Case",
+    footer: "100 icônes équilibrées dans 6 catégories.",
+  },
   treatment: {
     controlTitle: "Votre réponse est anonyme",
     controlBody: "Sélectionnez votre nombre",
@@ -923,7 +968,7 @@ const pt = withServerErrors({
       {
         title: "O que é esta atividade",
         body:
-          "Esta atividade faz parte de um estudo acadÃ©mico sobre tomada de decisÃµes em contextos digitais e culturais. Ã‰ realizada em colaboraÃ§Ã£o com um laboratÃ³rio de economia comportamental.",
+          "Esta atividade faz parte de um estudo académico sobre tomada de decisões em contextos digitais e culturais. É realizada em colaboração com um laboratório de economia comportamental.",
       },
       {
         title: "O que vais fazer",
@@ -965,7 +1010,7 @@ const pt = withServerErrors({
   comprehension: {
     eyebrow: "Antes de continuar",
     title: "Que número é que nos tens de dizer?",
-    options: ["Primeira tirada", "Ãšltima tirada", "A mais alta"],
+    options: ["Primeira tirada", "Última tirada", "A mais alta"],
     errorEmpty: "Seleciona uma opção",
     errorWrong: "Lembra-te: conta a primeira tirada",
     cta: "Seguir",
@@ -990,6 +1035,15 @@ const pt = withServerErrors({
     title: "Indica o teu número",
     body: "Indica o primeiro número que saiu ao lançar o dado.",
     errorSave: "Não foi possível guardar a resposta",
+  },
+  prizeReveal: {
+    eyebrow: "Seleção final",
+    title: "Escolhe uma",
+    helper: "Escolhe uma ficha para descobrir o resultado.",
+    winnerResult: "Esta era a premiada.",
+    loserResult: "A premiada era outra.",
+    optionLabel: "Ficha",
+    footer: "100 ícones equilibrados em 6 categorias.",
   },
   treatment: {
     controlTitle: "A tua resposta é anónima",

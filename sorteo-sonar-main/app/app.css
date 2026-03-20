@@ -569,6 +569,65 @@ button:disabled {
   border-color: var(--text);
 }
 
+.prize-reveal-grid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 0.32rem;
+}
+
+.prize-reveal-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: 0.78rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: rgba(17, 17, 17, 0.78);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.prize-reveal-cell:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--text);
+}
+
+.prize-reveal-cell:disabled {
+  cursor: default;
+}
+
+.prize-reveal-cell--picked {
+  box-shadow: 0 10px 24px rgba(17, 17, 17, 0.08);
+}
+
+.prize-reveal-cell--loser {
+  border-color: var(--danger-line);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+.prize-reveal-cell--winner {
+  border-color: var(--accent-yellow-line);
+  background: var(--accent-yellow);
+  color: #7f6110;
+  transform: scale(1.08);
+  box-shadow: 0 14px 24px rgba(191, 156, 52, 0.18);
+}
+
+.prize-reveal-cell--winner.prize-reveal-cell--picked {
+  transform: scale(1.16);
+}
+
+.prize-reveal-glyph {
+  width: 58%;
+  height: 58%;
+}
+
 .sonar-ticket-code {
   display: inline-flex;
   align-items: center;
@@ -675,4 +734,3 @@ button:disabled {
     transform: rotate(360deg) scale(1);
   }
 }
-
