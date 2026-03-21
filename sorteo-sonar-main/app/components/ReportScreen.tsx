@@ -57,11 +57,10 @@ export function ReportScreen({ onSubmitReport }: ReportScreenProps) {
     };
   }, [copy, isRecovering, prepareForReport, session]);
 
-  if (!session) {
-    return null;
-  }
-
   useEffect(() => {
+    if (!session) {
+      return;
+    }
     const snapshot = session.report_snapshot;
     if (!snapshot) {
       return;
@@ -86,6 +85,10 @@ export function ReportScreen({ onSubmitReport }: ReportScreenProps) {
       // The report UI should stay usable even if snapshot persistence fails.
     });
   }, [copy, language, saveDisplaySnapshot, session]);
+
+  if (!session) {
+    return null;
+  }
 
   if (!session.report_snapshot) {
     return (
