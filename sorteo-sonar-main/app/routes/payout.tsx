@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Route } from "./+types/payout";
 import { ScreenFrame } from "../components/ScreenFrame";
 import { useLanguage } from "../utils/LanguageContext";
@@ -30,10 +30,24 @@ export default function PayoutRoute() {
     amountEur?: number;
   }>({ status: "idle" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusTone, setStatusTone] = useState<"neutral" | "error" | "success">(
     "neutral",
   );
+  const autoLookupPendingRef = useRef(false);
+  const codePrefilledRef = useRef(false);
+
+  const inviteLink =
+    typeof window === "undefined"
+      ? ""
+      : `${window.location.origin}/`;
+  const whatsappText = encodeURIComponent(
+    formatCopy(paymentCopy.successShareMessageTemplate, {
+      link: inviteLink,
+    }),
+  );
+  const whatsappLink = `https://wa.me/?text=${whatsappText}`;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -44,6 +58,8 @@ export default function PayoutRoute() {
     const nextLang = url.searchParams.get("lang");
     if (nextCode) {
       setCode(nextCode);
+      autoLookupPendingRef.current = true;
+      codePrefilledRef.current = true;
     }
     if (
       nextLang &&
@@ -53,6 +69,8 @@ export default function PayoutRoute() {
       setLanguage(nextLang as typeof language);
     }
   }, [language, setLanguage]);
+
+  const isCodeLocked = codePrefilledRef.current;
 
   const translatePaymentError = (message: string) => {
     if (message === "Codigo no elegible para cobro") {
@@ -64,8 +82,9 @@ export default function PayoutRoute() {
     return translateServerError(message, copy);
   };
 
-  const handleLookup = async () => {
-    if (!code.trim()) {
+  const handleLookup = async (incomingCode?: string) => {
+    const lookupCode = (incomingCode ?? code).trim();
+    if (!lookupCode) {
       setStatusTone("error");
       setStatusMessage(paymentCopy.invalidCode);
       return;
@@ -78,7 +97,7 @@ export default function PayoutRoute() {
       ctaKind: "secondary",
     });
     try {
-      const response = await lookupPaymentCode(code.trim());
+      const response = await lookupPaymentCode(lookupCode);
       if (!response.valid) {
         const nextStatus = response.status === "queued" ? "used" : "invalid";
         setLookupState({ status: nextStatus });
@@ -107,6 +126,14 @@ export default function PayoutRoute() {
       );
     }
   };
+
+  useEffect(() => {
+    if (!autoLookupPendingRef.current || !code.trim()) {
+      return;
+    }
+    autoLookupPendingRef.current = false;
+    void handleLookup(code);
+  }, [code]);
 
   const handleSubmit = async () => {
     if (lookupState.status !== "ready") {
@@ -142,6 +169,7 @@ export default function PayoutRoute() {
           amount_eur: response.amount_eur,
         },
       });
+      setIsSubmitted(true);
     } catch (error) {
       setStatusTone("error");
       setStatusMessage(
@@ -153,6 +181,81 @@ export default function PayoutRoute() {
       setIsSubmitting(false);
     }
   };
+
+  const footerMatch = useMemo(
+    () => paymentCopy.successFooter.match(/^(.*?)(cotec\.es)(.*)$/i),
+    [paymentCopy.successFooter],
+  );
+
+  if (isSubmitted) {
+    return (
+      <ScreenFrame>
+        <div className="flex min-h-full flex-col justify-between gap-8">
+          <div className="space-y-5">
+            <div className="space-y-3">
+              <p className="editorial-eyebrow">{paymentCopy.successEyebrow}</p>
+              <h1 className="editorial-title editorial-title--compact">
+                {paymentCopy.successTitle}
+              </h1>
+            </div>
+
+            <div className="sonar-panel p-5">
+              <p className="editorial-body">{paymentCopy.successBody}</p>
+            </div>
+
+            <div className="sonar-panel sonar-panel-highlight p-5">
+              <div className="space-y-4">
+                <p className="editorial-body">{paymentCopy.successSecondary}</p>
+                <a
+                  href={whatsappLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() =>
+                    trackClick("payment_success_share_whatsapp", {
+                      target: "payment_success_share_whatsapp",
+                      role: "link",
+                      ctaKind: "secondary",
+                    })
+                  }
+                  className="sonar-share-button"
+                >
+                  {paymentCopy.successShareLabel}
+                </a>
+              </div>
+            </div>
+
+            <div className="sonar-panel p-5">
+              <p className="editorial-small">
+                {footerMatch ? (
+                  <>
+                    {footerMatch[1]}
+                    <a
+                      href="https://cotec.es"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() =>
+                        trackClick("payment_success_open_cotec", {
+                          target: "payment_success_cotec",
+                          role: "link",
+                          ctaKind: "secondary",
+                        })
+                      }
+                      className="font-semibold text-slate-950 underline decoration-slate-400 underline-offset-3 transition hover:decoration-slate-950"
+                    >
+                      {footerMatch[2]}
+                    </a>
+                    {footerMatch[3]}
+                  </>
+                ) : (
+                  paymentCopy.successFooter
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+      </ScreenFrame>
+    );
+  }
 
   return (
     <ScreenFrame>
@@ -181,16 +284,19 @@ export default function PayoutRoute() {
                 value={code}
                 onChange={(event) => setCode(event.target.value.trim())}
                 className="sonar-field sonar-field--code"
+                readOnly={isCodeLocked}
               />
             </div>
 
-            <button
-              type="button"
-              onClick={() => void handleLookup()}
-              className="sonar-secondary-button mx-auto"
-            >
-              {paymentCopy.lookupLabel}
-            </button>
+            {!isCodeLocked ? (
+              <button
+                type="button"
+                onClick={() => void handleLookup()}
+                className="sonar-secondary-button mx-auto"
+              >
+                {paymentCopy.lookupLabel}
+              </button>
+            ) : null}
 
             <div>
               <label className="sonar-field-label">

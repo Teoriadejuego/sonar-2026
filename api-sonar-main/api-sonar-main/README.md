@@ -12,7 +12,7 @@ Backend experimental en FastAPI + SQLModel para el estudio de honestidad de Sona
 - Rerolls registrados.
 - Snapshot de tratamiento congelado justo antes del claim.
 - Ventana social visible configurable, actualmente de 60 observaciones.
-- Longitud de serie configurable, actualmente 180 participantes por serie.
+- Longitud de serie configurable, actualmente 120 participantes por serie.
 - Telemetria pasiva y flags basicos de calidad y antifraude.
 
 ## Arranque

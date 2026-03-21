@@ -138,6 +138,13 @@ export type UiCopy = {
     invalidCode: string;
     alreadyUsed: string;
     lookupHelpTemplate: string;
+    successEyebrow: string;
+    successTitle: string;
+    successBody: string;
+    successSecondary: string;
+    successFooter: string;
+    successShareLabel: string;
+    successShareMessageTemplate: string;
     errorDefault: string;
   };
   accessibility: {
@@ -213,7 +220,7 @@ const es = withServerErrors({
   },
   languageEntry: {
     title: "",
-    subtitle: "",
+    subtitle: "Select your language",
   },
   landing: {
     eyebrow: "Participa, 60 seg, y sorteamos:",
@@ -273,24 +280,24 @@ const es = withServerErrors({
   instructions: {
     title: "Cómo funciona",
     intro:
-      "Lanza un dado. Después te preguntaremos cuál fue el primer número que te salió.",
+      "Lanza un dado. Después te preguntaremos qué número salió en tu primera tirada.",
     body:
-      "Según el número que nos indiques, podrás ganar el premio que aparece en la tabla.",
+      "La primera tirada es la que cuenta. Según ese número, puedes ganar el premio que aparece en la tabla.",
     odds: "1 de cada 100 recibe el pago.",
     prizeTableLabel: "Tabla de premios",
     cta: "Continuar",
   },
   comprehension: {
     eyebrow: "Antes de seguir",
-    title: "¿Qué número es el que nos tienes que decir?",
+    title: "¿Qué número te vamos a pedir después?",
     options: ["Primera tirada", "Última tirada", "La más alta"],
     errorEmpty: "Selecciona una opción",
-    errorWrong: "Recuerda: cuenta la primera tirada",
+    errorWrong: "Recuerda: te pediremos el número de la primera tirada",
     cta: "Seguir",
   },
   game: {
     title: "Tirada",
-    intro: "Pulsa el dado para ver una tirada.",
+    intro: "Pulsa el dado para ver otra tirada.",
     visibleResultLabel: "",
     firstResultTemplate: "Tu primera tirada: {value}",
     continueCta: "Continuar",
@@ -305,18 +312,18 @@ const es = withServerErrors({
     },
   },
   report: {
-    title: "Indica tu número",
-    body: "Indica el primer número que salió al lanzar el dado.",
+    title: "Tu primera tirada",
+    body: "Indica el número que te salió al tirar el dado la primera vez.",
     errorSave: "No se pudo guardar la respuesta",
   },
   prizeReveal: {
     eyebrow: "Selección final",
     title: "Clica una",
-    helper: "Elige una ficha para descubrir el resultado.",
-    winnerResult: "Esta era la premiada.",
-    loserResult: "La premiada era otra.",
+    helper: "Elige una ficha para descubrir si has salido ganador.",
+    winnerResult: "Esta era la ficha ganadora.",
+    loserResult: "La ficha ganadora era otra.",
     optionLabel: "Ficha",
-    footer: "100 iconos equilibrados en 6 categorías.",
+    footer: "",
   },
   treatment: {
     controlTitle: "Tu respuesta es anónima",
@@ -371,6 +378,14 @@ const es = withServerErrors({
     invalidCode: "Código no válido",
     alreadyUsed: "Código ya usado",
     lookupHelpTemplate: "Código válido · {amount} EUR",
+    successEyebrow: "Solicitud enviada",
+    successTitle: "Aún puedes ganar",
+    successBody: "Tu solicitud de cobro ha quedado registrada correctamente.",
+    successSecondary:
+      "Además, sigues participando en el sorteo de 2 entradas VIP. Invita a más amigos que estén hoy en el evento para aumentar tus posibilidades.",
+    successFooter: "Los resultados del estudio se publicarán en cotec.es.",
+    successShareLabel: "Invitar por WhatsApp",
+    successShareMessageTemplate: "Participa en SONAR 2026: {link}",
     errorDefault: "Error al enviar",
   },
   accessibility: {
@@ -395,7 +410,7 @@ const ca = withServerErrors({
   },
   languageEntry: {
     title: "",
-    subtitle: "",
+    subtitle: "Select your language",
   },
   landing: {
     eyebrow: "Participa, 60 s, i sortegem:",
@@ -455,24 +470,24 @@ const ca = withServerErrors({
   instructions: {
     title: "Com funciona",
     intro:
-      "Llança un dau. Després et preguntarem quin va ser el primer número que et va sortir.",
+      "Llança un dau. Després et preguntarem quin número va sortir a la teva primera tirada.",
     body:
-      "Segons el número que ens indiquis, podràs guanyar el premi que apareix a la taula.",
+      "La primera tirada és la que compta. Segons aquest número, pots guanyar el premi que apareix a la taula.",
     odds: "1 de cada 100 rep el pagament.",
     prizeTableLabel: "Taula de premis",
     cta: "Continuar",
   },
   comprehension: {
     eyebrow: "Abans de seguir",
-    title: "Quin número és el que ens has de dir?",
+    title: "Quin número et demanarem després?",
     options: ["Primera tirada", "Última tirada", "La més alta"],
     errorEmpty: "Selecciona una opció",
-    errorWrong: "Recorda: compta la primera tirada",
+    errorWrong: "Recorda: et demanarem el número de la primera tirada",
     cta: "Seguir",
   },
   game: {
     title: "Tirada",
-    intro: "Prem el dau per veure una tirada.",
+    intro: "Prem el dau per veure una altra tirada.",
     visibleResultLabel: "",
     firstResultTemplate: "La teva primera tirada: {value}",
     continueCta: "Continuar",
@@ -487,18 +502,18 @@ const ca = withServerErrors({
     },
   },
   report: {
-    title: "Indica el teu número",
-    body: "Indica el primer número que va sortir en llançar el dau.",
+    title: "La teva primera tirada",
+    body: "Indica el número que et va sortir en tirar el dau la primera vegada.",
     errorSave: "No s'ha pogut guardar la resposta",
   },
   prizeReveal: {
     eyebrow: "Selecció final",
     title: "Tria'n una",
-    helper: "Escull una fitxa per descobrir el resultat.",
-    winnerResult: "Aquesta era la premiada.",
-    loserResult: "La premiada era una altra.",
+    helper: "Escull una fitxa per descobrir si has estat guanyador.",
+    winnerResult: "Aquesta era la fitxa guanyadora.",
+    loserResult: "La fitxa guanyadora era una altra.",
     optionLabel: "Fitxa",
-    footer: "100 icones equilibrades en 6 categories.",
+    footer: "",
   },
   treatment: {
     controlTitle: "La teva resposta és anònima",
@@ -553,6 +568,14 @@ const ca = withServerErrors({
     invalidCode: "Codi no vàlid",
     alreadyUsed: "Codi ja utilitzat",
     lookupHelpTemplate: "Codi vàlid · {amount} EUR",
+    successEyebrow: "Sol·licitud enviada",
+    successTitle: "Encara pots guanyar",
+    successBody: "La teva sol·licitud de cobrament ha quedat registrada correctament.",
+    successSecondary:
+      "A més, continues participant en el sorteig de 2 entrades VIP. Convida més amics que siguin avui a l'esdeveniment per augmentar les teves possibilitats.",
+    successFooter: "Els resultats de l'estudi es publicaran a cotec.es.",
+    successShareLabel: "Convidar per WhatsApp",
+    successShareMessageTemplate: "Participa a SONAR 2026: {link}",
     errorDefault: "Error en enviar",
   },
   accessibility: {
@@ -577,7 +600,7 @@ const en = withServerErrors({
   },
   languageEntry: {
     title: "",
-    subtitle: "",
+    subtitle: "Select your language",
   },
   landing: {
     eyebrow: "Join in, 60 sec, and we raffle:",
@@ -636,19 +659,19 @@ const en = withServerErrors({
   },
   instructions: {
     title: "How it works",
-    intro: "Roll the die. Then we will ask which number came up first.",
+    intro: "Roll the die. Then we will ask which number came up on your first roll.",
     body:
-      "Based on the number you report, you may win the prize shown in the table.",
+      "The first roll is the one that counts. Based on that number, you may win the prize shown in the table.",
     odds: "1 in 100 receives payment.",
     prizeTableLabel: "Prize table",
     cta: "Continue",
   },
   comprehension: {
     eyebrow: "Before you continue",
-    title: "Which number do you need to tell us?",
+    title: "Which number will we ask you for next?",
     options: ["First roll", "Last roll", "The highest one"],
     errorEmpty: "Select one option",
-    errorWrong: "Remember: the first roll counts",
+    errorWrong: "Remember: we will ask for the number from the first roll",
     cta: "Continue",
   },
   game: {
@@ -668,18 +691,18 @@ const en = withServerErrors({
     },
   },
   report: {
-    title: "Enter your number",
-    body: "Enter the first number that came up when you rolled the die.",
+    title: "Your first roll",
+    body: "Enter the number that came up when you rolled the die the first time.",
     errorSave: "Could not save your response",
   },
   prizeReveal: {
     eyebrow: "Final selection",
     title: "Pick one",
-    helper: "Choose one tile to reveal the outcome.",
+    helper: "Choose one tile to discover whether you are a winner.",
     winnerResult: "This was the winning tile.",
     loserResult: "A different tile was the winning one.",
     optionLabel: "Tile",
-    footer: "100 balanced icons across 6 categories.",
+    footer: "",
   },
   treatment: {
     controlTitle: "Your response is anonymous",
@@ -734,6 +757,14 @@ const en = withServerErrors({
     invalidCode: "Invalid code",
     alreadyUsed: "Code already used",
     lookupHelpTemplate: "Valid code · {amount} EUR",
+    successEyebrow: "Request sent",
+    successTitle: "You can still win",
+    successBody: "Your payment request has been recorded successfully.",
+    successSecondary:
+      "You are also still entered in the draw for 2 VIP tickets. Invite more friends who are at the event today to improve your chances.",
+    successFooter: "The study results will be published at cotec.es.",
+    successShareLabel: "Invite on WhatsApp",
+    successShareMessageTemplate: "Take part in SONAR 2026: {link}",
     errorDefault: "Error sending request",
   },
   accessibility: {
@@ -758,7 +789,7 @@ const fr = withServerErrors({
   },
   languageEntry: {
     title: "",
-    subtitle: "",
+    subtitle: "Select your language",
   },
   landing: {
     eyebrow: "Participez, 60 sec, et nous tirons au sort :",
@@ -818,24 +849,24 @@ const fr = withServerErrors({
   instructions: {
     title: "Comment ça marche",
     intro:
-      "Lancez le dé. Ensuite, nous vous demanderons quel a été le premier nombre obtenu.",
+      "Lancez le dé. Ensuite, nous vous demanderons quel nombre est sorti lors de votre premier lancer.",
     body:
-      "Selon le nombre que vous nous indiquerez, vous pourrez gagner le prix affiché dans le tableau.",
+      "Le premier lancer est celui qui compte. Selon ce nombre, vous pourrez gagner le prix affiché dans le tableau.",
     odds: "1 personne sur 100 reçoit le paiement.",
     prizeTableLabel: "Table des prix",
     cta: "Continuer",
   },
   comprehension: {
     eyebrow: "Avant de continuer",
-    title: "Quel nombre devez-vous nous dire ?",
+    title: "Quel nombre allons-nous vous demander ensuite ?",
     options: ["Premier lancer", "Dernier lancer", "Le plus élevé"],
     errorEmpty: "Sélectionnez une option",
-    errorWrong: "Rappelez-vous : le premier lancer compte",
+    errorWrong: "Rappelez-vous : nous vous demanderons le nombre du premier lancer",
     cta: "Continuer",
   },
   game: {
     title: "Lancer",
-    intro: "Touchez le dé pour voir un lancer.",
+    intro: "Touchez le dé pour voir un autre lancer.",
     visibleResultLabel: "",
     firstResultTemplate: "Votre premier lancer : {value}",
     continueCta: "Continuer",
@@ -850,18 +881,18 @@ const fr = withServerErrors({
     },
   },
   report: {
-    title: "Indiquez votre nombre",
-    body: "Indiquez le premier nombre apparu lorsque vous avez lancé le dé.",
+    title: "Votre premier lancer",
+    body: "Indiquez le nombre obtenu lorsque vous avez lancé le dé la première fois.",
     errorSave: "Impossible d'enregistrer la réponse",
   },
   prizeReveal: {
     eyebrow: "Sélection finale",
     title: "Choisissez-en une",
-    helper: "Choisissez une case pour révéler le résultat.",
+    helper: "Choisissez une case pour découvrir si vous avez gagné.",
     winnerResult: "C'était la case gagnante.",
     loserResult: "La case gagnante était une autre.",
     optionLabel: "Case",
-    footer: "100 icônes équilibrées dans 6 catégories.",
+    footer: "",
   },
   treatment: {
     controlTitle: "Votre réponse est anonyme",
@@ -916,6 +947,14 @@ const fr = withServerErrors({
     invalidCode: "Code invalide",
     alreadyUsed: "Code déjà utilisé",
     lookupHelpTemplate: "Code valide · {amount} EUR",
+    successEyebrow: "Demande envoyée",
+    successTitle: "Vous pouvez encore gagner",
+    successBody: "Votre demande de paiement a bien été enregistrée.",
+    successSecondary:
+      "Vous participez aussi toujours au tirage de 2 billets VIP. Invitez d'autres amis présents à l'événement aujourd'hui pour augmenter vos chances.",
+    successFooter: "Les résultats de l'étude seront publiés sur cotec.es.",
+    successShareLabel: "Inviter sur WhatsApp",
+    successShareMessageTemplate: "Participez à SONAR 2026 : {link}",
     errorDefault: "Erreur lors de l'envoi",
   },
   accessibility: {
@@ -940,7 +979,7 @@ const pt = withServerErrors({
   },
   languageEntry: {
     title: "",
-    subtitle: "",
+    subtitle: "Select your language",
   },
   landing: {
     eyebrow: "Participa, 60 seg, e sorteamos:",
@@ -1000,24 +1039,24 @@ const pt = withServerErrors({
   instructions: {
     title: "Como funciona",
     intro:
-      "Lança o dado. Depois vamos perguntar qual foi o primeiro número que te saiu.",
+      "Lança o dado. Depois vamos perguntar que número saiu na tua primeira tirada.",
     body:
-      "Consoante o número que nos disseres, poderás ganhar o prémio que aparece na tabela.",
+      "A primeira tirada é a que conta. Consoante esse número, poderás ganhar o prémio que aparece na tabela.",
     odds: "1 em cada 100 recebe o pagamento.",
     prizeTableLabel: "Tabela de prémios",
     cta: "Continuar",
   },
   comprehension: {
     eyebrow: "Antes de continuar",
-    title: "Que número é que nos tens de dizer?",
+    title: "Que número te vamos pedir depois?",
     options: ["Primeira tirada", "Última tirada", "A mais alta"],
     errorEmpty: "Seleciona uma opção",
-    errorWrong: "Lembra-te: conta a primeira tirada",
+    errorWrong: "Lembra-te: vamos pedir o número da primeira tirada",
     cta: "Seguir",
   },
   game: {
     title: "Tirada",
-    intro: "Toca no dado para ver uma tirada.",
+    intro: "Toca no dado para ver outra tirada.",
     visibleResultLabel: "",
     firstResultTemplate: "A tua primeira tirada: {value}",
     continueCta: "Continuar",
@@ -1032,18 +1071,18 @@ const pt = withServerErrors({
     },
   },
   report: {
-    title: "Indica o teu número",
-    body: "Indica o primeiro número que saiu ao lançar o dado.",
+    title: "A tua primeira tirada",
+    body: "Indica o número que te saiu ao lançar o dado na primeira vez.",
     errorSave: "Não foi possível guardar a resposta",
   },
   prizeReveal: {
     eyebrow: "Seleção final",
     title: "Escolhe uma",
-    helper: "Escolhe uma ficha para descobrir o resultado.",
+    helper: "Escolhe uma ficha para descobrir se saíste vencedor.",
     winnerResult: "Esta era a premiada.",
     loserResult: "A premiada era outra.",
     optionLabel: "Ficha",
-    footer: "100 ícones equilibrados em 6 categorias.",
+    footer: "",
   },
   treatment: {
     controlTitle: "A tua resposta é anónima",
@@ -1098,6 +1137,14 @@ const pt = withServerErrors({
     invalidCode: "Código inválido",
     alreadyUsed: "Código já usado",
     lookupHelpTemplate: "Código válido · {amount} EUR",
+    successEyebrow: "Pedido enviado",
+    successTitle: "Ainda podes ganhar",
+    successBody: "O teu pedido de cobrança ficou registado corretamente.",
+    successSecondary:
+      "Além disso, continuas a participar no sorteio de 2 entradas VIP. Convida mais amigos que estejam hoje no evento para aumentar as tuas possibilidades.",
+    successFooter: "Os resultados do estudo serão publicados em cotec.es.",
+    successShareLabel: "Convidar por WhatsApp",
+    successShareMessageTemplate: "Participa no SONAR 2026: {link}",
     errorDefault: "Erro ao enviar",
   },
   accessibility: {

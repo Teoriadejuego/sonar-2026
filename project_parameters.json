@@ -16,7 +16,7 @@
   "experiment": {
     "window_size": 60,
     "max_attempts": 10,
-    "participant_limit": 180,
+    "participant_limit": 120,
     "deck_block_size": 24,
     "demo_pulsera_count": 12000,
     "payout_rate_denominator": 100,

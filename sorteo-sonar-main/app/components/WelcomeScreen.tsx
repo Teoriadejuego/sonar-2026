@@ -160,7 +160,7 @@ export function WelcomeScreen({ onStart, isLoading }: WelcomeScreenProps) {
             <p className="editorial-eyebrow">
               {landingCopy.eyebrow}
             </p>
-            <h1 className="editorial-title editorial-title--compact max-w-[30rem]">
+            <h1 className="editorial-title editorial-title--landing max-w-[24rem]">
               {landingCopy.title}
             </h1>
           </div>
@@ -198,9 +198,9 @@ export function WelcomeScreen({ onStart, isLoading }: WelcomeScreenProps) {
                 </button>
               </div>
 
-              <div className="space-y-3">
+              <div className="sonar-checkbox-group">
                 <label
-                  className={`sonar-checkbox-card ${ageConfirmed ? "is-checked" : ""}`}
+                  className={`sonar-checkbox-row ${ageConfirmed ? "is-checked" : ""}`}
                 >
                   <input
                     type="checkbox"
@@ -218,7 +218,7 @@ export function WelcomeScreen({ onStart, isLoading }: WelcomeScreenProps) {
                 </label>
 
                 <label
-                  className={`sonar-checkbox-card ${participationAccepted ? "is-checked" : ""}`}
+                  className={`sonar-checkbox-row ${participationAccepted ? "is-checked" : ""}`}
                 >
                   <input
                     type="checkbox"
@@ -239,7 +239,7 @@ export function WelcomeScreen({ onStart, isLoading }: WelcomeScreenProps) {
                 </label>
 
                 <label
-                  className={`sonar-checkbox-card ${dataAccepted ? "is-checked" : ""}`}
+                  className={`sonar-checkbox-row ${dataAccepted ? "is-checked" : ""}`}
                 >
                   <input
                     type="checkbox"

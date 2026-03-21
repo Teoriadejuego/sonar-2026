@@ -135,7 +135,7 @@ export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
   current_phase: "phase_1_main",
   phase_transition_threshold: 6000,
   max_attempts: 10,
-  participant_limit: 180,
+  participant_limit: 120,
   window_size: 60,
   prize_eur: { "1": 10, "2": 20, "3": 30, "4": 40, "5": 50, "6": 60 },
   treatments: ["control", "seed_low", "seed_high"],

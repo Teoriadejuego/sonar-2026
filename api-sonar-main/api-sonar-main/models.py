@@ -94,8 +94,8 @@ class Series(SQLModel, table=True):
     assignment_weight: float = Field(
         default=0.0, sa_column=Column(Float, nullable=False)
     )
-    participant_limit: int = Field(default=250)
-    sample_size: int = Field(default=100)
+    participant_limit: int = Field(default=120)
+    sample_size: int = Field(default=60)
     position_counter: int = Field(default=0)
     completed_count: int = Field(default=0)
     visible_count_target: int = Field(default=0)

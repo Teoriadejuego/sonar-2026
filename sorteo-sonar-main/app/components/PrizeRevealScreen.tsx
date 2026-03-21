@@ -186,9 +186,11 @@ export function PrizeRevealScreen({ onComplete }: PrizeRevealScreenProps) {
           </div>
         </div>
 
-        <p className="editorial-micro text-center text-slate-500">
-          {copy.prizeReveal.footer}
-        </p>
+        {copy.prizeReveal.footer ? (
+          <p className="editorial-micro text-center text-slate-500">
+            {copy.prizeReveal.footer}
+          </p>
+        ) : null}
       </div>
     </ScreenFrame>
   );
