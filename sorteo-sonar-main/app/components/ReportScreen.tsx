@@ -11,15 +11,53 @@ interface ReportScreenProps {
 }
 
 export function ReportScreen({ onSubmitReport }: ReportScreenProps) {
-  const { session, submitClaim, pushTelemetry, saveDisplaySnapshot } =
+  const {
+    session,
+    submitClaim,
+    pushTelemetry,
+    saveDisplaySnapshot,
+    prepareForReport,
+  } =
     useSession();
   const { copy, language } = useLanguage();
   const { trackClick } = usePageTelemetry("report");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRecovering, setIsRecovering] = useState(false);
   const shownAtRef = useRef(Date.now());
 
-  if (!session || !session.report_snapshot) {
+  useEffect(() => {
+    if (!session || session.report_snapshot || isRecovering) {
+      return;
+    }
+
+    let cancelled = false;
+    setIsRecovering(true);
+    setError(null);
+
+    void prepareForReport()
+      .catch((err) => {
+        if (cancelled) {
+          return;
+        }
+        setError(
+          err instanceof Error
+            ? translateServerError(err.message, copy)
+            : copy.game.errors.loadReport,
+        );
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsRecovering(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [copy, isRecovering, prepareForReport, session]);
+
+  if (!session) {
     return null;
   }
 
@@ -44,8 +82,28 @@ export function ReportScreen({ onSubmitReport }: ReportScreenProps) {
         ? `${copy.treatment.controlTitle}. ${copy.treatment.controlBody}`
         : undefined,
       rerolls_visible: session.throws.slice(1).map((item) => item.result_value),
+    }).catch(() => {
+      // The report UI should stay usable even if snapshot persistence fails.
     });
   }, [copy, language, saveDisplaySnapshot, session]);
+
+  if (!session.report_snapshot) {
+    return (
+      <ScreenFrame>
+        <div className="flex min-h-full flex-col items-center justify-center gap-4 text-center">
+          <div className="h-14 w-14 animate-spin rounded-full border-4 border-slate-200 border-t-slate-950" />
+          <p className="editorial-small">
+            {isRecovering ? copy.common.loadingPrepare : copy.game.errors.loadReport}
+          </p>
+          {error ? (
+            <div className="sonar-status sonar-panel-danger w-full max-w-[28rem]">
+              {error}
+            </div>
+          ) : null}
+        </div>
+      </ScreenFrame>
+    );
+  }
 
   const handleReport = async (value: number) => {
     if (isSubmitting) {
