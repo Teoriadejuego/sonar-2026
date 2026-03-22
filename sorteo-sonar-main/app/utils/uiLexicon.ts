@@ -93,6 +93,17 @@ export type UiCopy = {
     controlBody: string;
     socialMessageTemplate: string;
   };
+  bonusDraw: {
+    title: string;
+    intro: string;
+    prompt: string;
+    baseTicket: string;
+    predictionTicket: string;
+    inviteTicket: string;
+    achievedLabel: string;
+    predictionAchieved: string;
+    selectedTemplate: string;
+  };
   winner: {
     eyebrow: string;
     title: string;
@@ -331,6 +342,18 @@ const es = withServerErrors({
     socialMessageTemplate:
       "{count} de cada {denominator} personas eligieron {target}.",
   },
+  bonusDraw: {
+    title: "Consigue opciones extra para el sorteo VIP",
+    intro: "Ya tienes 1 papeleta para el sorteo de 2 entradas VIP por haber participado.",
+    prompt:
+      "Si quieres una extra, adivina qué número crees que más veces nos dirá la gente que le salió en su primera tirada.",
+    baseTicket: "1 papeleta por participar",
+    predictionTicket: "1 extra si aciertas la predicción",
+    inviteTicket: "1 extra por cada persona del festival que invites y participe",
+    achievedLabel: "Conseguida",
+    predictionAchieved: "Papeleta extra conseguida",
+    selectedTemplate: "Predicción guardada: {value}",
+  },
   winner: {
     eyebrow: "Has sido seleccionado",
     title: "Premio confirmado",
@@ -343,8 +366,8 @@ const es = withServerErrors({
     title: "Aún puedes ganar",
     body: "No has sido seleccionado para el premio en metálico.",
     bodySecondary:
-      "Sigues participando en el sorteo de 2 entradas VIP. Invita a más personas que estén aquí hoy para aumentar tus posibilidades.",
-    bodyFooter: "El resultado del estudio se publicará en cotec.es.",
+      "Sigues participando en el sorteo de 2 entradas VIP.",
+    bodyFooter: "Sabrás más sobre el estudio y sus resultados agregados en cotec.es.",
     shareLabel: "Invitar por WhatsApp",
     shareMessageTemplate: "Participa en SONAR 2026: {link}",
   },
@@ -382,8 +405,8 @@ const es = withServerErrors({
     successTitle: "Aún puedes ganar",
     successBody: "Tu solicitud de cobro ha quedado registrada correctamente.",
     successSecondary:
-      "Además, sigues participando en el sorteo de 2 entradas VIP. Invita a más amigos que estén hoy en el evento para aumentar tus posibilidades.",
-    successFooter: "Los resultados del estudio se publicarán en cotec.es.",
+      "Además, sigues participando en el sorteo de 2 entradas VIP.",
+    successFooter: "Sabrás más sobre el estudio y sus resultados agregados en cotec.es.",
     successShareLabel: "Invitar por WhatsApp",
     successShareMessageTemplate: "Participa en SONAR 2026: {link}",
     errorDefault: "Error al enviar",
@@ -521,6 +544,18 @@ const ca = withServerErrors({
     socialMessageTemplate:
       "{count} de cada {denominator} persones van escollir {target}.",
   },
+  bonusDraw: {
+    title: "Aconsegueix opcions extra per al sorteig VIP",
+    intro: "Ja tens 1 papereta per al sorteig de 2 entrades VIP per haver participat.",
+    prompt:
+      "Si en vols una extra, endevina quin número creus que la gent ens dirà més vegades que li va sortir en la primera tirada.",
+    baseTicket: "1 papereta per participar",
+    predictionTicket: "1 extra si encertes la predicció",
+    inviteTicket: "1 extra per cada persona del festival que convidis i participi",
+    achievedLabel: "Aconseguida",
+    predictionAchieved: "Papereta extra aconseguida",
+    selectedTemplate: "Predicció desada: {value}",
+  },
   winner: {
     eyebrow: "Has estat seleccionat",
     title: "Premi confirmat",
@@ -533,8 +568,8 @@ const ca = withServerErrors({
     title: "Encara pots guanyar",
     body: "No has estat seleccionat per al premi en metàl·lic.",
     bodySecondary:
-      "Continues participant en el sorteig de 2 entrades VIP. Convida més persones que siguin aquí avui per augmentar les teves possibilitats.",
-    bodyFooter: "El resultat de l'estudi es publicarà a cotec.es.",
+      "Continues participant en el sorteig de 2 entrades VIP.",
+    bodyFooter: "Sabràs més sobre l'estudi i els seus resultats agregats a cotec.es.",
     shareLabel: "Convidar per WhatsApp",
     shareMessageTemplate: "Participa a SONAR 2026: {link}",
   },
@@ -572,8 +607,8 @@ const ca = withServerErrors({
     successTitle: "Encara pots guanyar",
     successBody: "La teva sol·licitud de cobrament ha quedat registrada correctament.",
     successSecondary:
-      "A més, continues participant en el sorteig de 2 entrades VIP. Convida més amics que siguin avui a l'esdeveniment per augmentar les teves possibilitats.",
-    successFooter: "Els resultats de l'estudi es publicaran a cotec.es.",
+      "A més, continues participant en el sorteig de 2 entrades VIP.",
+    successFooter: "Sabràs més sobre l'estudi i els seus resultats agregats a cotec.es.",
     successShareLabel: "Convidar per WhatsApp",
     successShareMessageTemplate: "Participa a SONAR 2026: {link}",
     errorDefault: "Error en enviar",
@@ -710,6 +745,18 @@ const en = withServerErrors({
     socialMessageTemplate:
       "{count} out of every {denominator} people chose {target}.",
   },
+  bonusDraw: {
+    title: "Get extra entries for the VIP draw",
+    intro: "You already have 1 entry for the draw for 2 VIP tickets for taking part.",
+    prompt:
+      "If you want one extra, guess which number you think people will tell us most often came up on their first roll.",
+    baseTicket: "1 entry for taking part",
+    predictionTicket: "1 extra if your prediction is correct",
+    inviteTicket: "1 extra for each person at the festival you invite who takes part",
+    achievedLabel: "Earned",
+    predictionAchieved: "Extra entry earned",
+    selectedTemplate: "Prediction saved: {value}",
+  },
   winner: {
     eyebrow: "You were selected",
     title: "Prize confirmed",
@@ -722,8 +769,8 @@ const en = withServerErrors({
     title: "You can still win",
     body: "You were not selected for the cash prize.",
     bodySecondary:
-      "You are still entered in the draw for 2 VIP tickets. Invite more people who are here today to improve your chances.",
-    bodyFooter: "The study result will be published at cotec.es.",
+      "You are still entered in the draw for 2 VIP tickets.",
+    bodyFooter: "You will be able to learn more about the study and its aggregated results at cotec.es.",
     shareLabel: "Invite on WhatsApp",
     shareMessageTemplate: "Take part in SONAR 2026: {link}",
   },
@@ -761,8 +808,8 @@ const en = withServerErrors({
     successTitle: "You can still win",
     successBody: "Your payment request has been recorded successfully.",
     successSecondary:
-      "You are also still entered in the draw for 2 VIP tickets. Invite more friends who are at the event today to improve your chances.",
-    successFooter: "The study results will be published at cotec.es.",
+      "You are also still entered in the draw for 2 VIP tickets.",
+    successFooter: "You will be able to learn more about the study and its aggregated results at cotec.es.",
     successShareLabel: "Invite on WhatsApp",
     successShareMessageTemplate: "Take part in SONAR 2026: {link}",
     errorDefault: "Error sending request",
@@ -900,6 +947,18 @@ const fr = withServerErrors({
     socialMessageTemplate:
       "{count} personnes sur {denominator} ont choisi {target}.",
   },
+  bonusDraw: {
+    title: "Obtenez des chances supplémentaires pour le tirage VIP",
+    intro: "Vous avez déjà 1 participation au tirage de 2 billets VIP pour avoir pris part à l'activité.",
+    prompt:
+      "Si vous en voulez une de plus, devinez quel nombre, selon vous, les personnes nous diront le plus souvent avoir obtenu à leur premier lancer.",
+    baseTicket: "1 participation pour avoir pris part",
+    predictionTicket: "1 supplémentaire si votre prédiction est correcte",
+    inviteTicket: "1 supplémentaire par personne du festival que vous invitez et qui participe",
+    achievedLabel: "Obtenue",
+    predictionAchieved: "Participation supplémentaire obtenue",
+    selectedTemplate: "Prédiction enregistrée : {value}",
+  },
   winner: {
     eyebrow: "Vous avez été sélectionné",
     title: "Prix confirmé",
@@ -912,8 +971,8 @@ const fr = withServerErrors({
     title: "Vous pouvez encore gagner",
     body: "Vous n'avez pas été sélectionné pour le prix en espèces.",
     bodySecondary:
-      "Vous participez toujours au tirage de 2 billets VIP. Invitez d'autres personnes présentes aujourd'hui pour augmenter vos chances.",
-    bodyFooter: "Le résultat de l'étude sera publié sur cotec.es.",
+      "Vous participez toujours au tirage de 2 billets VIP.",
+    bodyFooter: "Vous en saurez plus sur l'étude et ses résultats agrégés sur cotec.es.",
     shareLabel: "Inviter sur WhatsApp",
     shareMessageTemplate: "Participez à SONAR 2026 : {link}",
   },
@@ -951,8 +1010,8 @@ const fr = withServerErrors({
     successTitle: "Vous pouvez encore gagner",
     successBody: "Votre demande de paiement a bien été enregistrée.",
     successSecondary:
-      "Vous participez aussi toujours au tirage de 2 billets VIP. Invitez d'autres amis présents à l'événement aujourd'hui pour augmenter vos chances.",
-    successFooter: "Les résultats de l'étude seront publiés sur cotec.es.",
+      "Vous participez aussi toujours au tirage de 2 billets VIP.",
+    successFooter: "Vous en saurez plus sur l'étude et ses résultats agrégés sur cotec.es.",
     successShareLabel: "Inviter sur WhatsApp",
     successShareMessageTemplate: "Participez à SONAR 2026 : {link}",
     errorDefault: "Erreur lors de l'envoi",
@@ -1090,6 +1149,18 @@ const pt = withServerErrors({
     socialMessageTemplate:
       "{count} de cada {denominator} pessoas escolheram {target}.",
   },
+  bonusDraw: {
+    title: "Consegue entradas extra para o sorteio VIP",
+    intro: "Já tens 1 participação no sorteio de 2 entradas VIP por teres participado.",
+    prompt:
+      "Se quiseres mais uma, adivinha qual é o número que achas que as pessoas nos vão dizer mais vezes que lhes saiu na primeira tirada.",
+    baseTicket: "1 participação por participar",
+    predictionTicket: "1 extra se acertares na previsão",
+    inviteTicket: "1 extra por cada pessoa do festival que convidares e que participe",
+    achievedLabel: "Conseguida",
+    predictionAchieved: "Participação extra conseguida",
+    selectedTemplate: "Previsão guardada: {value}",
+  },
   winner: {
     eyebrow: "Foste selecionado",
     title: "Prémio confirmado",
@@ -1102,8 +1173,8 @@ const pt = withServerErrors({
     title: "Ainda podes ganhar",
     body: "Não foste selecionado para o prémio em dinheiro.",
     bodySecondary:
-      "Continuas a participar no sorteio de 2 entradas VIP. Convida mais pessoas que estejam aqui hoje para aumentar as tuas possibilidades.",
-    bodyFooter: "O resultado do estudo será publicado em cotec.es.",
+      "Continuas a participar no sorteio de 2 entradas VIP.",
+    bodyFooter: "Saberás mais sobre o estudo e os seus resultados agregados em cotec.es.",
     shareLabel: "Convidar por WhatsApp",
     shareMessageTemplate: "Participa no SONAR 2026: {link}",
   },
@@ -1141,8 +1212,8 @@ const pt = withServerErrors({
     successTitle: "Ainda podes ganhar",
     successBody: "O teu pedido de cobrança ficou registado corretamente.",
     successSecondary:
-      "Além disso, continuas a participar no sorteio de 2 entradas VIP. Convida mais amigos que estejam hoje no evento para aumentar as tuas possibilidades.",
-    successFooter: "Os resultados do estudo serão publicados em cotec.es.",
+      "Além disso, continuas a participar no sorteio de 2 entradas VIP.",
+    successFooter: "Saberás mais sobre o estudo e os seus resultados agregados em cotec.es.",
     successShareLabel: "Convidar por WhatsApp",
     successShareMessageTemplate: "Participa no SONAR 2026: {link}",
     errorDefault: "Erro ao enviar",

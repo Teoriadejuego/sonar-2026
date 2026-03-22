@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Link } from "react-router";
+import { BonusDrawPanel } from "./BonusDrawPanel";
 import { ScreenFrame } from "./ScreenFrame";
 import { useLanguage } from "../utils/LanguageContext";
 import { usePageTelemetry } from "../utils/usePageTelemetry";
@@ -15,7 +16,7 @@ function sanitizeWhatsappPhone(rawPhone: string) {
 }
 
 export function ExitScreen() {
-  const { session, publicConfig, saveDisplaySnapshot } = useSession();
+  const { session, publicConfig, saveDisplaySnapshot, pushTelemetry } = useSession();
   const { copy, language } = useLanguage();
   const { trackClick } = usePageTelemetry("exit");
 
@@ -34,6 +35,7 @@ export function ExitScreen() {
   const whatsappLink = `https://wa.me/?text=${whatsappText}`;
 
   const winnerCopy = copy.winner;
+  const bonusCopy = copy.bonusDraw;
   const winnerCode = session.payment.reference_code ?? "-";
   const winnerAmount = session.payment.amount_eur.toFixed(0);
   const payoutPageLink = `/payout?code=${encodeURIComponent(winnerCode)}&lang=${encodeURIComponent(language)}`;
@@ -134,6 +136,31 @@ export function ExitScreen() {
               <div className="sonar-panel sonar-panel-highlight p-5">
                 <div className="space-y-4">
                   <p className="editorial-body">{loserCopy.bodySecondary}</p>
+                  <BonusDrawPanel
+                    copy={bonusCopy}
+                    storageKey={`sonar_bonus_prediction:${session.session_id}`}
+                    onSelect={(value) => {
+                      trackClick("bonus_prediction_exit", {
+                        target: `bonus_prediction_${value}`,
+                        role: "button",
+                        ctaKind: "secondary",
+                        value,
+                      });
+                      pushTelemetry({
+                        event_type: "custom",
+                        event_name: "bonus_prediction_selected",
+                        screen_name: "exit",
+                        value,
+                        payload: {
+                          session_id: session.session_id,
+                          referral_code: session.referral_code,
+                        },
+                      });
+                    }}
+                  />
+                  <p className="editorial-small text-slate-700">
+                    {bonusCopy.inviteTicket}
+                  </p>
                   <a
                     href={whatsappLink}
                     target="_blank"
@@ -146,6 +173,7 @@ export function ExitScreen() {
                         payload: {
                           referralCode: session.referral_code,
                           referralSource: "whatsapp",
+                          bonusPredictionStored: true,
                         },
                       })
                     }

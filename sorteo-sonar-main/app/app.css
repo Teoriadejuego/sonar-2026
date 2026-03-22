@@ -602,6 +602,119 @@ button:disabled {
   border-color: var(--text);
 }
 
+.bonus-draw-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(127, 97, 16, 0.18);
+  border-radius: 1.15rem;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.bonus-draw-ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bonus-draw-ticket-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bonus-draw-ticket-item--achieved .bonus-draw-ticket-text {
+  font-weight: 700;
+}
+
+.bonus-draw-ticket-badge {
+  display: inline-flex;
+  min-width: 2.45rem;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(127, 97, 16, 0.2);
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.bonus-draw-ticket-text {
+  flex: 1;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.bonus-draw-ticket-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.65rem;
+  padding: 0 0.65rem;
+  border-radius: 999px;
+  background: rgba(221, 243, 223, 0.92);
+  color: #205d2d;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bonus-draw-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.bonus-draw-button {
+  min-height: 2.85rem;
+  border: 1px solid rgba(17, 17, 17, 0.14);
+  border-radius: 0.95rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 800;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.bonus-draw-button:hover:not(:disabled),
+.bonus-draw-button:focus-visible {
+  border-color: rgba(17, 17, 17, 0.65);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.bonus-draw-button--selected {
+  border-color: var(--text);
+  background: var(--text);
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(17, 17, 17, 0.14);
+}
+
+.bonus-draw-status {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7f6110;
+}
+
+.bonus-draw-status--earned {
+  color: #205d2d;
+}
+
 .prize-reveal-grid {
   display: grid;
   grid-template-columns: repeat(10, minmax(0, 1fr));
@@ -754,6 +867,17 @@ button:disabled {
 
 .dice-rolling {
   animation: roll 900ms ease-in-out;
+}
+
+@media (max-width: 480px) {
+  .bonus-draw-grid {
+    gap: 0.35rem;
+  }
+
+  .bonus-draw-button {
+    min-height: 2.65rem;
+    border-radius: 0.85rem;
+  }
 }
 
 @keyframes roll {

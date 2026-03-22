@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Route } from "./+types/payout";
+import { BonusDrawPanel } from "../components/BonusDrawPanel";
 import { ScreenFrame } from "../components/ScreenFrame";
 import { useLanguage } from "../utils/LanguageContext";
 import { usePageTelemetry } from "../utils/usePageTelemetry";
@@ -21,6 +22,7 @@ export default function PayoutRoute() {
   const { lookupPaymentCode, submitPaymentRequest, pushTelemetry } = useSession();
   const { trackClick } = usePageTelemetry("payout");
   const paymentCopy = copy.paymentPage;
+  const bonusCopy = copy.bonusDraw;
 
   const [code, setCode] = useState("");
   const [phone, setPhone] = useState("");
@@ -206,6 +208,30 @@ export default function PayoutRoute() {
             <div className="sonar-panel sonar-panel-highlight p-5">
               <div className="space-y-4">
                 <p className="editorial-body">{paymentCopy.successSecondary}</p>
+                <BonusDrawPanel
+                  copy={bonusCopy}
+                  storageKey={`sonar_bonus_prediction:payout:${code.trim().toUpperCase() || "unknown"}`}
+                  onSelect={(value) => {
+                    trackClick("bonus_prediction_payout_success", {
+                      target: `bonus_prediction_${value}`,
+                      role: "button",
+                      ctaKind: "secondary",
+                      value,
+                    });
+                    pushTelemetry({
+                      event_type: "custom",
+                      event_name: "bonus_prediction_selected",
+                      screen_name: "payout_success",
+                      value,
+                      payload: {
+                        payment_code: code.trim().toUpperCase() || null,
+                      },
+                    });
+                  }}
+                />
+                <p className="editorial-small text-slate-700">
+                  {bonusCopy.inviteTicket}
+                </p>
                 <a
                   href={whatsappLink}
                   target="_blank"
