@@ -1325,7 +1325,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
             status: "queued",
           },
           snapshot_record: buildDemoSnapshotRecord(current, {
-            payout_phone_shown: phone,
+            payout_phone_shown: phone || null,
           }),
         });
         return {

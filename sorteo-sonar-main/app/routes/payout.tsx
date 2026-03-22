@@ -167,13 +167,13 @@ export default function PayoutRoute() {
       return;
     }
 
-    if (!hasValidPhone(normalizedPhone)) {
+    if (!donationRequested && !hasValidPhone(normalizedPhone)) {
       setStatusTone("error");
       setStatusMessage(paymentCopy.phoneRequired);
       return;
     }
 
-    if (!hasPaymentConsent) {
+    if (!donationRequested && !hasPaymentConsent) {
       setStatusTone("error");
       setStatusMessage(paymentCopy.consentRequired);
       return;
@@ -198,7 +198,7 @@ export default function PayoutRoute() {
     try {
       const response = await submitPaymentRequest(
         normalizedCode,
-        normalizedPhone,
+        donationRequested ? "" : normalizedPhone,
         donationRequested,
       );
       setWasDonationRequest(donationRequested);

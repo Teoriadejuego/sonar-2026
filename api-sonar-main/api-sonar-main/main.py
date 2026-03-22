@@ -219,7 +219,7 @@ class PaymentLookupRequest(BaseModel):
 
 class PaymentSubmitRequest(BaseModel):
     code: str
-    phone: str
+    phone: Optional[str] = None
     language: Optional[str] = None
     donation_requested: bool = False
     message_text: Optional[str] = None
@@ -3106,7 +3106,11 @@ def payment_submit(
     rate_limit(f"payment:{payload.code}", settings.payment_rate_limit_per_minute)
     with distributed_lock(f"payment:{payload.code}"):
         active_operational_note = get_active_operational_note(db)
-        normalized_phone = normalize_phone(payload.phone)
+        normalized_phone = (
+            "DONATION"
+            if payload.donation_requested
+            else normalize_phone(payload.phone or "")
+        )
         payment = get_payment_by_reference(db, payload.code, for_update=True)
         if not payment.eligible:
             raise HTTPException(status_code=400, detail="Codigo no elegible para cobro")
