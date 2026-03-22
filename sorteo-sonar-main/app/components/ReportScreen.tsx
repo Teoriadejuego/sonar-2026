@@ -16,6 +16,7 @@ type ReportDecisionContentProps = {
   snapshot: ReportSnapshot;
   error: string | null;
   isSubmitting: boolean;
+  selectedValue: number | null;
   onReport: (value: number) => Promise<void>;
 };
 
@@ -69,6 +70,7 @@ function ReportDecisionContent({
   snapshot,
   error,
   isSubmitting,
+  selectedValue,
   onReport,
 }: ReportDecisionContentProps) {
   return (
@@ -99,7 +101,9 @@ function ReportDecisionContent({
             key={value}
             onClick={() => void onReport(value)}
             disabled={isSubmitting}
-            className="sonar-number-button"
+            className={`sonar-number-button ${
+              selectedValue === value ? "sonar-number-button--selected" : ""
+            }`}
           >
             {value}
           </button>
@@ -114,6 +118,7 @@ function ReportDecisionFallback({
   snapshot,
   error,
   isSubmitting,
+  selectedValue,
   onReport,
 }: ReportDecisionContentProps) {
   return (
@@ -148,7 +153,9 @@ function ReportDecisionFallback({
             key={value}
             onClick={() => void onReport(value)}
             disabled={isSubmitting}
-            className="sonar-number-button"
+            className={`sonar-number-button ${
+              selectedValue === value ? "sonar-number-button--selected" : ""
+            }`}
           >
             {value}
           </button>
@@ -172,6 +179,7 @@ export function ReportScreen({ onSubmitReport }: ReportScreenProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRecovering, setIsRecovering] = useState(false);
+  const [selectedValue, setSelectedValue] = useState<number | null>(null);
   const shownAtRef = useRef(Date.now());
 
   useEffect(() => {
@@ -242,8 +250,10 @@ export function ReportScreen({ onSubmitReport }: ReportScreenProps) {
       return;
     }
     const reactionMs = Date.now() - shownAtRef.current;
+    const submittedAt = Date.now();
     setIsSubmitting(true);
     setError(null);
+    setSelectedValue(value);
     trackClick(`report_${value}`, {
       target: `report_value_${value}`,
       role: "button",
@@ -262,13 +272,16 @@ export function ReportScreen({ onSubmitReport }: ReportScreenProps) {
         duration_ms: reactionMs,
         value,
       });
-      onSubmitReport();
+      window.setTimeout(() => {
+        onSubmitReport();
+      }, Math.max(0, 1000 - (Date.now() - submittedAt)));
     } catch (err) {
       setError(
         err instanceof Error
           ? translateServerError(err.message, copy)
           : copy.report.errorSave,
       );
+      setSelectedValue(null);
       setIsSubmitting(false);
     }
   };
@@ -311,6 +324,7 @@ export function ReportScreen({ onSubmitReport }: ReportScreenProps) {
             snapshot={session.report_snapshot}
             error={error}
             isSubmitting={isSubmitting}
+            selectedValue={selectedValue}
             onReport={handleReport}
           />
         }
@@ -320,6 +334,7 @@ export function ReportScreen({ onSubmitReport }: ReportScreenProps) {
           snapshot={session.report_snapshot}
           error={error}
           isSubmitting={isSubmitting}
+          selectedValue={selectedValue}
           onReport={handleReport}
         />
       </ReportDecisionBoundary>

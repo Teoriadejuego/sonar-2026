@@ -1,5 +1,5 @@
 const PUBLIC_REVIEW_API_URL =
-  "https://sonar-2026private-production.up.railway.app";
+  "https://api-production-9fe7b.up.railway.app";
 
 function resolveApiBaseUrl() {
   const envUrl = import.meta.env.API_BASE_URL || import.meta.env.VITE_API_URL;

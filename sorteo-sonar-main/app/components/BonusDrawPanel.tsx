@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { formatCopy, type UiCopy } from "../utils/uiLexicon";
 
 interface BonusDrawPanelProps {
   copy: UiCopy["bonusDraw"];
   storageKey: string;
   onSelect?: (value: number) => void;
+  children?: ReactNode;
 }
 
 function readStoredPrediction(storageKey: string) {
@@ -23,6 +24,7 @@ export function BonusDrawPanel({
   copy,
   storageKey,
   onSelect,
+  children,
 }: BonusDrawPanelProps) {
   const [selectedValue, setSelectedValue] = useState<number | null>(null);
 
@@ -40,9 +42,8 @@ export function BonusDrawPanel({
         label: copy.predictionTicket,
         achieved: hasLockedPrediction,
       },
-      { badge: "+1", label: copy.inviteTicket, achieved: false },
     ],
-    [copy.baseTicket, copy.inviteTicket, copy.predictionTicket, hasLockedPrediction],
+    [copy.baseTicket, copy.predictionTicket, hasLockedPrediction],
   );
 
   const handleSelect = (value: number) => {
@@ -113,6 +114,8 @@ export function BonusDrawPanel({
             {formatCopy(copy.selectedTemplate, { value: selectedValue })}
           </p>
         ) : null}
+        <p className="editorial-small bonus-draw-invite-note">{copy.inviteTicket}</p>
+        {children}
       </div>
     </div>
   );

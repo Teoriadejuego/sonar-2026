@@ -157,30 +157,28 @@ export function ExitScreen() {
                         },
                       });
                     }}
-                  />
-                  <p className="editorial-small text-slate-700">
-                    {bonusCopy.inviteTicket}
-                  </p>
-                  <a
-                    href={whatsappLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() =>
-                      trackClick("share_whatsapp", {
-                        target: "share_whatsapp",
-                        role: "link",
-                        ctaKind: "secondary",
-                        payload: {
-                          referralCode: session.referral_code,
-                          referralSource: "whatsapp",
-                          bonusPredictionStored: true,
-                        },
-                      })
-                    }
-                    className="sonar-share-button"
                   >
-                    {loserCopy.shareLabel}
-                  </a>
+                    <a
+                      href={whatsappLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() =>
+                        trackClick("share_whatsapp", {
+                          target: "share_whatsapp",
+                          role: "link",
+                          ctaKind: "secondary",
+                          payload: {
+                            referralCode: session.referral_code,
+                            referralSource: "whatsapp",
+                            bonusPredictionStored: true,
+                          },
+                        })
+                      }
+                      className="sonar-share-button w-full"
+                    >
+                      {loserCopy.shareLabel}
+                    </a>
+                  </BonusDrawPanel>
                 </div>
               </div>
 

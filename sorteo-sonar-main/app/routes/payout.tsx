@@ -80,7 +80,7 @@ export default function PayoutRoute() {
     }
     if (
       nextLang &&
-      ["es", "ca", "en", "fr", "pt"].includes(nextLang) &&
+      ["es", "ca", "en", "fr", "pt", "it"].includes(nextLang) &&
       nextLang !== language
     ) {
       setLanguage(nextLang as typeof language);
@@ -286,25 +286,23 @@ export default function PayoutRoute() {
                       },
                     });
                   }}
-                />
-                <p className="editorial-small text-slate-700">
-                  {bonusCopy.inviteTicket}
-                </p>
-                <a
-                  href={whatsappLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() =>
-                    trackClick("payment_success_share_whatsapp", {
-                      target: "payment_success_share_whatsapp",
-                      role: "link",
-                      ctaKind: "secondary",
-                    })
-                  }
-                  className="sonar-share-button"
                 >
-                  {paymentCopy.successShareLabel}
-                </a>
+                  <a
+                    href={whatsappLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() =>
+                      trackClick("payment_success_share_whatsapp", {
+                        target: "payment_success_share_whatsapp",
+                        role: "link",
+                        ctaKind: "secondary",
+                      })
+                    }
+                    className="sonar-share-button w-full"
+                  >
+                    {paymentCopy.successShareLabel}
+                  </a>
+                </BonusDrawPanel>
               </div>
             </div>
 

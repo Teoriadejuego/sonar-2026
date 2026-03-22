@@ -1,4 +1,4 @@
-﻿export type AppLanguage = "es" | "ca" | "en" | "fr" | "pt";
+export type AppLanguage = "es" | "ca" | "en" | "fr" | "pt" | "it";
 
 export type InfoSection = {
   title: string;
@@ -60,6 +60,7 @@ export type UiCopy = {
   };
   game: {
     title: string;
+    initialIntro: string;
     intro: string;
     visibleResultLabel: string;
     firstResultTemplate: string;
@@ -183,7 +184,7 @@ type TranslationSeed = Omit<UiCopy, "serverErrors" | "common"> & {
   };
 };
 
-export const SUPPORTED_LANGUAGES: AppLanguage[] = ["es", "ca", "en", "fr", "pt"];
+export const SUPPORTED_LANGUAGES: AppLanguage[] = ["es", "ca", "en", "fr", "pt", "it"];
 
 const SHARED_LANGUAGE_NAMES: Record<AppLanguage, string> = {
   es: "Español",
@@ -191,6 +192,7 @@ const SHARED_LANGUAGE_NAMES: Record<AppLanguage, string> = {
   en: "English",
   fr: "Français",
   pt: "Português",
+  it: "Italiano",
 };
 
 const SHARED_WELCOME_WORDS: Record<AppLanguage, string> = {
@@ -199,6 +201,7 @@ const SHARED_WELCOME_WORDS: Record<AppLanguage, string> = {
   en: "Welcome",
   fr: "Bienvenue",
   pt: "Bem-vindo",
+  it: "Benvenuto",
 };
 
 const PAYMENT_PRIVACY_SECTIONS_ES: InfoSection[] = [
@@ -387,7 +390,7 @@ const es = withServerErrors({
       "2 entradas VIP para SONAR 2027\ny cientos de premios de hasta 60 euros",
     subtitle: "",
     intro: "",
-    braceletLabel: "ID de pulsera",
+    braceletLabel: "ID de la pulsera",
     braceletPlaceholder: "Ej: 10000001",
     moreInfoButton: "Más información",
     ageCheckbox: "Tengo 18 años o más",
@@ -439,16 +442,16 @@ const es = withServerErrors({
   instructions: {
     title: "Cómo funciona",
     intro:
-      "Lanza un dado. Después te preguntaremos qué número salió en tu primera tirada.",
+      "Lanza un dado en la siguiente pantalla. Después te preguntaremos qué número salió en tu primera tirada.",
     body:
-      "La primera tirada es la que cuenta. Según ese número, puedes ganar el premio que aparece en la tabla.",
+      "La primera tirada es la que cuenta. Según el número que nos indiques que salió en esa primera tirada, puedes ganar el premio que aparece en la tabla.",
     odds: "1 de cada 100 recibe el pago.",
     prizeTableLabel: "Tabla de premios",
     cta: "Continuar",
   },
   comprehension: {
     eyebrow: "Antes de seguir",
-    title: "¿Qué número te vamos a pedir después?",
+    title: "¿Qué número te pediremos que nos digas después?",
     options: ["Primera tirada", "Última tirada", "La más alta"],
     errorEmpty: "Selecciona una opción",
     errorWrong: "Recuerda: te pediremos el número de la primera tirada",
@@ -456,12 +459,13 @@ const es = withServerErrors({
   },
   game: {
     title: "Tirada",
+    initialIntro: "Pulsa el dado o el botón Lanzar para hacer tu primera tirada.",
     intro: "Pulsa el dado para ver otra tirada.",
     visibleResultLabel: "",
     firstResultTemplate: "Tu primera tirada: {value}",
     continueCta: "Continuar",
     firstRollCta: "Lanzar",
-    rerollCta: "Probar el dado",
+    rerollCta: "",
     loading: "Cargando...",
     attemptsTemplate: "Tiradas registradas: {count}/{max}",
     errors: {
@@ -472,15 +476,15 @@ const es = withServerErrors({
   },
   report: {
     title: "Tu primera tirada",
-    body: "Indica el número que te salió al tirar el dado la primera vez.",
+    body: "Indica el número que te salió al tirar el dado la primera vez tocando ese número.",
     errorSave: "No se pudo guardar la respuesta",
   },
   prizeReveal: {
     eyebrow: "Selección final",
     title: "Clica una",
-    helper: "Elige una ficha para descubrir si has salido ganador.",
-    winnerResult: "Esta era la ficha ganadora.",
-    loserResult: "La ficha ganadora era otra.",
+    helper: "Elige una figura y, si es la premiada, ganas {amount} €.",
+    winnerResult: "Esta era la figura premiada. Ganas {amount} €.",
+    loserResult: "La figura premiada era otra. El premio era {amount} €.",
     optionLabel: "Ficha",
     footer: "",
   },
@@ -517,7 +521,7 @@ const es = withServerErrors({
       "Sigues participando en el sorteo de 2 entradas VIP.",
     bodyFooter: "Sabrás más sobre el estudio y sus resultados agregados en cotec.es.",
     shareLabel: "Invitar por WhatsApp",
-    shareMessageTemplate: "Participa en SONAR 2026: {link}",
+    shareMessageTemplate: "Si estás ahora en Sónar, haz esta prueba de 60 segundos: puedes entrar en el sorteo de 2 entradas VIP para Sónar 2027 y optar a premios en dinero de hasta 60 €. Participa aquí: {link}",
   },
   paused: {
     eyebrow: "Gracias",
@@ -568,7 +572,7 @@ const es = withServerErrors({
       "Además, sigues participando en el sorteo de 2 entradas VIP.",
     successFooter: "Sabrás más sobre el estudio y sus resultados agregados en cotec.es.",
     successShareLabel: "Invitar por WhatsApp",
-    successShareMessageTemplate: "Participa en SONAR 2026: {link}",
+    successShareMessageTemplate: "Si estás ahora en Sónar, haz esta prueba de 60 segundos: puedes entrar en el sorteo de 2 entradas VIP para Sónar 2027 y optar a premios en dinero de hasta 60 €. Participa aquí: {link}",
     errorDefault: "Error al enviar",
   },
   accessibility: {
@@ -601,7 +605,7 @@ const ca = withServerErrors({
       "2 entrades VIP per a SONAR 2027\ni centenars de premis de fins a 60 euros",
     subtitle: "",
     intro: "",
-    braceletLabel: "ID de polsera",
+    braceletLabel: "ID de la polsera",
     braceletPlaceholder: "Ex: 10000001",
     moreInfoButton: "Més informació",
     ageCheckbox: "Tinc 18 anys o més",
@@ -653,16 +657,16 @@ const ca = withServerErrors({
   instructions: {
     title: "Com funciona",
     intro:
-      "Llança un dau. Després et preguntarem quin número va sortir a la teva primera tirada.",
+      "Llança un dau a la pantalla següent. Després et preguntarem quin número va sortir a la teva primera tirada.",
     body:
-      "La primera tirada és la que compta. Segons aquest número, pots guanyar el premi que apareix a la taula.",
+      "La primera tirada és la que compta. Segons el número que ens indiquis que va sortir en aquesta primera tirada, pots guanyar el premi que apareix a la taula.",
     odds: "1 de cada 100 rep el pagament.",
     prizeTableLabel: "Taula de premis",
     cta: "Continuar",
   },
   comprehension: {
     eyebrow: "Abans de seguir",
-    title: "Quin número et demanarem després?",
+    title: "Quin número et preguntarem després?",
     options: ["Primera tirada", "Última tirada", "La més alta"],
     errorEmpty: "Selecciona una opció",
     errorWrong: "Recorda: et demanarem el número de la primera tirada",
@@ -670,12 +674,13 @@ const ca = withServerErrors({
   },
   game: {
     title: "Tirada",
+    initialIntro: "Prem el dau o el botó Llançar per fer la teva primera tirada.",
     intro: "Prem el dau per veure una altra tirada.",
     visibleResultLabel: "",
     firstResultTemplate: "La teva primera tirada: {value}",
     continueCta: "Continuar",
     firstRollCta: "Llançar",
-    rerollCta: "Provar el dau",
+    rerollCta: "",
     loading: "Carregant...",
     attemptsTemplate: "Tirades registrades: {count}/{max}",
     errors: {
@@ -686,15 +691,15 @@ const ca = withServerErrors({
   },
   report: {
     title: "La teva primera tirada",
-    body: "Indica el número que et va sortir en tirar el dau la primera vegada.",
+    body: "Indica el número que et va sortir en tirar el dau la primera vegada fent-hi clic.",
     errorSave: "No s'ha pogut guardar la resposta",
   },
   prizeReveal: {
     eyebrow: "Selecció final",
     title: "Tria'n una",
-    helper: "Escull una fitxa per descobrir si has estat guanyador.",
-    winnerResult: "Aquesta era la fitxa guanyadora.",
-    loserResult: "La fitxa guanyadora era una altra.",
+    helper: "Tria una figura. Si és la premiada, guanyes {amount} €.",
+    winnerResult: "Aquesta era la figura premiada. Guanyes {amount} €.",
+    loserResult: "La figura premiada era una altra. El premi era {amount} €.",
     optionLabel: "Fitxa",
     footer: "",
   },
@@ -731,7 +736,7 @@ const ca = withServerErrors({
       "Continues participant en el sorteig de 2 entrades VIP.",
     bodyFooter: "Sabràs més sobre l'estudi i els seus resultats agregats a cotec.es.",
     shareLabel: "Convidar per WhatsApp",
-    shareMessageTemplate: "Participa a SONAR 2026: {link}",
+    shareMessageTemplate: "Si ets ara al Sónar, prova això: dura 60 segons i pots entrar al sorteig de 2 entrades VIP per al Sónar 2027 i optar a premis en diners de fins a 60 €. Participa aquí: {link}",
   },
   paused: {
     eyebrow: "Gràcies",
@@ -782,7 +787,7 @@ const ca = withServerErrors({
       "A més, continues participant en el sorteig de 2 entrades VIP.",
     successFooter: "Sabràs més sobre l'estudi i els seus resultats agregats a cotec.es.",
     successShareLabel: "Convidar per WhatsApp",
-    successShareMessageTemplate: "Participa a SONAR 2026: {link}",
+    successShareMessageTemplate: "Si ets ara al Sónar, prova això: dura 60 segons i pots entrar al sorteig de 2 entrades VIP per al Sónar 2027 i optar a premis en diners de fins a 60 €. Participa aquí: {link}",
     errorDefault: "Error en enviar",
   },
   accessibility: {
@@ -866,16 +871,16 @@ const en = withServerErrors({
   },
   instructions: {
     title: "How it works",
-    intro: "Roll the die. Then we will ask which number came up on your first roll.",
+    intro: "Roll a die on the next screen. Then we will ask which number came up on your first roll.",
     body:
-      "The first roll is the one that counts. Based on that number, you may win the prize shown in the table.",
+      "The first roll is the one that counts. Based on the number you tell us came up on that first roll, you may win the prize shown in the table.",
     odds: "1 in 100 receives payment.",
     prizeTableLabel: "Prize table",
     cta: "Continue",
   },
   comprehension: {
     eyebrow: "Before you continue",
-    title: "Which number will we ask you for next?",
+    title: "Which number will we ask you about next?",
     options: ["First roll", "Last roll", "The highest one"],
     errorEmpty: "Select one option",
     errorWrong: "Remember: we will ask for the number from the first roll",
@@ -883,12 +888,13 @@ const en = withServerErrors({
   },
   game: {
     title: "Roll",
+    initialIntro: "Tap the die or the Roll button to make your first roll.",
     intro: "Tap the die to see another roll.",
     visibleResultLabel: "",
     firstResultTemplate: "Your first roll: {value}",
     continueCta: "Continue",
     firstRollCta: "Roll",
-    rerollCta: "Try the die",
+    rerollCta: "",
     loading: "Loading...",
     attemptsTemplate: "Rolls recorded: {count}/{max}",
     errors: {
@@ -899,15 +905,15 @@ const en = withServerErrors({
   },
   report: {
     title: "Your first roll",
-    body: "Enter the number that came up when you rolled the die the first time.",
+    body: "Enter the number that came up when you rolled the die the first time by tapping it.",
     errorSave: "Could not save your response",
   },
   prizeReveal: {
     eyebrow: "Final selection",
     title: "Pick one",
-    helper: "Choose one tile to discover whether you are a winner.",
-    winnerResult: "This was the winning tile.",
-    loserResult: "A different tile was the winning one.",
+    helper: "Choose one figure. If it is the winning one, you get {amount} €.",
+    winnerResult: "This was the winning figure. You get {amount} €.",
+    loserResult: "A different figure was the winning one. The prize was {amount} €.",
     optionLabel: "Tile",
     footer: "",
   },
@@ -944,7 +950,7 @@ const en = withServerErrors({
       "You are still entered in the draw for 2 VIP tickets.",
     bodyFooter: "You will be able to learn more about the study and its aggregated results at cotec.es.",
     shareLabel: "Invite on WhatsApp",
-    shareMessageTemplate: "Take part in SONAR 2026: {link}",
+    shareMessageTemplate: "If you are at Sónar right now, try this: it takes 60 seconds and you can enter the draw for 2 VIP tickets for Sónar 2027 and cash prizes up to 60 €. Join here: {link}",
   },
   paused: {
     eyebrow: "Thank you",
@@ -995,7 +1001,7 @@ const en = withServerErrors({
       "You are also still entered in the draw for 2 VIP tickets.",
     successFooter: "You will be able to learn more about the study and its aggregated results at cotec.es.",
     successShareLabel: "Invite on WhatsApp",
-    successShareMessageTemplate: "Take part in SONAR 2026: {link}",
+    successShareMessageTemplate: "If you are at Sónar right now, try this: it takes 60 seconds and you can enter the draw for 2 VIP tickets for Sónar 2027 and cash prizes up to 60 €. Join here: {link}",
     errorDefault: "Error sending request",
   },
   accessibility: {
@@ -1080,16 +1086,16 @@ const fr = withServerErrors({
   instructions: {
     title: "Comment ça marche",
     intro:
-      "Lancez le dé. Ensuite, nous vous demanderons quel nombre est sorti lors de votre premier lancer.",
+      "Lancez un dé sur l'écran suivant. Ensuite, nous vous demanderons quel nombre est sorti lors de votre premier lancer.",
     body:
-      "Le premier lancer est celui qui compte. Selon ce nombre, vous pourrez gagner le prix affiché dans le tableau.",
+      "Le premier lancer est celui qui compte. Selon le nombre que vous nous indiquerez comme étant sorti lors de ce premier lancer, vous pourrez gagner le prix affiché dans le tableau.",
     odds: "1 personne sur 100 reçoit le paiement.",
     prizeTableLabel: "Table des prix",
     cta: "Continuer",
   },
   comprehension: {
     eyebrow: "Avant de continuer",
-    title: "Quel nombre allons-nous vous demander ensuite ?",
+    title: "Quel nombre vous demanderons-nous ensuite ?",
     options: ["Premier lancer", "Dernier lancer", "Le plus élevé"],
     errorEmpty: "Sélectionnez une option",
     errorWrong: "Rappelez-vous : nous vous demanderons le nombre du premier lancer",
@@ -1097,12 +1103,13 @@ const fr = withServerErrors({
   },
   game: {
     title: "Lancer",
+    initialIntro: "Touchez le dé ou le bouton Lancer pour faire votre premier lancer.",
     intro: "Touchez le dé pour voir un autre lancer.",
     visibleResultLabel: "",
     firstResultTemplate: "Votre premier lancer : {value}",
     continueCta: "Continuer",
     firstRollCta: "Lancer",
-    rerollCta: "Essayer le dé",
+    rerollCta: "",
     loading: "Chargement...",
     attemptsTemplate: "Lancers enregistrés : {count}/{max}",
     errors: {
@@ -1113,15 +1120,15 @@ const fr = withServerErrors({
   },
   report: {
     title: "Votre premier lancer",
-    body: "Indiquez le nombre obtenu lorsque vous avez lancé le dé la première fois.",
+    body: "Indiquez le nombre obtenu lorsque vous avez lancé le dé la première fois en cliquant dessus.",
     errorSave: "Impossible d'enregistrer la réponse",
   },
   prizeReveal: {
     eyebrow: "Sélection finale",
     title: "Choisissez-en une",
-    helper: "Choisissez une case pour découvrir si vous avez gagné.",
-    winnerResult: "C'était la case gagnante.",
-    loserResult: "La case gagnante était une autre.",
+    helper: "Choisissez une figure. Si c'est la figure gagnante, vous gagnez {amount} €.",
+    winnerResult: "C'était la figure gagnante. Vous gagnez {amount} €.",
+    loserResult: "La figure gagnante était une autre. Le prix était de {amount} €.",
     optionLabel: "Case",
     footer: "",
   },
@@ -1158,7 +1165,7 @@ const fr = withServerErrors({
       "Vous participez toujours au tirage de 2 billets VIP.",
     bodyFooter: "Vous en saurez plus sur l'étude et ses résultats agrégés sur cotec.es.",
     shareLabel: "Inviter sur WhatsApp",
-    shareMessageTemplate: "Participez à SONAR 2026 : {link}",
+    shareMessageTemplate: "Si vous êtes au Sónar en ce moment, essayez ceci : cela dure 60 secondes et vous pouvez participer au tirage de 2 billets VIP pour le Sónar 2027 ainsi qu'à des prix en argent jusqu'à 60 €. Participez ici : {link}",
   },
   paused: {
     eyebrow: "Merci",
@@ -1209,7 +1216,7 @@ const fr = withServerErrors({
       "Vous participez aussi toujours au tirage de 2 billets VIP.",
     successFooter: "Vous en saurez plus sur l'étude et ses résultats agrégés sur cotec.es.",
     successShareLabel: "Inviter sur WhatsApp",
-    successShareMessageTemplate: "Participez à SONAR 2026 : {link}",
+    successShareMessageTemplate: "Si vous êtes au Sónar en ce moment, essayez ceci : cela dure 60 secondes et vous pouvez participer au tirage de 2 billets VIP pour le Sónar 2027 ainsi qu'à des prix en argent jusqu'à 60 €. Participez ici : {link}",
     errorDefault: "Erreur lors de l'envoi",
   },
   accessibility: {
@@ -1294,16 +1301,16 @@ const pt = withServerErrors({
   instructions: {
     title: "Como funciona",
     intro:
-      "Lança o dado. Depois vamos perguntar que número saiu na tua primeira tirada.",
+      "Lança um dado no ecrã seguinte. Depois vamos perguntar que número saiu na tua primeira tirada.",
     body:
-      "A primeira tirada é a que conta. Consoante esse número, poderás ganhar o prémio que aparece na tabela.",
+      "A primeira tirada é a que conta. Consoante o número que nos disseres que saiu nessa primeira tirada, poderás ganhar o prémio que aparece na tabela.",
     odds: "1 em cada 100 recebe o pagamento.",
     prizeTableLabel: "Tabela de prémios",
     cta: "Continuar",
   },
   comprehension: {
     eyebrow: "Antes de continuar",
-    title: "Que número te vamos pedir depois?",
+    title: "Que número te vamos perguntar depois?",
     options: ["Primeira tirada", "Última tirada", "A mais alta"],
     errorEmpty: "Seleciona uma opção",
     errorWrong: "Lembra-te: vamos pedir o número da primeira tirada",
@@ -1311,12 +1318,13 @@ const pt = withServerErrors({
   },
   game: {
     title: "Tirada",
+    initialIntro: "Toca no dado ou no botão Lançar para fazer a tua primeira tirada.",
     intro: "Toca no dado para ver outra tirada.",
     visibleResultLabel: "",
     firstResultTemplate: "A tua primeira tirada: {value}",
     continueCta: "Continuar",
     firstRollCta: "Lançar",
-    rerollCta: "Provar o dado",
+    rerollCta: "",
     loading: "A carregar...",
     attemptsTemplate: "Tiradas registadas: {count}/{max}",
     errors: {
@@ -1327,15 +1335,15 @@ const pt = withServerErrors({
   },
   report: {
     title: "A tua primeira tirada",
-    body: "Indica o número que te saiu ao lançar o dado na primeira vez.",
+    body: "Indica o número que te saiu ao lançar o dado na primeira vez clicando nele.",
     errorSave: "Não foi possível guardar a resposta",
   },
   prizeReveal: {
     eyebrow: "Seleção final",
     title: "Escolhe uma",
-    helper: "Escolhe uma ficha para descobrir se saíste vencedor.",
-    winnerResult: "Esta era a premiada.",
-    loserResult: "A premiada era outra.",
+    helper: "Escolhe uma figura. Se for a premiada, ganhas {amount} €.",
+    winnerResult: "Esta era a figura premiada. Ganhas {amount} €.",
+    loserResult: "A figura premiada era outra. O prémio era de {amount} €.",
     optionLabel: "Ficha",
     footer: "",
   },
@@ -1372,7 +1380,7 @@ const pt = withServerErrors({
       "Continuas a participar no sorteio de 2 entradas VIP.",
     bodyFooter: "Saberás mais sobre o estudo e os seus resultados agregados em cotec.es.",
     shareLabel: "Convidar por WhatsApp",
-    shareMessageTemplate: "Participa no SONAR 2026: {link}",
+    shareMessageTemplate: "Se estás agora no Sónar, experimenta isto: demora 60 segundos e podes entrar no sorteio de 2 entradas VIP para o Sónar 2027 e optar a prémios em dinheiro até 60 €. Participa aqui: {link}",
   },
   paused: {
     eyebrow: "Obrigado",
@@ -1423,7 +1431,7 @@ const pt = withServerErrors({
       "Além disso, continuas a participar no sorteio de 2 entradas VIP.",
     successFooter: "Saberás mais sobre o estudo e os seus resultados agregados em cotec.es.",
     successShareLabel: "Convidar por WhatsApp",
-    successShareMessageTemplate: "Participa no SONAR 2026: {link}",
+    successShareMessageTemplate: "Se estás agora no Sónar, experimenta isto: demora 60 segundos e podes entrar no sorteio de 2 entradas VIP para o Sónar 2027 e optar a prémios em dinheiro até 60 €. Participa aqui: {link}",
     errorDefault: "Erro ao enviar",
   },
   accessibility: {
@@ -1438,12 +1446,173 @@ const pt = withServerErrors({
   },
 });
 
+const it = withServerErrors({
+  ...en,
+  common: {
+    ...en.common,
+    languageSelectorAria: "Seleziona la lingua",
+    loadingResume: "Recupero sessione",
+    loadingPrepare: "Preparazione esperienza",
+    close: "Chiudi",
+  },
+  languageEntry: {
+    ...en.languageEntry,
+    subtitle: "Select your language",
+  },
+  landing: {
+    ...en.landing,
+    eyebrow: "Partecipa, 60 sec, e sorteggiamo:",
+    title:
+      "2 biglietti VIP per SONAR 2027\ne centinaia di premi fino a 60 euro",
+    braceletLabel: "ID del braccialetto",
+    braceletPlaceholder: "Es: 10000001",
+    moreInfoButton: "Piu informazioni",
+    ageCheckbox: "Ho 18 anni o piu",
+    participationCheckbox: "Accetto di partecipare",
+    dataCheckbox: "Accetto il trattamento dei dati",
+    cta: "Inizia",
+  },
+  instructions: {
+    ...en.instructions,
+    title: "Come funziona",
+    intro:
+      "Lancia un dado nella schermata successiva. Poi ti chiederemo quale numero e uscito al primo lancio.",
+    body:
+      "Il primo lancio e quello che conta. In base al numero che ci dirai essere uscito in quel primo lancio, puoi vincere il premio che appare nella tabella.",
+    odds: "1 persona su 100 riceve il pagamento.",
+    prizeTableLabel: "Tabella dei premi",
+    cta: "Continua",
+  },
+  comprehension: {
+    ...en.comprehension,
+    eyebrow: "Prima di continuare",
+    title: "Quale numero ti chiederemo dopo?",
+    options: ["Primo lancio", "Ultimo lancio", "Il piu alto"],
+    errorEmpty: "Seleziona un'opzione",
+    errorWrong: "Ricorda: ti chiederemo il numero del primo lancio",
+    cta: "Continua",
+  },
+  game: {
+    ...en.game,
+    title: "Lancio",
+    initialIntro: "Tocca il dado o il pulsante Lancia per fare il primo lancio.",
+    intro: "Tocca il dado per vedere un altro lancio.",
+    firstResultTemplate: "Il tuo primo lancio: {value}",
+    continueCta: "Continua",
+    firstRollCta: "Lancia",
+    rerollCta: "",
+    loading: "Caricamento...",
+    errors: {
+      ...en.game.errors,
+      noSession: "Sessione non disponibile",
+      loadRoll: "Impossibile lanciare il dado",
+      loadReport: "Azione non disponibile",
+    },
+  },
+  report: {
+    ...en.report,
+    title: "Il tuo primo lancio",
+    body: "Indica il numero uscito quando hai lanciato il dado la prima volta facendo clic su di esso.",
+    errorSave: "Impossibile salvare la risposta",
+  },
+  prizeReveal: {
+    ...en.prizeReveal,
+    eyebrow: "Selezione finale",
+    title: "Scegline una",
+    helper: "Scegli una figura. Se e quella premiata, vinci {amount} euro.",
+    winnerResult: "Questa era la figura premiata. Vinci {amount} euro.",
+    loserResult: "La figura premiata era un'altra. Il premio era di {amount} euro.",
+    optionLabel: "Casella",
+  },
+  winner: {
+    ...en.winner,
+    eyebrow: "Sei stato selezionato",
+    title: "Pagamento confermato",
+    amountLabel: "Premio in denaro",
+    codeLabelTemplate: "Codice di riscossione: {code}",
+    cta: "Richiedi il Bizum",
+  },
+  loser: {
+    ...en.loser,
+    eyebrow: "Grazie per aver partecipato",
+    title: "Puoi ancora vincere",
+    body: "Non sei stato selezionato per il premio in denaro.",
+    bodySecondary: "Continui a partecipare al sorteggio di 2 biglietti VIP.",
+    bodyFooter: "Saprai di piu sullo studio e sui risultati aggregati su cotec.es.",
+    shareLabel: "Invita via WhatsApp",
+    shareMessageTemplate:
+      "Se sei al Sónar in questo momento, prova questo: ti richiede 60 secondi e puoi entrare nel sorteggio di 2 biglietti VIP per il Sónar 2027 e concorrere a premi in denaro fino a 60 euro. Partecipa qui: {link}",
+  },
+  paused: {
+    ...en.paused,
+    eyebrow: "Grazie",
+    title: "Tutti i premi sono gia stati distribuiti",
+    body: "L'attivita e chiusa per ora.",
+    bodySecondary:
+      "Se vuoi ricevere avvisi su studi simili, lascia la tua email.",
+    emailLabel: "Email",
+    emailPlaceholder: "nome@email.com",
+    cta: "Avvisami",
+    success: "Ti avviseremo se apriremo un nuovo studio.",
+  },
+  paymentPage: {
+    ...en.paymentPage,
+    eyebrow: "Ricevi il tuo premio",
+    title: "Per ricevere un Bizum",
+    intro: "",
+    codeLabel: "Codice del premio",
+    phoneLabel: "Il tuo telefono",
+    phonePlaceholder: "Scrivi il tuo telefono",
+    donationHint:
+      "Se preferisci, puoi donare l'importo a una ONG senza inserire il telefono ne segnare l'autorizzazione.",
+    submitLabel: "Richiedi Bizum",
+    donateLabel: "Dona a una ONG",
+    consentLabel:
+      "Autorizzo il trattamento dei miei dati di pagamento per gestire il Bizum e confermo di aver letto l'informativa sulla privacy.",
+    consentInfoLabel: "Piu informazioni",
+    privacyModalTitle: "Privacy e gestione etica del pagamento",
+    privacySections: PAYMENT_PRIVACY_SECTIONS_EN,
+    success: "Richiesta inviata",
+    invalidCode: "Codice non valido",
+    alreadyUsed: "Codice gia usato",
+    lookupHelpTemplate: "Codice valido · {amount} EUR",
+    phoneRequired: "Inserisci un telefono valido per continuare",
+    consentRequired:
+      "Segna l'autorizzazione privacy per continuare",
+    successEyebrow: "Richiesta inviata",
+    successTitle: "Puoi ancora vincere",
+    successBody: "La tua richiesta di Bizum e stata registrata correttamente.",
+    successDonationBody:
+      "La tua richiesta di donazione a una ONG e stata registrata correttamente.",
+    successSecondary:
+      "Inoltre continui a partecipare al sorteggio di 2 biglietti VIP.",
+    successFooter:
+      "Saprai di piu sullo studio e sui suoi risultati aggregati su cotec.es.",
+    successShareLabel: "Invita via WhatsApp",
+    successShareMessageTemplate:
+      "Se sei al Sónar in questo momento, prova questo: ti richiede 60 secondi e puoi entrare nel sorteggio di 2 biglietti VIP per il Sónar 2027 e concorrere a premi in denaro fino a 60 euro. Partecipa qui: {link}",
+    errorDefault: "Errore durante l'invio",
+  },
+  accessibility: {
+    ...en.accessibility,
+    diceRollAria: "Lancia il dado",
+  },
+  errors: {
+    braceletNotFound: "Braccialetto non trovato",
+    accessInvalid: "Accesso non valido",
+    sessionNotFound: "Sessione non trovata",
+    actionUnavailable: "Azione non disponibile",
+    defaultMessage: "Errore imprevisto",
+  },
+});
+
 export const UI_LEXICON: Record<AppLanguage, UiCopy> = {
   es,
   ca,
   en,
   fr,
   pt,
+  it,
 };
 
 function collectLexiconPaths(value: unknown, prefix = ""): string[] {

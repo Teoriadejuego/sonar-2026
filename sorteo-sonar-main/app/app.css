@@ -602,6 +602,14 @@ button:disabled {
   border-color: var(--text);
 }
 
+.sonar-number-button--selected {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--surface);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 14px 26px rgba(17, 17, 17, 0.18);
+}
+
 .bonus-draw-panel {
   display: flex;
   flex-direction: column;
@@ -715,6 +723,10 @@ button:disabled {
   color: #205d2d;
 }
 
+.bonus-draw-invite-note {
+  margin-top: 0.1rem;
+}
+
 .prize-reveal-grid {
   display: grid;
   grid-template-columns: repeat(10, minmax(0, 1fr));
@@ -722,6 +734,7 @@ button:disabled {
 }
 
 .prize-reveal-cell {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -736,6 +749,7 @@ button:disabled {
     background-color 180ms ease,
     color 180ms ease,
     box-shadow 180ms ease;
+  overflow: visible;
 }
 
 .prize-reveal-cell:hover:not(:disabled) {
@@ -761,17 +775,62 @@ button:disabled {
   border-color: var(--accent-yellow-line);
   background: var(--accent-yellow);
   color: #7f6110;
-  transform: scale(1.08);
+  transform: scale(1.16);
   box-shadow: 0 14px 24px rgba(191, 156, 52, 0.18);
+  z-index: 3;
 }
 
 .prize-reveal-cell--winner.prize-reveal-cell--picked {
-  transform: scale(1.16);
+  transform: scale(1.26);
 }
 
 .prize-reveal-glyph {
   width: 58%;
   height: 58%;
+}
+
+.prize-reveal-face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.prize-reveal-award {
+  position: absolute;
+  inset: auto 0.18rem 0.22rem 0.18rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.2rem;
+  pointer-events: none;
+}
+
+.prize-reveal-award-amount {
+  font-size: 0.56rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: #7f6110;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.prize-reveal-award-amount--crossed {
+  color: var(--danger-text);
+  text-decoration: line-through;
+  text-decoration-thickness: 0.12rem;
+}
+
+.prize-reveal-award-cross {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #c33d2e;
 }
 
 .sonar-ticket-code {

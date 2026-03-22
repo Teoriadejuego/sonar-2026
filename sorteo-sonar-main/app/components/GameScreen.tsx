@@ -77,15 +77,11 @@ export function GameScreen({ onContinueToReport }: GameScreenProps) {
     session.throws.length > 0 && session.throws.length < session.max_attempts;
   const hasFirstRoll = session.first_result_value !== null;
   const lastThrow = session.throws[session.throws.length - 1];
-  const currentVisibleValue = lastThrow?.result_value ?? session.last_seen_value ?? 1;
+  const currentVisibleValue = lastThrow?.result_value ?? session.last_seen_value ?? null;
   const canRollFromDice = !isPreparing && (!hasFirstRoll || canReroll);
   const nextRollKind: "first_roll" | "reroll" = hasFirstRoll
     ? "reroll"
     : "first_roll";
-  const autoRollKey =
-    !hasFirstRoll && session.throws.length === 0 && !error
-      ? `${session.session_id}-first-roll`
-      : null;
 
   useEffect(() => {
     enteredAtRef.current = Date.now();
@@ -98,9 +94,9 @@ export function GameScreen({ onContinueToReport }: GameScreenProps) {
           <h2 className="editorial-title editorial-title--compact">
             {copy.game.title}
           </h2>
-          {copy.game.intro ? (
+          {(hasFirstRoll ? copy.game.intro : copy.game.initialIntro) ? (
             <p className="editorial-small mx-auto max-w-[22rem]">
-              {copy.game.intro}
+              {hasFirstRoll ? copy.game.intro : copy.game.initialIntro}
             </p>
           ) : null}
         </div>
@@ -111,7 +107,6 @@ export function GameScreen({ onContinueToReport }: GameScreenProps) {
             interactive={canRollFromDice}
             disabled={isRolling || isPreparing || !canRollFromDice}
             onRollRequest={() => handleRoll(nextRollKind, "dice")}
-            autoRollKey={autoRollKey}
           />
         </div>
 
@@ -168,15 +163,6 @@ export function GameScreen({ onContinueToReport }: GameScreenProps) {
                 {copy.game.continueCta}
               </button>
 
-              {canReroll && (
-                <button
-                  onClick={() => void handleRoll("reroll", "button")}
-                  disabled={isRolling}
-                  className="sonar-secondary-button mx-auto"
-                >
-                  {isRolling ? copy.game.loading : copy.game.rerollCta}
-                </button>
-              )}
             </>
           )}
 

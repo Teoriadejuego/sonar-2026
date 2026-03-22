@@ -9,6 +9,7 @@ import {
   markPrizeRevealCompleted,
   type PrizeIconCategory,
 } from "../utils/prizeReveal";
+import { formatCopy } from "../utils/uiLexicon";
 
 function PrizeRevealGlyph({ category }: { category: PrizeIconCategory }) {
   switch (category) {
@@ -59,7 +60,7 @@ type PrizeRevealScreenProps = {
 };
 
 export function PrizeRevealScreen({ onComplete }: PrizeRevealScreenProps) {
-  const { session, pushTelemetry } = useSession();
+  const { session, publicConfig, pushTelemetry } = useSession();
   const { copy } = useLanguage();
   const { trackClick } = usePageTelemetry("prize_reveal");
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -83,6 +84,10 @@ export function PrizeRevealScreen({ onComplete }: PrizeRevealScreenProps) {
     return null;
   }
 
+  const revealedPrizeAmount =
+    session.claim?.reported_value != null
+      ? publicConfig.prize_eur[String(session.claim.reported_value)] ?? session.payment.amount_eur
+      : session.payment.amount_eur;
   const isRevealed = selectedIndex !== null && winnerIndex !== null;
 
   const handlePick = (index: number) => {
@@ -134,14 +139,14 @@ export function PrizeRevealScreen({ onComplete }: PrizeRevealScreenProps) {
         completedAt: new Date().toISOString(),
       });
       onComplete();
-    }, session.payment.eligible ? 1150 : 1350);
+    }, session.payment.eligible ? 1550 : 1850);
   };
 
   const helperText = isRevealed
     ? session.payment.eligible
-      ? copy.prizeReveal.winnerResult
-      : copy.prizeReveal.loserResult
-    : copy.prizeReveal.helper;
+      ? formatCopy(copy.prizeReveal.winnerResult, { amount: revealedPrizeAmount })
+      : formatCopy(copy.prizeReveal.loserResult, { amount: revealedPrizeAmount })
+    : formatCopy(copy.prizeReveal.helper, { amount: revealedPrizeAmount });
 
   return (
     <ScreenFrame>
@@ -179,7 +184,27 @@ export function PrizeRevealScreen({ onComplete }: PrizeRevealScreenProps) {
                   disabled={isRevealed}
                   aria-label={`${copy.prizeReveal.optionLabel} ${tile.index + 1}`}
                 >
-                  <PrizeRevealGlyph category={tile.category} />
+                  <div className="prize-reveal-face">
+                    <PrizeRevealGlyph category={tile.category} />
+                  </div>
+                  {isWinningTile ? (
+                    <div className="prize-reveal-award">
+                      <span
+                        className={`prize-reveal-award-amount ${
+                          !session.payment.eligible
+                            ? "prize-reveal-award-amount--crossed"
+                            : ""
+                        }`}
+                      >
+                        {revealedPrizeAmount} {"\u20ac"}
+                      </span>
+                      {!session.payment.eligible ? (
+                        <span className="prize-reveal-award-cross" aria-hidden="true">
+                          X
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </button>
               );
             })}
