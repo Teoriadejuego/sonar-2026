@@ -145,13 +145,21 @@ export type UiCopy = {
     donationHint: string;
     lookupLabel: string;
     submitLabel: string;
+    donateLabel: string;
+    consentLabel: string;
+    consentInfoLabel: string;
+    privacyModalTitle: string;
+    privacySections: InfoSection[];
     success: string;
     invalidCode: string;
     alreadyUsed: string;
     lookupHelpTemplate: string;
+    phoneRequired: string;
+    consentRequired: string;
     successEyebrow: string;
     successTitle: string;
     successBody: string;
+    successDonationBody: string;
     successSecondary: string;
     successFooter: string;
     successShareLabel: string;
@@ -192,6 +200,146 @@ const SHARED_WELCOME_WORDS: Record<AppLanguage, string> = {
   fr: "Bienvenue",
   pt: "Bem-vindo",
 };
+
+const PAYMENT_PRIVACY_SECTIONS_ES: InfoSection[] = [
+  {
+    title: "Finalidad de este tratamiento",
+    body:
+      "Los datos que introduzcas en esta pantalla se utilizarán únicamente para gestionar el pago de tu premio por Bizum o, si lo prefieres, para tramitar la renuncia al cobro y registrar la donación equivalente a una ONG. Este tratamiento no se usa para tomar decisiones experimentales ni para analizar tu comportamiento dentro del estudio.",
+  },
+  {
+    title: "Qué información se guarda",
+    body:
+      "Se registrarán el código de cobro, el teléfono facilitado para el Bizum o para la gestión administrativa asociada, el idioma de la solicitud, si has pedido el pago o la donación y la información mínima necesaria para poder justificar internamente la operación. No se solicitarán aquí más datos personales de los necesarios para completar la gestión económica.",
+  },
+  {
+    title: "Separación respecto al experimento",
+    body:
+      "La información de cobro se almacenará en un sistema separado del experimento y en una base de datos distinta de la empleada para las respuestas experimentales. El equipo de análisis no necesita tu teléfono para estudiar el comportamiento observado en la tarea, y el procedimiento está diseñado para reducir al mínimo el cruce entre la información experimental y la información administrativa del pago.",
+  },
+  {
+    title: "Conservación, acceso y trazabilidad",
+    body:
+      "Estos datos se conservarán durante el tiempo necesario para gestionar el pago o la donación, resolver incidencias, atender comprobaciones internas y cumplir las obligaciones legales, fiscales, contables y de auditoría que correspondan. Después se eliminarán o se mantendrán bloqueados solo durante los plazos exigidos por la normativa aplicable. El acceso quedará restringido al personal autorizado para la gestión administrativa del incentivo.",
+  },
+  {
+    title: "Participación y derechos",
+    body:
+      "Solicitar el cobro o la donación es una acción voluntaria posterior al experimento. Si decides no continuar en esta pantalla, tu participación experimental ya habrá quedado registrada igualmente. Si tienes dudas sobre este tratamiento administrativo o sobre la gestión del pago, puedes consultarlo con el equipo presente en el stand antes de enviar la solicitud.",
+  },
+];
+
+const PAYMENT_PRIVACY_SECTIONS_CA: InfoSection[] = [
+  {
+    title: "Finalitat d'aquest tractament",
+    body:
+      "Les dades que introdueixis en aquesta pantalla s'utilitzaran únicament per gestionar el pagament del teu premi per Bizum o, si ho prefereixes, per tramitar la renúncia al cobrament i registrar la donació equivalent a una ONG. Aquest tractament no s'utilitza per prendre decisions experimentals ni per analitzar el teu comportament dins de l'estudi.",
+  },
+  {
+    title: "Quina informació es guarda",
+    body:
+      "Es registraran el codi de cobrament, el telèfon facilitat per al Bizum o per a la gestió administrativa associada, l'idioma de la sol·licitud, si has demanat el pagament o la donació i la informació mínima necessària per poder justificar internament l'operació. Aquí no se't demanaran més dades personals de les estrictament necessàries per completar la gestió econòmica.",
+  },
+  {
+    title: "Separació respecte de l'experiment",
+    body:
+      "La informació de cobrament s'emmagatzemarà en un sistema separat de l'experiment i en una base de dades diferent de la utilitzada per a les respostes experimentals. L'equip d'anàlisi no necessita el teu telèfon per estudiar el comportament observat a la tasca, i el procediment està dissenyat per reduir al mínim l'encreuament entre la informació experimental i la informació administrativa del pagament.",
+  },
+  {
+    title: "Conservació, accés i traçabilitat",
+    body:
+      "Aquestes dades es conservaran durant el temps necessari per gestionar el pagament o la donació, resoldre incidències, atendre comprovacions internes i complir les obligacions legals, fiscals, comptables i d'auditoria que corresponguin. Després s'eliminaran o es mantindran bloquejades només durant els terminis exigits per la normativa aplicable. L'accés quedarà restringit al personal autoritzat per a la gestió administrativa de l'incentiu.",
+  },
+  {
+    title: "Participació i drets",
+    body:
+      "Sol·licitar el cobrament o la donació és una acció voluntària posterior a l'experiment. Si decideixes no continuar en aquesta pantalla, la teva participació experimental ja haurà quedat registrada igualment. Si tens dubtes sobre aquest tractament administratiu o sobre la gestió del pagament, pots consultar-ho amb l'equip present a l'estand abans d'enviar la sol·licitud.",
+  },
+];
+
+const PAYMENT_PRIVACY_SECTIONS_EN: InfoSection[] = [
+  {
+    title: "Purpose of this processing",
+    body:
+      "The information entered on this screen will be used only to manage payment of your prize by Bizum or, if you prefer, to process your renunciation of payment and register the equivalent donation to an NGO. This processing is not used to make experimental decisions or to analyse your behaviour within the study.",
+  },
+  {
+    title: "What information is stored",
+    body:
+      "We will record the payout code, the phone number provided for Bizum or the related administrative process, the language of the request, whether you asked for payment or donation, and the minimum information required to justify the transaction internally. No additional personal data beyond what is strictly necessary for the financial administration will be requested here.",
+  },
+  {
+    title: "Separation from the experiment",
+    body:
+      "Payment information will be stored in a system that is separate from the experiment and in a database different from the one used for experimental responses. The analysis team does not need your phone number to study behaviour in the task, and the procedure is designed to minimise any link between experimental data and the administrative information used for payment.",
+  },
+  {
+    title: "Retention, access and traceability",
+    body:
+      "These data will be kept for as long as needed to manage the payment or donation, resolve incidents, answer internal checks, and comply with the relevant legal, tax, accounting and audit obligations. Afterwards they will be deleted or kept blocked only for the retention periods required by applicable law. Access will be limited to authorised staff responsible for the administrative management of the incentive.",
+  },
+  {
+    title: "Participation and rights",
+    body:
+      "Requesting payment or donation is a voluntary step that takes place after the experiment. If you decide not to continue on this screen, your experimental participation will already have been recorded. If you have questions about this administrative processing or about how the payment is managed, you can ask the team at the stand before submitting the request.",
+  },
+];
+
+const PAYMENT_PRIVACY_SECTIONS_FR: InfoSection[] = [
+  {
+    title: "Finalité de ce traitement",
+    body:
+      "Les données saisies sur cet écran seront utilisées uniquement pour gérer le paiement de votre prix par Bizum ou, si vous le préférez, pour traiter votre renoncement au paiement et enregistrer le don équivalent à une ONG. Ce traitement n'est pas utilisé pour prendre des décisions expérimentales ni pour analyser votre comportement dans l'étude.",
+  },
+  {
+    title: "Quelles informations sont conservées",
+    body:
+      "Seront enregistrés le code de paiement, le numéro de téléphone fourni pour le Bizum ou pour la gestion administrative associée, la langue de la demande, le fait que vous demandiez le paiement ou le don, ainsi que les informations minimales nécessaires pour justifier l'opération en interne. Aucune donnée personnelle supplémentaire au-delà de ce qui est strictement nécessaire à la gestion financière ne sera demandée ici.",
+  },
+  {
+    title: "Séparation par rapport à l'expérience",
+    body:
+      "Les informations de paiement seront stockées dans un système séparé de l'expérience et dans une base de données différente de celle utilisée pour les réponses expérimentales. L'équipe d'analyse n'a pas besoin de votre numéro de téléphone pour étudier le comportement observé dans la tâche, et la procédure est conçue pour réduire au minimum le croisement entre les données expérimentales et les informations administratives de paiement.",
+  },
+  {
+    title: "Conservation, accès et traçabilité",
+    body:
+      "Ces données seront conservées pendant le temps nécessaire pour gérer le paiement ou le don, résoudre les incidents, répondre aux vérifications internes et respecter les obligations légales, fiscales, comptables et d'audit applicables. Elles seront ensuite supprimées ou conservées sous forme bloquée uniquement pendant les délais exigés par la réglementation applicable. L'accès sera limité au personnel autorisé chargé de la gestion administrative de l'incitation.",
+  },
+  {
+    title: "Participation et droits",
+    body:
+      "Demander le paiement ou le don est une démarche volontaire postérieure à l'expérience. Si vous décidez de ne pas continuer sur cet écran, votre participation expérimentale aura déjà été enregistrée. Si vous avez des questions sur ce traitement administratif ou sur la gestion du paiement, vous pouvez les poser à l'équipe présente sur le stand avant d'envoyer la demande.",
+  },
+];
+
+const PAYMENT_PRIVACY_SECTIONS_PT: InfoSection[] = [
+  {
+    title: "Finalidade deste tratamento",
+    body:
+      "Os dados introduzidos neste ecrã serão usados apenas para gerir o pagamento do teu prémio por Bizum ou, se preferires, para tratar a renúncia ao recebimento e registar a doação equivalente a uma ONG. Este tratamento não é usado para tomar decisões experimentais nem para analisar o teu comportamento dentro do estudo.",
+  },
+  {
+    title: "Que informação é guardada",
+    body:
+      "Serão registados o código de pagamento, o telefone fornecido para o Bizum ou para a gestão administrativa associada, o idioma do pedido, se pediste o pagamento ou a doação e a informação mínima necessária para justificar internamente a operação. Aqui não serão pedidos mais dados pessoais do que os estritamente necessários para concluir a gestão financeira.",
+  },
+  {
+    title: "Separação em relação ao experimento",
+    body:
+      "A informação de pagamento será guardada num sistema separado do experimento e numa base de dados diferente da usada para as respostas experimentais. A equipa de análise não precisa do teu número de telefone para estudar o comportamento observado na tarefa, e o procedimento foi desenhado para reduzir ao mínimo a ligação entre os dados experimentais e a informação administrativa do pagamento.",
+  },
+  {
+    title: "Conservação, acesso e rastreabilidade",
+    body:
+      "Estes dados serão conservados durante o tempo necessário para gerir o pagamento ou a doação, resolver incidências, responder a verificações internas e cumprir as obrigações legais, fiscais, contabilísticas e de auditoria aplicáveis. Depois serão eliminados ou mantidos bloqueados apenas durante os prazos exigidos pela legislação aplicável. O acesso ficará limitado ao pessoal autorizado responsável pela gestão administrativa do incentivo.",
+  },
+  {
+    title: "Participação e direitos",
+    body:
+      "Solicitar o pagamento ou a doação é um passo voluntário posterior ao experimento. Se decidires não continuar neste ecrã, a tua participação experimental já terá sido registada na mesma. Se tiveres dúvidas sobre este tratamento administrativo ou sobre a gestão do pagamento, podes falar com a equipa presente no stand antes de enviar o pedido.",
+  },
+];
 
 function withServerErrors(seed: TranslationSeed): UiCopy {
   return {
@@ -387,23 +535,35 @@ const es = withServerErrors({
   },
   paymentPage: {
     eyebrow: "Cobro",
-    title: "Introduce tu código y tu teléfono",
-    intro: "",
+    title: "Para recibir un Bizum",
+    intro:
+      "Tu código ya está preparado. Solo necesitamos tu teléfono y tu autorización para tramitar el pago o, si lo prefieres, registrar la donación equivalente a una ONG.",
     codeLabel: "Código",
     phoneLabel: "Teléfono",
-    phonePlaceholder: "",
-    messageLabel: "Mensaje (opcional)",
+    phonePlaceholder: "Escribe tu teléfono",
+    messageLabel: "",
     messagePlaceholder: "",
-    donationHint: "Puedes escribir ONG para donar",
-    lookupLabel: "Validar código",
-    submitLabel: "Enviar",
+    donationHint: "Si lo prefieres, puedes donar el importe a una ONG.",
+    lookupLabel: "",
+    submitLabel: "Solicitar Bizum",
+    donateLabel: "Donar a una ONG",
+    consentLabel:
+      "Autorizo el tratamiento de mis datos de pago para gestionar el Bizum o la donación, y confirmo que he leído la información de privacidad.",
+    consentInfoLabel: "Más información",
+    privacyModalTitle: "Privacidad y gestión ética del pago",
+    privacySections: PAYMENT_PRIVACY_SECTIONS_ES,
     success: "Solicitud enviada",
     invalidCode: "Código no válido",
     alreadyUsed: "Código ya usado",
     lookupHelpTemplate: "Código válido · {amount} EUR",
+    phoneRequired: "Introduce un teléfono válido para continuar",
+    consentRequired:
+      "Marca la autorización de privacidad para continuar",
     successEyebrow: "Solicitud enviada",
     successTitle: "Aún puedes ganar",
-    successBody: "Tu solicitud de cobro ha quedado registrada correctamente.",
+    successBody: "Tu solicitud de Bizum ha quedado registrada correctamente.",
+    successDonationBody:
+      "Tu solicitud de donación a una ONG ha quedado registrada correctamente.",
     successSecondary:
       "Además, sigues participando en el sorteo de 2 entradas VIP.",
     successFooter: "Sabrás más sobre el estudio y sus resultados agregados en cotec.es.",
@@ -589,23 +749,35 @@ const ca = withServerErrors({
   },
   paymentPage: {
     eyebrow: "Cobrament",
-    title: "Introdueix el teu codi i el teu telèfon",
-    intro: "",
+    title: "Per rebre un Bizum",
+    intro:
+      "El teu codi ja està preparat. Només necessitem el teu telèfon i la teva autorització per tramitar el pagament o, si ho prefereixes, registrar la donació equivalent a una ONG.",
     codeLabel: "Codi",
     phoneLabel: "Telèfon",
-    phonePlaceholder: "",
-    messageLabel: "Missatge (opcional)",
+    phonePlaceholder: "Escriu el teu telèfon",
+    messageLabel: "",
     messagePlaceholder: "",
-    donationHint: "Pots escriure ONG per donar",
-    lookupLabel: "Validar codi",
-    submitLabel: "Enviar",
+    donationHint: "Si ho prefereixes, pots donar l'import a una ONG.",
+    lookupLabel: "",
+    submitLabel: "Sol·licitar Bizum",
+    donateLabel: "Donar a una ONG",
+    consentLabel:
+      "Autoritzo el tractament de les meves dades de pagament per gestionar el Bizum o la donació, i confirmo que he llegit la informació de privacitat.",
+    consentInfoLabel: "Més informació",
+    privacyModalTitle: "Privacitat i gestió ètica del pagament",
+    privacySections: PAYMENT_PRIVACY_SECTIONS_CA,
     success: "Sol·licitud enviada",
     invalidCode: "Codi no vàlid",
     alreadyUsed: "Codi ja utilitzat",
     lookupHelpTemplate: "Codi vàlid · {amount} EUR",
+    phoneRequired: "Introdueix un telèfon vàlid per continuar",
+    consentRequired:
+      "Marca l'autorització de privacitat per continuar",
     successEyebrow: "Sol·licitud enviada",
     successTitle: "Encara pots guanyar",
-    successBody: "La teva sol·licitud de cobrament ha quedat registrada correctament.",
+    successBody: "La teva sol·licitud de Bizum ha quedat registrada correctament.",
+    successDonationBody:
+      "La teva sol·licitud de donació a una ONG ha quedat registrada correctament.",
     successSecondary:
       "A més, continues participant en el sorteig de 2 entrades VIP.",
     successFooter: "Sabràs més sobre l'estudi i els seus resultats agregats a cotec.es.",
@@ -790,23 +962,35 @@ const en = withServerErrors({
   },
   paymentPage: {
     eyebrow: "Payment",
-    title: "Enter your code and your phone",
-    intro: "",
+    title: "To receive a Bizum",
+    intro:
+      "Your code is already prepared. We only need your phone number and your authorisation to process the payment or, if you prefer, record the equivalent donation to an NGO.",
     codeLabel: "Code",
     phoneLabel: "Phone",
-    phonePlaceholder: "",
-    messageLabel: "Message (optional)",
+    phonePlaceholder: "Enter your phone number",
+    messageLabel: "",
     messagePlaceholder: "",
-    donationHint: "You can write ONG to donate",
-    lookupLabel: "Validate code",
-    submitLabel: "Send",
+    donationHint: "If you prefer, you can donate the amount to an NGO.",
+    lookupLabel: "",
+    submitLabel: "Request Bizum",
+    donateLabel: "Donate to an NGO",
+    consentLabel:
+      "I authorise the processing of my payment data to manage the Bizum or the donation, and I confirm that I have read the privacy information.",
+    consentInfoLabel: "More information",
+    privacyModalTitle: "Privacy and ethical payment handling",
+    privacySections: PAYMENT_PRIVACY_SECTIONS_EN,
     success: "Request sent",
     invalidCode: "Invalid code",
     alreadyUsed: "Code already used",
     lookupHelpTemplate: "Valid code · {amount} EUR",
+    phoneRequired: "Enter a valid phone number to continue",
+    consentRequired:
+      "Tick the privacy authorisation to continue",
     successEyebrow: "Request sent",
     successTitle: "You can still win",
-    successBody: "Your payment request has been recorded successfully.",
+    successBody: "Your Bizum request has been recorded successfully.",
+    successDonationBody:
+      "Your NGO donation request has been recorded successfully.",
     successSecondary:
       "You are also still entered in the draw for 2 VIP tickets.",
     successFooter: "You will be able to learn more about the study and its aggregated results at cotec.es.",
@@ -992,23 +1176,35 @@ const fr = withServerErrors({
   },
   paymentPage: {
     eyebrow: "Paiement",
-    title: "Entrez votre code et votre téléphone",
-    intro: "",
+    title: "Pour recevoir un Bizum",
+    intro:
+      "Votre code est déjà prêt. Nous avons seulement besoin de votre numéro de téléphone et de votre autorisation pour traiter le paiement ou, si vous le préférez, enregistrer le don équivalent à une ONG.",
     codeLabel: "Code",
     phoneLabel: "Téléphone",
-    phonePlaceholder: "",
-    messageLabel: "Message (optionnel)",
+    phonePlaceholder: "Saisissez votre téléphone",
+    messageLabel: "",
     messagePlaceholder: "",
-    donationHint: "Vous pouvez écrire ONG pour faire un don",
-    lookupLabel: "Valider le code",
-    submitLabel: "Envoyer",
+    donationHint: "Si vous le préférez, vous pouvez faire don du montant à une ONG.",
+    lookupLabel: "",
+    submitLabel: "Demander un Bizum",
+    donateLabel: "Faire un don à une ONG",
+    consentLabel:
+      "J'autorise le traitement de mes données de paiement pour gérer le Bizum ou le don, et je confirme avoir lu les informations de confidentialité.",
+    consentInfoLabel: "Plus d'information",
+    privacyModalTitle: "Confidentialité et gestion éthique du paiement",
+    privacySections: PAYMENT_PRIVACY_SECTIONS_FR,
     success: "Demande envoyée",
     invalidCode: "Code invalide",
     alreadyUsed: "Code déjà utilisé",
     lookupHelpTemplate: "Code valide · {amount} EUR",
+    phoneRequired: "Entrez un numéro de téléphone valide pour continuer",
+    consentRequired:
+      "Cochez l'autorisation de confidentialité pour continuer",
     successEyebrow: "Demande envoyée",
     successTitle: "Vous pouvez encore gagner",
-    successBody: "Votre demande de paiement a bien été enregistrée.",
+    successBody: "Votre demande de Bizum a bien été enregistrée.",
+    successDonationBody:
+      "Votre demande de don à une ONG a bien été enregistrée.",
     successSecondary:
       "Vous participez aussi toujours au tirage de 2 billets VIP.",
     successFooter: "Vous en saurez plus sur l'étude et ses résultats agrégés sur cotec.es.",
@@ -1194,23 +1390,35 @@ const pt = withServerErrors({
   },
   paymentPage: {
     eyebrow: "Cobrança",
-    title: "Introduz o teu código e o teu telefone",
-    intro: "",
+    title: "Para receber um Bizum",
+    intro:
+      "O teu código já está preparado. Só precisamos do teu telefone e da tua autorização para tratar o pagamento ou, se preferires, registar a doação equivalente a uma ONG.",
     codeLabel: "Código",
     phoneLabel: "Telefone",
-    phonePlaceholder: "",
-    messageLabel: "Mensagem (opcional)",
+    phonePlaceholder: "Escreve o teu telefone",
+    messageLabel: "",
     messagePlaceholder: "",
-    donationHint: "Podes escrever ONG para doar",
-    lookupLabel: "Validar código",
-    submitLabel: "Enviar",
+    donationHint: "Se preferires, podes doar o valor a uma ONG.",
+    lookupLabel: "",
+    submitLabel: "Pedir Bizum",
+    donateLabel: "Doar a uma ONG",
+    consentLabel:
+      "Autorizo o tratamento dos meus dados de pagamento para gerir o Bizum ou a doação, e confirmo que li a informação de privacidade.",
+    consentInfoLabel: "Mais informação",
+    privacyModalTitle: "Privacidade e gestão ética do pagamento",
+    privacySections: PAYMENT_PRIVACY_SECTIONS_PT,
     success: "Pedido enviado",
     invalidCode: "Código inválido",
     alreadyUsed: "Código já usado",
     lookupHelpTemplate: "Código válido · {amount} EUR",
+    phoneRequired: "Introduz um telefone válido para continuar",
+    consentRequired:
+      "Marca a autorização de privacidade para continuar",
     successEyebrow: "Pedido enviado",
     successTitle: "Ainda podes ganhar",
-    successBody: "O teu pedido de cobrança ficou registado corretamente.",
+    successBody: "O teu pedido de Bizum ficou registado corretamente.",
+    successDonationBody:
+      "O teu pedido de doação a uma ONG ficou registado corretamente.",
     successSecondary:
       "Além disso, continuas a participar no sorteio de 2 entradas VIP.",
     successFooter: "Saberás mais sobre o estudo e os seus resultados agregados em cotec.es.",

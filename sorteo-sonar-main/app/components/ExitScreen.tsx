@@ -138,7 +138,7 @@ export function ExitScreen() {
                   <p className="editorial-body">{loserCopy.bodySecondary}</p>
                   <BonusDrawPanel
                     copy={bonusCopy}
-                    storageKey={`sonar_bonus_prediction:${session.session_id}`}
+                    storageKey={`sonar_bonus_prediction:${session.session_id}:${session.claim?.submitted_at ?? session.valid_completed_at ?? "current"}`}
                     onSelect={(value) => {
                       trackClick("bonus_prediction_exit", {
                         target: `bonus_prediction_${value}`,

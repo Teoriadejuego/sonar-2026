@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Route } from "./+types/payout";
 import { BonusDrawPanel } from "../components/BonusDrawPanel";
+import { ConsentModal } from "../components/ConsentModal";
 import { ScreenFrame } from "../components/ScreenFrame";
 import { useLanguage } from "../utils/LanguageContext";
 import { usePageTelemetry } from "../utils/usePageTelemetry";
@@ -17,6 +18,17 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
+function normalizePhoneInput(raw: string) {
+  const hasPlus = raw.trim().startsWith("+");
+  const digits = raw.replace(/\D/g, "").slice(0, 15);
+  return hasPlus ? `+${digits}` : digits;
+}
+
+function hasValidPhone(raw: string) {
+  const digits = raw.replace(/\D/g, "");
+  return digits.length >= 9 && digits.length <= 15;
+}
+
 export default function PayoutRoute() {
   const { copy, language, setLanguage } = useLanguage();
   const { lookupPaymentCode, submitPaymentRequest, pushTelemetry } = useSession();
@@ -26,19 +38,23 @@ export default function PayoutRoute() {
 
   const [code, setCode] = useState("");
   const [phone, setPhone] = useState("");
-  const [messageText, setMessageText] = useState("");
   const [lookupState, setLookupState] = useState<{
     status: "idle" | "loading" | "ready" | "invalid" | "used";
     amountEur?: number;
   }>({ status: "idle" });
+  const [hasPaymentConsent, setHasPaymentConsent] = useState(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusTone, setStatusTone] = useState<"neutral" | "error" | "success">(
     "neutral",
   );
+  const [wasDonationRequest, setWasDonationRequest] = useState(false);
+  const [successBonusStorageKey, setSuccessBonusStorageKey] = useState<string | null>(
+    null,
+  );
   const autoLookupPendingRef = useRef(false);
-  const codePrefilledRef = useRef(false);
 
   const inviteLink =
     typeof window === "undefined"
@@ -59,9 +75,8 @@ export default function PayoutRoute() {
     const nextCode = url.searchParams.get("code") ?? "";
     const nextLang = url.searchParams.get("lang");
     if (nextCode) {
-      setCode(nextCode);
+      setCode(nextCode.trim().toUpperCase());
       autoLookupPendingRef.current = true;
-      codePrefilledRef.current = true;
     }
     if (
       nextLang &&
@@ -71,8 +86,6 @@ export default function PayoutRoute() {
       setLanguage(nextLang as typeof language);
     }
   }, [language, setLanguage]);
-
-  const isCodeLocked = codePrefilledRef.current;
 
   const translatePaymentError = (message: string) => {
     if (message === "Codigo no elegible para cobro") {
@@ -84,20 +97,25 @@ export default function PayoutRoute() {
     return translateServerError(message, copy);
   };
 
-  const handleLookup = async (incomingCode?: string) => {
-    const lookupCode = (incomingCode ?? code).trim();
+  const handleLookup = async (incomingCode?: string, source: "auto" | "manual" | "submit" = "manual") => {
+    const lookupCode = (incomingCode ?? code).trim().toUpperCase();
     if (!lookupCode) {
+      setLookupState({ status: "invalid" });
       setStatusTone("error");
       setStatusMessage(paymentCopy.invalidCode);
-      return;
+      return null;
     }
     setLookupState({ status: "loading" });
     setStatusMessage(null);
-    trackClick("payment_lookup", {
-      target: "payment_lookup",
-      role: "button",
-      ctaKind: "secondary",
-    });
+
+    if (source === "manual") {
+      trackClick("payment_lookup", {
+        target: "payment_lookup",
+        role: "button",
+        ctaKind: "secondary",
+      });
+    }
+
     try {
       const response = await lookupPaymentCode(lookupCode);
       if (!response.valid) {
@@ -109,7 +127,7 @@ export default function PayoutRoute() {
             ? paymentCopy.alreadyUsed
             : paymentCopy.invalidCode,
         );
-        return;
+        return null;
       }
       setLookupState({ status: "ready", amountEur: response.amount_eur });
       setStatusTone("neutral");
@@ -118,6 +136,7 @@ export default function PayoutRoute() {
           amount: response.amount_eur,
         }),
       );
+      return response;
     } catch (error) {
       setLookupState({ status: "invalid" });
       setStatusTone("error");
@@ -126,6 +145,7 @@ export default function PayoutRoute() {
           ? translatePaymentError(error.message)
           : paymentCopy.errorDefault,
       );
+      return null;
     }
   };
 
@@ -134,27 +154,56 @@ export default function PayoutRoute() {
       return;
     }
     autoLookupPendingRef.current = false;
-    void handleLookup(code);
+    void handleLookup(code, "auto");
   }, [code]);
 
-  const handleSubmit = async () => {
-    if (lookupState.status !== "ready") {
-      await handleLookup();
+  const handleSubmit = async (donationRequested: boolean) => {
+    const normalizedCode = code.trim().toUpperCase();
+    const normalizedPhone = phone.trim();
+
+    if (!normalizedCode) {
+      setStatusTone("error");
+      setStatusMessage(paymentCopy.invalidCode);
       return;
     }
+
+    if (!hasValidPhone(normalizedPhone)) {
+      setStatusTone("error");
+      setStatusMessage(paymentCopy.phoneRequired);
+      return;
+    }
+
+    if (!hasPaymentConsent) {
+      setStatusTone("error");
+      setStatusMessage(paymentCopy.consentRequired);
+      return;
+    }
+
+    if (lookupState.status !== "ready") {
+      const readyResponse = await handleLookup(normalizedCode, "submit");
+      if (!readyResponse) {
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setStatusMessage(null);
-    trackClick("payment_submit", {
-      target: "payment_submit",
+    setStatusTone("neutral");
+    trackClick(donationRequested ? "payment_donate" : "payment_submit", {
+      target: donationRequested ? "payment_donate" : "payment_submit",
       role: "button",
-      ctaKind: "primary",
+      ctaKind: donationRequested ? "secondary" : "primary",
     });
+
     try {
       const response = await submitPaymentRequest(
-        code.trim(),
-        phone.trim(),
-        /\bONG\b/i.test(messageText),
-        messageText,
+        normalizedCode,
+        normalizedPhone,
+        donationRequested,
+      );
+      setWasDonationRequest(donationRequested);
+      setSuccessBonusStorageKey(
+        `sonar_bonus_prediction:payout:${normalizedCode}:${Date.now()}`,
       );
       setStatusTone("success");
       setStatusMessage(paymentCopy.success);
@@ -169,6 +218,7 @@ export default function PayoutRoute() {
         payload: {
           donation_requested: response.donation_requested,
           amount_eur: response.amount_eur,
+          payment_code: normalizedCode,
         },
       });
       setIsSubmitted(true);
@@ -202,7 +252,11 @@ export default function PayoutRoute() {
             </div>
 
             <div className="sonar-panel p-5">
-              <p className="editorial-body">{paymentCopy.successBody}</p>
+              <p className="editorial-body">
+                {wasDonationRequest
+                  ? paymentCopy.successDonationBody
+                  : paymentCopy.successBody}
+              </p>
             </div>
 
             <div className="sonar-panel sonar-panel-highlight p-5">
@@ -210,7 +264,10 @@ export default function PayoutRoute() {
                 <p className="editorial-body">{paymentCopy.successSecondary}</p>
                 <BonusDrawPanel
                   copy={bonusCopy}
-                  storageKey={`sonar_bonus_prediction:payout:${code.trim().toUpperCase() || "unknown"}`}
+                  storageKey={
+                    successBonusStorageKey ??
+                    `sonar_bonus_prediction:payout:${code.trim().toUpperCase() || "unknown"}:success`
+                  }
                   onSelect={(value) => {
                     trackClick("bonus_prediction_payout_success", {
                       target: `bonus_prediction_${value}`,
@@ -225,6 +282,7 @@ export default function PayoutRoute() {
                       value,
                       payload: {
                         payment_code: code.trim().toUpperCase() || null,
+                        donation_requested: wasDonationRequest,
                       },
                     });
                   }}
@@ -285,100 +343,122 @@ export default function PayoutRoute() {
 
   return (
     <ScreenFrame>
-      <div className="flex min-h-full flex-col gap-6">
-        <div className="space-y-3">
-          <p className="editorial-eyebrow">
-            {paymentCopy.eyebrow}
-          </p>
-          <h1 className="editorial-title editorial-title--compact whitespace-pre-line">
-            {paymentCopy.title}
-          </h1>
-          {paymentCopy.intro ? (
-            <p className="editorial-small max-w-[24rem]">
-              {paymentCopy.intro}
-            </p>
-          ) : null}
-        </div>
+      <>
+        <div className="flex min-h-full flex-col gap-6">
+          <div className="space-y-3">
+            <p className="editorial-eyebrow">{paymentCopy.eyebrow}</p>
+            <h1 className="editorial-title editorial-title--compact whitespace-pre-line">
+              {paymentCopy.title}
+            </h1>
+            {paymentCopy.intro ? (
+              <p className="editorial-small max-w-[26rem]">{paymentCopy.intro}</p>
+            ) : null}
+          </div>
 
-        <div className="sonar-panel p-5">
-          <div className="space-y-4">
-            <div>
-              <label className="sonar-field-label">
-                {paymentCopy.codeLabel}
-              </label>
-              <input
-                value={code}
-                onChange={(event) => setCode(event.target.value.trim())}
-                className="sonar-field sonar-field--code"
-                readOnly={isCodeLocked}
-              />
+          <div className="sonar-panel p-5">
+            <div className="space-y-4">
+              <div>
+                <label className="sonar-field-label">{paymentCopy.codeLabel}</label>
+                <input
+                  value={code}
+                  readOnly
+                  className="sonar-field sonar-field--code"
+                />
+              </div>
+
+              <div>
+                <label className="sonar-field-label">{paymentCopy.phoneLabel}</label>
+                <input
+                  value={phone}
+                  onChange={(event) =>
+                    setPhone(normalizePhoneInput(event.target.value))
+                  }
+                  placeholder={paymentCopy.phonePlaceholder}
+                  inputMode="tel"
+                  autoComplete="tel"
+                  className="sonar-field"
+                />
+              </div>
+
+              <div
+                className={`sonar-checkbox-card ${
+                  hasPaymentConsent ? "is-checked" : ""
+                }`}
+              >
+                <input
+                  id="payment-privacy-consent"
+                  type="checkbox"
+                  checked={hasPaymentConsent}
+                  onChange={(event) =>
+                    setHasPaymentConsent(event.target.checked)
+                  }
+                  className="sonar-checkbox"
+                />
+                <div className="min-w-0 flex-1 space-y-3">
+                  <label
+                    htmlFor="payment-privacy-consent"
+                    className="sonar-checkbox-label block"
+                  >
+                    {paymentCopy.consentLabel}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsPrivacyModalOpen(true)}
+                    className="sonar-text-button mx-auto"
+                  >
+                    {paymentCopy.consentInfoLabel}
+                  </button>
+                </div>
+              </div>
             </div>
+          </div>
 
-            {!isCodeLocked ? (
+          {statusMessage && (
+            <div
+              className={`sonar-status ${
+                statusTone === "success"
+                  ? "sonar-panel-success"
+                  : statusTone === "error"
+                    ? "sonar-panel-danger"
+                    : "sonar-panel"
+              }`}
+            >
+              {statusMessage}
+            </div>
+          )}
+
+          <div className="mt-auto space-y-3">
+            <button
+              type="button"
+              onClick={() => void handleSubmit(false)}
+              disabled={isSubmitting}
+              className="sonar-primary-button"
+            >
+              {paymentCopy.submitLabel}
+            </button>
+
+            <div className="space-y-2">
+              <p className="editorial-small text-center">{paymentCopy.donationHint}</p>
               <button
                 type="button"
-                onClick={() => void handleLookup()}
-                className="sonar-secondary-button mx-auto"
+                onClick={() => void handleSubmit(true)}
+                disabled={isSubmitting}
+                className="sonar-secondary-button w-full"
               >
-                {paymentCopy.lookupLabel}
+                {paymentCopy.donateLabel}
               </button>
-            ) : null}
-
-            <div>
-              <label className="sonar-field-label">
-                {paymentCopy.phoneLabel}
-              </label>
-              <input
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                placeholder={paymentCopy.phonePlaceholder}
-                className="sonar-field"
-              />
-            </div>
-
-            <div>
-              <label className="sonar-field-label">
-                {paymentCopy.messageLabel}
-              </label>
-              <textarea
-                value={messageText}
-                onChange={(event) => setMessageText(event.target.value)}
-                placeholder={paymentCopy.messagePlaceholder}
-                className="sonar-textarea"
-              />
             </div>
           </div>
         </div>
 
-        <div className="sonar-panel sonar-panel-success p-5">
-          <p className="editorial-small text-slate-700">
-            {paymentCopy.donationHint}
-          </p>
-        </div>
-
-        {statusMessage && (
-          <div
-            className={`sonar-status ${
-              statusTone === "success"
-                ? "sonar-panel-success"
-                : statusTone === "error"
-                  ? "sonar-panel-danger"
-                  : "sonar-panel"
-            }`}
-          >
-            {statusMessage}
-          </div>
-        )}
-
-        <button
-          type="button"
-          onClick={() => void handleSubmit()}
-          disabled={isSubmitting}
-          className="sonar-primary-button mt-auto"
-        >
-          {paymentCopy.submitLabel}
-        </button>
-      </div>
+        <ConsentModal
+          isOpen={isPrivacyModalOpen}
+          title={paymentCopy.privacyModalTitle}
+          sections={paymentCopy.privacySections}
+          closeLabel={copy.common.close}
+          onClose={() => setIsPrivacyModalOpen(false)}
+        />
+      </>
     </ScreenFrame>
   );
 }
