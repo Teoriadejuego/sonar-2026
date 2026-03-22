@@ -1,7 +1,27 @@
-const envUrl = import.meta.env.API_BASE_URL || import.meta.env.VITE_API_URL;
-const API_BASE_URL = envUrl
-  ? envUrl.replace(/\/$/, "")
-  : "http://127.0.0.1:8000";
+const PUBLIC_REVIEW_API_URL =
+  "https://sonar-2026private-production.up.railway.app";
+
+function resolveApiBaseUrl() {
+  const envUrl = import.meta.env.API_BASE_URL || import.meta.env.VITE_API_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/$/, "");
+  }
+
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    const isLocalMachine =
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "[::1]";
+    if (!isLocalMachine) {
+      return PUBLIC_REVIEW_API_URL;
+    }
+  }
+
+  return "http://127.0.0.1:8000";
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 export type PublicConfig = {
   schema_version: string;
