@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ComprehensionScreen } from "../components/ComprehensionScreen";
 import { ExperimentPausedScreen } from "../components/ExperimentPausedScreen";
 import { ExitScreen } from "../components/ExitScreen";
@@ -30,6 +30,7 @@ export function Welcome() {
   const { copy } = useLanguage();
   const [showConsentScreen, setShowConsentScreen] = useState(false);
   const [prizeRevealCompleted, setPrizeRevealCompleted] = useState(false);
+  const historyGuardRef = useRef<string | null>(null);
   const {
     publicConfig,
     session,
@@ -45,16 +46,35 @@ export function Welcome() {
 
   useEffect(() => {
     if (!session || !["report", "exit"].includes(session.screen)) {
+      historyGuardRef.current = null;
       return;
     }
 
-    window.history.pushState(null, "", window.location.href);
+    if (historyGuardRef.current === session.screen) {
+      return;
+    }
+
+    historyGuardRef.current = session.screen;
+
+    const safePushState = () => {
+      try {
+        window.history.pushState(
+          { sonarScreen: session.screen },
+          document.title,
+          window.location.href,
+        );
+      } catch {
+        // iOS/WebKit can throw intermittently here; the experiment should continue.
+      }
+    };
+
+    safePushState();
     const onPopState = () => {
-      window.history.pushState(null, "", window.location.href);
+      safePushState();
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [session]);
+  }, [session?.screen]);
 
   useEffect(() => {
     if (!session || session.screen !== "exit") {
