@@ -17,6 +17,7 @@ export function GameScreen({ onContinueToReport }: GameScreenProps) {
   const [isRolling, setIsRolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPreparing, setIsPreparing] = useState(false);
+  const [buttonRollKey, setButtonRollKey] = useState<string | null>(null);
   const enteredAtRef = useRef(Date.now());
 
   const handleRoll = async (
@@ -87,6 +88,13 @@ export function GameScreen({ onContinueToReport }: GameScreenProps) {
     enteredAtRef.current = Date.now();
   }, [session.session_id]);
 
+  const triggerRollFromButton = () => {
+    if (isRolling || isPreparing || hasFirstRoll) {
+      return;
+    }
+    setButtonRollKey(`${session.session_id}:${Date.now()}`);
+  };
+
   return (
     <ScreenFrame>
       <div className="flex min-h-full flex-col gap-6">
@@ -106,7 +114,9 @@ export function GameScreen({ onContinueToReport }: GameScreenProps) {
             value={currentVisibleValue}
             interactive={canRollFromDice}
             disabled={isRolling || isPreparing || !canRollFromDice}
-            onRollRequest={() => handleRoll(nextRollKind, "dice")}
+            autoRollKey={buttonRollKey}
+            autoRollSource="button"
+            onRollRequest={(source) => handleRoll(nextRollKind, source ?? "dice")}
           />
         </div>
 
@@ -129,7 +139,7 @@ export function GameScreen({ onContinueToReport }: GameScreenProps) {
         <div className="space-y-3">
           {!hasFirstRoll ? (
             <button
-              onClick={() => void handleRoll("first_roll", "button")}
+              onClick={triggerRollFromButton}
               disabled={isRolling}
               className="sonar-primary-button"
             >

@@ -4,11 +4,12 @@ import { useLanguage } from "../utils/LanguageContext";
 interface Dice3DProps {
   value?: number | null;
   onResult?: (result: number) => void;
-  onRollRequest?: () => Promise<number>;
-  onRollStart?: () => void;
+  onRollRequest?: (source?: "dice" | "button" | "auto") => Promise<number>;
+  onRollStart?: (source?: "dice" | "button" | "auto") => void;
   disabled?: boolean;
   interactive?: boolean;
   autoRollKey?: string | null;
+  autoRollSource?: "button" | "auto";
 }
 
 export function Dice3D({
@@ -19,6 +20,7 @@ export function Dice3D({
   disabled = false,
   interactive = true,
   autoRollKey = null,
+  autoRollSource = "auto",
 }: Dice3DProps) {
   const { copy } = useLanguage();
   const [displayValue, setDisplayValue] = useState<number>(
@@ -44,17 +46,17 @@ export function Dice3D({
     return () => window.clearInterval(timer);
   }, [isRolling]);
 
-  const roll = async () => {
+  const roll = async (source: "dice" | "button" | "auto" = "dice") => {
     if (disabled || isRolling || !onRollRequest) {
       return;
     }
 
     setIsRolling(true);
-    onRollStart?.();
+    onRollStart?.(source);
     const startedAt = Date.now();
 
     try {
-      const result = await onRollRequest();
+      const result = await onRollRequest(source);
       const elapsed = Date.now() - startedAt;
       const remaining = Math.max(0, 900 - elapsed);
       window.setTimeout(() => {
@@ -79,8 +81,8 @@ export function Dice3D({
       return;
     }
     autoRollTriggeredRef.current = autoRollKey;
-    void roll();
-  }, [autoRollKey]);
+    void roll(autoRollSource);
+  }, [autoRollKey, autoRollSource]);
 
   if (!interactive) {
     return (
@@ -93,11 +95,11 @@ export function Dice3D({
   return (
     <button
       type="button"
-      onClick={() => void roll()}
+      onClick={() => void roll("dice")}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          void roll();
+          void roll("dice");
         }
       }}
       disabled={disabled || !onRollRequest}
