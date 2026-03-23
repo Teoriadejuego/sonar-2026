@@ -22,6 +22,10 @@ from database import engine
 from main import app, bootstrap_demo_data
 
 
+def bracelet_code(seed: int) -> str:
+    return f"EXPO{seed:04d}"
+
+
 class ResearchExportsTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls) -> None:
@@ -100,7 +104,7 @@ class ResearchExportsTests(unittest.TestCase):
         return list(reader)
 
     def test_exports_page_and_dashboard_are_available(self) -> None:
-        completed = self.complete_session("10000001")
+        completed = self.complete_session(bracelet_code(1))
 
         exports_response = self.client.get("/admin/exports")
         self.assertEqual(exports_response.status_code, 200)
@@ -114,7 +118,7 @@ class ResearchExportsTests(unittest.TestCase):
         self.assertIn(completed["experiment_phase"], dashboard_response.text)
 
     def test_sessions_csv_is_analytic_and_sanitized(self) -> None:
-        self.complete_session("10000002")
+        self.complete_session(bracelet_code(2))
 
         response = self.client.get("/admin/export/sessions.csv")
         self.assertEqual(response.status_code, 200, response.text)
@@ -126,7 +130,7 @@ class ResearchExportsTests(unittest.TestCase):
         self.assertNotIn("payout_reference_shown", rows[0])
 
     def test_analytic_bundle_contains_manifest_and_excludes_admin_tables(self) -> None:
-        self.complete_session("10000003")
+        self.complete_session(bracelet_code(3))
 
         response = self.client.get("/admin/export/bundle/analytic.zip")
         self.assertEqual(response.status_code, 200, response.text)

@@ -20,6 +20,10 @@ from database import engine
 from main import app, bootstrap_demo_data
 
 
+def bracelet_code(seed: int) -> str:
+    return f"TELE{seed:04d}"
+
+
 class TelemetryPipelineTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls) -> None:
@@ -92,7 +96,7 @@ class TelemetryPipelineTests(unittest.TestCase):
         return response.json()["session"]
 
     def test_high_resolution_telemetry_is_persisted_and_exported(self) -> None:
-        session = self.access_session("10000020")
+        session = self.access_session(bracelet_code(20))
         session_id = session["session_id"]
         base_client_ts = 1_774_191_605_666
 

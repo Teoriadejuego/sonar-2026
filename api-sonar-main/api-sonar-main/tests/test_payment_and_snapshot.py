@@ -19,6 +19,10 @@ from main import app, bootstrap_demo_data
 from models import Payment, PayoutRequest, SessionRecord, SnapshotRecord
 
 
+def bracelet_code(seed: int) -> str:
+    return f"TEST{seed:04d}"
+
+
 class PaymentAndSnapshotTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls) -> None:
@@ -54,16 +58,16 @@ class PaymentAndSnapshotTests(unittest.TestCase):
             db.add(record)
             db.commit()
 
-    def access_non_control_session(self, start_bracelet: int) -> dict:
-        next_bracelet = start_bracelet
+    def access_non_control_session(self, start_seed: int) -> dict:
+        next_seed = start_seed
         while True:
-            session = self.access_session(str(next_bracelet))
+            session = self.access_session(bracelet_code(next_seed))
             if session["treatment_key"] != "control":
                 return session
-            next_bracelet += 1
+            next_seed += 1
 
     def test_display_snapshot_persists_exact_visible_copy(self) -> None:
-        session = self.access_non_control_session(10000010)
+        session = self.access_non_control_session(10)
         session_id = session["session_id"]
         self.make_winner(session_id)
 
@@ -136,7 +140,8 @@ class PaymentAndSnapshotTests(unittest.TestCase):
             )
 
     def test_payment_lookup_and_submit_prevent_reuse(self) -> None:
-        session = self.access_session("10000011")
+        bracelet_id = bracelet_code(11)
+        session = self.access_session(bracelet_id)
         session_id = session["session_id"]
         self.make_winner(session_id)
 
@@ -174,6 +179,7 @@ class PaymentAndSnapshotTests(unittest.TestCase):
             "/v1/payment/submit",
             json={
                 "code": reference_code,
+                "bracelet_id": bracelet_id,
                 "phone": "0034693494561",
                 "language": "en",
                 "donation_requested": False,
@@ -187,6 +193,7 @@ class PaymentAndSnapshotTests(unittest.TestCase):
             "/v1/payment/submit",
             json={
                 "code": reference_code,
+                "bracelet_id": bracelet_id,
                 "phone": "0034693494561",
                 "language": "en",
                 "donation_requested": False,
@@ -205,6 +212,49 @@ class PaymentAndSnapshotTests(unittest.TestCase):
             self.assertEqual(payment.status, "queued")
             self.assertIsNotNone(payout_request)
             self.assertEqual(payout_request.requested_phone, "34693494561")
+
+    def test_payment_submit_rejects_mismatched_bracelet(self) -> None:
+        bracelet_id = bracelet_code(12)
+        session = self.access_session(bracelet_id)
+        session_id = session["session_id"]
+        self.make_winner(session_id)
+
+        roll_response = self.client.post(
+            f"/v1/session/{session_id}/roll",
+            json={"attempt_index": 1, "reaction_ms": 900, "idempotency_key": f"roll-{session_id}"},
+        )
+        self.assertEqual(roll_response.status_code, 200, roll_response.text)
+        first_value = roll_response.json()["attempt"]["result_value"]
+
+        self.client.post(
+            f"/v1/session/{session_id}/prepare-report",
+            json={"idempotency_key": f"prepare-{session_id}"},
+        )
+        submit_response = self.client.post(
+            f"/v1/session/{session_id}/submit-report",
+            json={
+                "reported_value": first_value,
+                "reaction_ms": 1200,
+                "idempotency_key": f"submit-{session_id}",
+                "language": "en",
+            },
+        )
+        self.assertEqual(submit_response.status_code, 200, submit_response.text)
+        reference_code = submit_response.json()["session"]["payment"]["reference_code"]
+
+        invalid_submit = self.client.post(
+            "/v1/payment/submit",
+            json={
+                "code": reference_code,
+                "bracelet_id": bracelet_code(99),
+                "phone": "0034693494561",
+                "language": "en",
+                "donation_requested": False,
+                "message_text": "",
+            },
+        )
+        self.assertEqual(invalid_submit.status_code, 400, invalid_submit.text)
+        self.assertIn("Pulsera erronea", invalid_submit.text)
 
 
 if __name__ == "__main__":

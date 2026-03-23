@@ -21,6 +21,10 @@ from main import app, bootstrap_demo_data
 from models import ExperimentState, InterestSignup, SessionRecord
 
 
+def bracelet_code(seed: int) -> str:
+    return f"PAUS{seed:04d}"
+
+
 class ExperimentPauseTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls) -> None:
@@ -101,7 +105,7 @@ class ExperimentPauseTests(unittest.TestCase):
         blocked = self.client.post(
             "/v1/session/access",
             json={
-                "bracelet_id": "10000001",
+                "bracelet_id": bracelet_code(1),
                 "consent_accepted": True,
                 "consent_age_confirmed": True,
                 "consent_info_accepted": True,
@@ -122,7 +126,7 @@ class ExperimentPauseTests(unittest.TestCase):
         allowed = self.client.post(
             "/v1/session/access",
             json={
-                "bracelet_id": "10000001",
+                "bracelet_id": bracelet_code(1),
                 "consent_accepted": True,
                 "consent_age_confirmed": True,
                 "consent_info_accepted": True,
@@ -154,7 +158,7 @@ class ExperimentPauseTests(unittest.TestCase):
         self.assertEqual(rows[0]["email_normalized"], "user@example.com")
 
     def test_admin_experiment_and_dashboard_report_prize_totals(self) -> None:
-        self.complete_winner_session("10000002")
+        self.complete_winner_session(bracelet_code(2))
 
         experiment_response = self.client.get("/admin/experiment")
         self.assertEqual(experiment_response.status_code, 200, experiment_response.text)

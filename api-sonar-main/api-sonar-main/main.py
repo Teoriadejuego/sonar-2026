@@ -219,6 +219,7 @@ class PaymentLookupRequest(BaseModel):
 
 class PaymentSubmitRequest(BaseModel):
     code: str
+    bracelet_id: str
     phone: Optional[str] = None
     language: Optional[str] = None
     donation_requested: bool = False
@@ -2360,7 +2361,9 @@ def access_session(
             ensure_experiment_accepting_entries(db)
             pulsera = db.get(Pulsera, bracelet_id)
             if not pulsera:
-                raise HTTPException(status_code=404, detail="Pulsera no encontrada")
+                pulsera = Pulsera(id=bracelet_id)
+                db.add(pulsera)
+                db.flush()
             _, session_record, created_now = ensure_user_and_session(
                 db,
                 bracelet_id=bracelet_id,
@@ -3107,6 +3110,10 @@ def payment_submit(
     rate_limit(f"payment:{payload.code}", settings.payment_rate_limit_per_minute)
     with distributed_lock(f"payment:{payload.code}"):
         active_operational_note = get_active_operational_note(db)
+        try:
+            normalized_bracelet_id = normalize_bracelet_id(payload.bracelet_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         normalized_phone = (
             "DONATION"
             if payload.donation_requested
@@ -3117,6 +3124,17 @@ def payment_submit(
             raise HTTPException(status_code=400, detail="Codigo no elegible para cobro")
         if payment.status != "pending":
             raise HTTPException(status_code=409, detail="Codigo de cobro ya utilizado")
+        session_record = db.get(SessionRecord, payment.session_id)
+        if not session_record:
+            raise HTTPException(status_code=404, detail="Sesion no encontrada")
+        user = db.get(User, session_record.user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="Sesion no encontrada")
+        if user.bracelet_id != normalized_bracelet_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Pulsera erronea, no coincide con la registrada inicialmente.",
+            )
 
         existing_request = db.exec(
             select(PayoutRequest).where(PayoutRequest.payment_id == payment.id)
@@ -3147,6 +3165,7 @@ def payment_submit(
             session_id=payment.session_id,
             payload={
                 "payout_reference": payload.code,
+                "bracelet_id_verified": True,
                 "donation_requested": payload.donation_requested,
                 "language": payload.language,
             },
@@ -3193,6 +3212,8 @@ def payout_page(code: Optional[str] = None) -> HTMLResponse:
       <p>Introduce tu codigo de cobro y el telefono donde quieres recibir el Bizum. Si prefieres donar el premio, indicalo al final.</p>
       <label for="code">Codigo de cobro</label>
       <input id="code" value="{safe_code}" />
+      <label for="bracelet">ID de la pulsera</label>
+      <input id="bracelet" placeholder="Ej: AB12CD34" />
       <label for="phone">Telefono</label>
       <input id="phone" placeholder="Ej: 34612345678" />
       <label for="message">Mensaje adicional</label>
@@ -3207,6 +3228,7 @@ def payout_page(code: Optional[str] = None) -> HTMLResponse:
         statusEl.style.display = 'none';
         const payload = {{
           code: document.getElementById('code').value.trim(),
+          bracelet_id: document.getElementById('bracelet').value.trim().toUpperCase(),
           phone: document.getElementById('phone').value.trim(),
           language: document.documentElement.lang || 'es',
           donation_requested: /\\bONG\\b/i.test(document.getElementById('message').value),

@@ -21,7 +21,7 @@
     "demo_pulsera_count": 12000,
     "payout_rate_denominator": 100,
     "collapse_consecutive_claims": 10,
-    "bracelet_pattern": "^[A-Z0-9]{4,12}$",
+    "bracelet_pattern": "^(?=(?:.*[A-Z]){4})(?=(?:.*\\d){4})[A-Z0-9]{8}$",
     "phase_transition_valid_completed_threshold": 6000,
     "prize_eur": {
       "1": 10,

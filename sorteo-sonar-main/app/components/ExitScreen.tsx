@@ -5,7 +5,16 @@ import { ScreenFrame } from "./ScreenFrame";
 import { useLanguage } from "../utils/LanguageContext";
 import { usePageTelemetry } from "../utils/usePageTelemetry";
 import { useSession } from "../utils/SessionContext";
-import { formatCopy } from "../utils/uiLexicon";
+import { formatCopy, type AppLanguage } from "../utils/uiLexicon";
+
+const CLOSING_MESSAGE: Record<AppLanguage, string> = {
+  es: "Muchas gracias, has terminado. Cierra el navegador y disfruta de la experiencia SONAR 2026.",
+  ca: "Moltes gracies, ja has acabat. Tanca el navegador i gaudeix de l'experiencia SONAR 2026.",
+  en: "Thank you very much, you have finished. Close the browser and enjoy the SONAR 2026 experience.",
+  fr: "Merci beaucoup, vous avez termine. Fermez le navigateur et profitez de l'experience SONAR 2026.",
+  pt: "Muito obrigado, terminaste. Fecha o navegador e desfruta da experiencia SONAR 2026.",
+  it: "Grazie mille, hai finito. Chiudi il browser e goditi l'esperienza SONAR 2026.",
+};
 
 function sanitizeWhatsappPhone(rawPhone: string) {
   const digitsOnly = rawPhone.replace(/\D/g, "");
@@ -205,6 +214,10 @@ export function ExitScreen() {
                   )}
                 </p>
               </div>
+
+              <p className="editorial-micro text-center">
+                {CLOSING_MESSAGE[language]}
+              </p>
             </>
           )}
         </div>

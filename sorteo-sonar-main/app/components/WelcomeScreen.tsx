@@ -27,6 +27,8 @@ type WelcomeScreenProps = {
 
 export function WelcomeScreen({ onStart, isLoading }: WelcomeScreenProps) {
   const { copy } = useLanguage();
+  const sanitizeBraceletInput = (raw: string) =>
+    raw.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8);
   const [braceletId, setBraceletId] = useState("");
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [participationAccepted, setParticipationAccepted] = useState(false);
@@ -179,11 +181,12 @@ export function WelcomeScreen({ onStart, isLoading }: WelcomeScreenProps) {
                   type="text"
                   value={braceletId}
                   onChange={(event) => {
-                    setBraceletId(event.target.value.toUpperCase());
+                    setBraceletId(sanitizeBraceletInput(event.target.value));
                     setError(null);
                   }}
                   placeholder={landingCopy.braceletPlaceholder}
                   disabled={isLoading}
+                  maxLength={8}
                   className="sonar-field sonar-field--code"
                 />
               </div>

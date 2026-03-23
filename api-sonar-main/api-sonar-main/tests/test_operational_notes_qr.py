@@ -20,6 +20,10 @@ from database import engine
 from main import app, bootstrap_demo_data
 
 
+def bracelet_code(seed: int) -> str:
+    return f"OPER{seed:04d}"
+
+
 class OperationalNotesAndQrTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls) -> None:
@@ -95,7 +99,7 @@ class OperationalNotesAndQrTests(unittest.TestCase):
         )
         self.assertEqual(activate.status_code, 200, activate.text)
 
-        session = self.complete_session("10000021")
+        session = self.complete_session(bracelet_code(21))
         self.assertEqual(session["qr_entry_code"], "poster-entrada-a")
         self.assertEqual(
             session["operational_note"]["note_text"],

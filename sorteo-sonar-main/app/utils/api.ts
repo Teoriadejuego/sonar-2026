@@ -849,6 +849,7 @@ export async function paymentLookup(
 
 export async function paymentSubmit(
   code: string,
+  braceletId: string,
   phone: string,
   language?: string,
   donationRequested?: boolean,
@@ -859,6 +860,7 @@ export async function paymentSubmit(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       code,
+      bracelet_id: braceletId,
       phone,
       language,
       donation_requested: donationRequested ?? false,

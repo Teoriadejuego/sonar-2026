@@ -83,6 +83,7 @@ type SessionContextValue = {
   lookupPaymentCode: (code: string) => Promise<PaymentLookupResponse>;
   submitPaymentRequest: (
     code: string,
+    braceletId: string,
     phone: string,
     donationRequested?: boolean,
     messageText?: string,
@@ -1306,18 +1307,28 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const submitPaymentRequest = useCallback(
     async (
       code: string,
+      submittedBraceletId: string,
       phone: string,
       donationRequested?: boolean,
       messageText?: string,
     ) => {
       const current = sessionRef.current;
       const normalizedCode = code.trim().toUpperCase();
+      const normalizedBraceletId = submittedBraceletId.trim().toUpperCase();
       if (
         current &&
         isDemoSession(current) &&
         current.selected_for_payment &&
         current.payment.reference_code?.toUpperCase() === normalizedCode
       ) {
+        const expectedBraceletId = (
+          braceletId || current.session_id.replace(DEMO_SESSION_PREFIX, "")
+        )
+          .trim()
+          .toUpperCase();
+        if (normalizedBraceletId !== expectedBraceletId) {
+          throw new Error("Pulsera erronea, no coincide con la registrada inicialmente.");
+        }
         commitSession({
           ...current,
           payment: {
@@ -1336,7 +1347,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           donation_requested: donationRequested ?? false,
         };
       }
-      return paymentSubmit(code, phone, language, donationRequested, messageText);
+      return paymentSubmit(
+        code,
+        submittedBraceletId,
+        phone,
+        language,
+        donationRequested,
+        messageText,
+      );
     },
     [commitSession, language],
   );

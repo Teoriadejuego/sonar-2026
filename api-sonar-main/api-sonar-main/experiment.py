@@ -198,7 +198,9 @@ def app_pepper() -> str:
 def normalize_bracelet_id(raw_id: str) -> str:
     normalized = raw_id.strip().upper()
     if not BRACELET_PATTERN.fullmatch(normalized):
-        raise ValueError("El formato de pulsera no es valido. Usa solo letras y numeros.")
+        raise ValueError(
+            "El formato de pulsera no es valido. Usa 8 caracteres con 4 letras y 4 numeros."
+        )
     return normalized
 
 
