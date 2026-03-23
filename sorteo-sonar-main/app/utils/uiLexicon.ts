@@ -495,8 +495,8 @@ const es = withServerErrors({
       "{count} de cada {denominator} personas eligieron {target}.",
   },
   bonusDraw: {
-    title: "Consigue opciones extra para el sorteo VIP",
-    intro: "Ya tienes 1 papeleta para el sorteo de 2 entradas VIP por haber participado.",
+    title: "Consigue opciones extra para el sorteo de SONAR 2027",
+    intro: "Ya tienes 1 papeleta para el sorteo de 2 entradas para SONAR 2027 por haber participado.",
     prompt:
       "Si quieres una extra, adivina qué número crees que más veces nos dirá la gente que le salió en su primera tirada.",
     baseTicket: "1 papeleta por participar",
@@ -519,7 +519,7 @@ const es = withServerErrors({
     body: "No has sido seleccionado para el premio en metálico.",
     bodySecondary:
       "Sigues participando en el sorteo de 2 entradas VIP.",
-    bodyFooter: "Sabrás más sobre el estudio y sus resultados agregados en cotec.es.",
+    bodyFooter: "Sabrás más sobre el estudio y sus resultados agregados en cotec.es, y el código ganador al finalizar el festival.",
     shareLabel: "Invitar por WhatsApp",
     shareMessageTemplate: "Si estás ahora en Sónar, haz esta prueba de 60 segundos: puedes entrar en el sorteo de 2 entradas VIP para Sónar 2027 y optar a premios en dinero de hasta 60 €. Participa aquí: {link}",
   },
@@ -570,7 +570,7 @@ const es = withServerErrors({
       "Tu solicitud de donación a una ONG ha quedado registrada correctamente.",
     successSecondary:
       "Además, sigues participando en el sorteo de 2 entradas VIP.",
-    successFooter: "Sabrás más sobre el estudio y sus resultados agregados en cotec.es.",
+    successFooter: "Sabrás más sobre el estudio y sus resultados agregados en cotec.es, y el código ganador al finalizar el festival.",
     successShareLabel: "Invitar por WhatsApp",
     successShareMessageTemplate: "Si estás ahora en Sónar, haz esta prueba de 60 segundos: puedes entrar en el sorteo de 2 entradas VIP para Sónar 2027 y optar a premios en dinero de hasta 60 €. Participa aquí: {link}",
     errorDefault: "Error al enviar",
@@ -710,8 +710,8 @@ const ca = withServerErrors({
       "{count} de cada {denominator} persones van escollir {target}.",
   },
   bonusDraw: {
-    title: "Aconsegueix opcions extra per al sorteig VIP",
-    intro: "Ja tens 1 papereta per al sorteig de 2 entrades VIP per haver participat.",
+    title: "Aconsegueix opcions extra per al sorteig de SONAR 2027",
+    intro: "Ja tens 1 papereta per al sorteig de 2 entrades per a SONAR 2027 per haver participat.",
     prompt:
       "Si en vols una extra, endevina quin número creus que la gent ens dirà més vegades que li va sortir en la primera tirada.",
     baseTicket: "1 papereta per participar",
@@ -734,7 +734,7 @@ const ca = withServerErrors({
     body: "No has estat seleccionat per al premi en metàl·lic.",
     bodySecondary:
       "Continues participant en el sorteig de 2 entrades VIP.",
-    bodyFooter: "Sabràs més sobre l'estudi i els seus resultats agregats a cotec.es.",
+    bodyFooter: "Sabràs més sobre l'estudi i els seus resultats agregats a cotec.es, i el codi guanyador en acabar el festival.",
     shareLabel: "Convidar per WhatsApp",
     shareMessageTemplate: "Si ets ara al Sónar, prova això: dura 60 segons i pots entrar al sorteig de 2 entrades VIP per al Sónar 2027 i optar a premis en diners de fins a 60 €. Participa aquí: {link}",
   },
@@ -785,7 +785,7 @@ const ca = withServerErrors({
       "La teva sol·licitud de donació a una ONG ha quedat registrada correctament.",
     successSecondary:
       "A més, continues participant en el sorteig de 2 entrades VIP.",
-    successFooter: "Sabràs més sobre l'estudi i els seus resultats agregats a cotec.es.",
+    successFooter: "Sabràs més sobre l'estudi i els seus resultats agregats a cotec.es, i el codi guanyador en acabar el festival.",
     successShareLabel: "Convidar per WhatsApp",
     successShareMessageTemplate: "Si ets ara al Sónar, prova això: dura 60 segons i pots entrar al sorteig de 2 entrades VIP per al Sónar 2027 i optar a premis en diners de fins a 60 €. Participa aquí: {link}",
     errorDefault: "Error en enviar",
@@ -924,8 +924,8 @@ const en = withServerErrors({
       "{count} out of every {denominator} people chose {target}.",
   },
   bonusDraw: {
-    title: "Get extra entries for the VIP draw",
-    intro: "You already have 1 entry for the draw for 2 VIP tickets for taking part.",
+    title: "Get extra entries for the SONAR 2027 draw",
+    intro: "You already have 1 entry for the draw for 2 tickets to SONAR 2027 for taking part.",
     prompt:
       "If you want one extra, guess which number you think people will tell us most often came up on their first roll.",
     baseTicket: "1 entry for taking part",
@@ -948,7 +948,7 @@ const en = withServerErrors({
     body: "You were not selected for the cash prize.",
     bodySecondary:
       "You are still entered in the draw for 2 VIP tickets.",
-    bodyFooter: "You will be able to learn more about the study and its aggregated results at cotec.es.",
+    bodyFooter: "You will be able to learn more about the study and its aggregated results at cotec.es, and about the winning code at the end of the festival.",
     shareLabel: "Invite on WhatsApp",
     shareMessageTemplate: "If you are at Sónar right now, try this: it takes 60 seconds and you can enter the draw for 2 VIP tickets for Sónar 2027 and cash prizes up to 60 €. Join here: {link}",
   },
@@ -999,7 +999,7 @@ const en = withServerErrors({
       "Your NGO donation request has been recorded successfully.",
     successSecondary:
       "You are also still entered in the draw for 2 VIP tickets.",
-    successFooter: "You will be able to learn more about the study and its aggregated results at cotec.es.",
+    successFooter: "You will be able to learn more about the study and its aggregated results at cotec.es, and about the winning code at the end of the festival.",
     successShareLabel: "Invite on WhatsApp",
     successShareMessageTemplate: "If you are at Sónar right now, try this: it takes 60 seconds and you can enter the draw for 2 VIP tickets for Sónar 2027 and cash prizes up to 60 €. Join here: {link}",
     errorDefault: "Error sending request",
@@ -1139,8 +1139,8 @@ const fr = withServerErrors({
       "{count} personnes sur {denominator} ont choisi {target}.",
   },
   bonusDraw: {
-    title: "Obtenez des chances supplémentaires pour le tirage VIP",
-    intro: "Vous avez déjà 1 participation au tirage de 2 billets VIP pour avoir pris part à l'activité.",
+    title: "Obtenez des chances supplémentaires pour le tirage SONAR 2027",
+    intro: "Vous avez déjà 1 participation au tirage de 2 billets pour SONAR 2027 pour avoir pris part à l'activité.",
     prompt:
       "Si vous en voulez une de plus, devinez quel nombre, selon vous, les personnes nous diront le plus souvent avoir obtenu à leur premier lancer.",
     baseTicket: "1 participation pour avoir pris part",
@@ -1163,7 +1163,7 @@ const fr = withServerErrors({
     body: "Vous n'avez pas été sélectionné pour le prix en espèces.",
     bodySecondary:
       "Vous participez toujours au tirage de 2 billets VIP.",
-    bodyFooter: "Vous en saurez plus sur l'étude et ses résultats agrégés sur cotec.es.",
+    bodyFooter: "Vous en saurez plus sur l'étude et ses résultats agrégés sur cotec.es, ainsi que sur le code gagnant à la fin du festival.",
     shareLabel: "Inviter sur WhatsApp",
     shareMessageTemplate: "Si vous êtes au Sónar en ce moment, essayez ceci : cela dure 60 secondes et vous pouvez participer au tirage de 2 billets VIP pour le Sónar 2027 ainsi qu'à des prix en argent jusqu'à 60 €. Participez ici : {link}",
   },
@@ -1214,7 +1214,7 @@ const fr = withServerErrors({
       "Votre demande de don à une ONG a bien été enregistrée.",
     successSecondary:
       "Vous participez aussi toujours au tirage de 2 billets VIP.",
-    successFooter: "Vous en saurez plus sur l'étude et ses résultats agrégés sur cotec.es.",
+    successFooter: "Vous en saurez plus sur l'étude et ses résultats agrégés sur cotec.es, ainsi que sur le code gagnant à la fin du festival.",
     successShareLabel: "Inviter sur WhatsApp",
     successShareMessageTemplate: "Si vous êtes au Sónar en ce moment, essayez ceci : cela dure 60 secondes et vous pouvez participer au tirage de 2 billets VIP pour le Sónar 2027 ainsi qu'à des prix en argent jusqu'à 60 €. Participez ici : {link}",
     errorDefault: "Erreur lors de l'envoi",
@@ -1354,8 +1354,8 @@ const pt = withServerErrors({
       "{count} de cada {denominator} pessoas escolheram {target}.",
   },
   bonusDraw: {
-    title: "Consegue entradas extra para o sorteio VIP",
-    intro: "Já tens 1 participação no sorteio de 2 entradas VIP por teres participado.",
+    title: "Consegue entradas extra para o sorteio de SONAR 2027",
+    intro: "Já tens 1 participação no sorteio de 2 entradas para o SONAR 2027 por teres participado.",
     prompt:
       "Se quiseres mais uma, adivinha qual é o número que achas que as pessoas nos vão dizer mais vezes que lhes saiu na primeira tirada.",
     baseTicket: "1 participação por participar",
@@ -1378,7 +1378,7 @@ const pt = withServerErrors({
     body: "Não foste selecionado para o prémio em dinheiro.",
     bodySecondary:
       "Continuas a participar no sorteio de 2 entradas VIP.",
-    bodyFooter: "Saberás mais sobre o estudo e os seus resultados agregados em cotec.es.",
+    bodyFooter: "Saberás mais sobre o estudo e os seus resultados agregados em cotec.es, e sobre o código vencedor no final do festival.",
     shareLabel: "Convidar por WhatsApp",
     shareMessageTemplate: "Se estás agora no Sónar, experimenta isto: demora 60 segundos e podes entrar no sorteio de 2 entradas VIP para o Sónar 2027 e optar a prémios em dinheiro até 60 €. Participa aqui: {link}",
   },
@@ -1429,7 +1429,7 @@ const pt = withServerErrors({
       "O teu pedido de doação a uma ONG ficou registado corretamente.",
     successSecondary:
       "Além disso, continuas a participar no sorteio de 2 entradas VIP.",
-    successFooter: "Saberás mais sobre o estudo e os seus resultados agregados em cotec.es.",
+    successFooter: "Saberás mais sobre o estudo e os seus resultados agregados em cotec.es, e sobre o código vencedor no final do festival.",
     successShareLabel: "Convidar por WhatsApp",
     successShareMessageTemplate: "Se estás agora no Sónar, experimenta isto: demora 60 segundos e podes entrar no sorteio de 2 entradas VIP para o Sónar 2027 e optar a prémios em dinheiro até 60 €. Participa aqui: {link}",
     errorDefault: "Erro ao enviar",
@@ -1538,7 +1538,7 @@ const it = withServerErrors({
     title: "Puoi ancora vincere",
     body: "Non sei stato selezionato per il premio in denaro.",
     bodySecondary: "Continui a partecipare al sorteggio di 2 biglietti VIP.",
-    bodyFooter: "Saprai di piu sullo studio e sui risultati aggregati su cotec.es.",
+    bodyFooter: "Saprai di piu sullo studio e sui risultati aggregati su cotec.es, e sul codice vincente alla fine del festival.",
     shareLabel: "Invita via WhatsApp",
     shareMessageTemplate:
       "Se sei al Sónar in questo momento, prova questo: ti richiede 60 secondi e puoi entrare nel sorteggio di 2 biglietti VIP per il Sónar 2027 e concorrere a premi in denaro fino a 60 euro. Partecipa qui: {link}",
@@ -1587,7 +1587,7 @@ const it = withServerErrors({
     successSecondary:
       "Inoltre continui a partecipare al sorteggio di 2 biglietti VIP.",
     successFooter:
-      "Saprai di piu sullo studio e sui suoi risultati aggregati su cotec.es.",
+      "Saprai di piu sullo studio e sui suoi risultati aggregati su cotec.es, e sul codice vincente alla fine del festival.",
     successShareLabel: "Invita via WhatsApp",
     successShareMessageTemplate:
       "Se sei al Sónar in questo momento, prova questo: ti richiede 60 secondi e puoi entrare nel sorteggio di 2 biglietti VIP per il Sónar 2027 e concorrere a premi in denaro fino a 60 euro. Partecipa qui: {link}",

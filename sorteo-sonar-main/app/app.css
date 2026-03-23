@@ -614,10 +614,10 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1rem;
-  border: 1px solid rgba(127, 97, 16, 0.18);
+  padding: 1.15rem;
+  border: 1px solid var(--accent-yellow-line);
   border-radius: 1.15rem;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--accent-yellow);
 }
 
 .bonus-draw-ticket-list {
@@ -634,6 +634,10 @@ button:disabled {
 
 .bonus-draw-ticket-item--achieved .bonus-draw-ticket-text {
   font-weight: 700;
+}
+
+.bonus-draw-ticket-item--invite {
+  margin-top: 0.25rem;
 }
 
 .bonus-draw-ticket-badge {
@@ -710,23 +714,6 @@ button:disabled {
   box-shadow: 0 10px 20px rgba(17, 17, 17, 0.14);
 }
 
-.bonus-draw-status {
-  margin: 0;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #7f6110;
-}
-
-.bonus-draw-status--earned {
-  color: #205d2d;
-}
-
-.bonus-draw-invite-note {
-  margin-top: 0.1rem;
-}
-
 .prize-reveal-grid {
   display: grid;
   grid-template-columns: repeat(10, minmax(0, 1fr));
@@ -799,16 +786,16 @@ button:disabled {
 
 .prize-reveal-award {
   position: absolute;
-  inset: auto 0.18rem 0.22rem 0.18rem;
+  inset: auto 0.18rem 0.18rem 0.18rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 1.2rem;
+  min-height: 1.8rem;
   pointer-events: none;
 }
 
 .prize-reveal-award-amount {
-  font-size: 0.56rem;
+  font-size: 0.9rem;
   font-weight: 900;
   letter-spacing: 0.02em;
   line-height: 1;
@@ -816,21 +803,16 @@ button:disabled {
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
-.prize-reveal-award-amount--crossed {
-  color: var(--danger-text);
-  text-decoration: line-through;
-  text-decoration-thickness: 0.12rem;
-}
-
-.prize-reveal-award-cross {
+.prize-reveal-picked-cross {
   position: absolute;
-  top: 46%;
-  left: 50%;
+  inset: 50% auto auto 50%;
   transform: translate(-50%, -50%);
-  font-size: 1rem;
+  font-size: 2.15rem;
   font-weight: 900;
   line-height: 1;
   color: #c33d2e;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.2);
+  pointer-events: none;
 }
 
 .sonar-ticket-code {

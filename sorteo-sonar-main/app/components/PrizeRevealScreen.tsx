@@ -164,13 +164,12 @@ export function PrizeRevealScreen({ onComplete }: PrizeRevealScreenProps) {
             {board.map((tile) => {
               const isPicked = selectedIndex === tile.index;
               const isWinningTile = winnerIndex === tile.index;
+              const isLosingPick = isPicked && !session.payment.eligible;
               const classNames = [
                 "prize-reveal-cell",
                 isPicked ? "prize-reveal-cell--picked" : "",
                 isWinningTile ? "prize-reveal-cell--winner" : "",
-                isPicked && !session.payment.eligible
-                  ? "prize-reveal-cell--loser"
-                  : "",
+                isLosingPick ? "prize-reveal-cell--loser" : "",
               ]
                 .filter(Boolean)
                 .join(" ");
@@ -189,21 +188,15 @@ export function PrizeRevealScreen({ onComplete }: PrizeRevealScreenProps) {
                   </div>
                   {isWinningTile ? (
                     <div className="prize-reveal-award">
-                      <span
-                        className={`prize-reveal-award-amount ${
-                          !session.payment.eligible
-                            ? "prize-reveal-award-amount--crossed"
-                            : ""
-                        }`}
-                      >
+                      <span className="prize-reveal-award-amount">
                         {revealedPrizeAmount} {"\u20ac"}
                       </span>
-                      {!session.payment.eligible ? (
-                        <span className="prize-reveal-award-cross" aria-hidden="true">
-                          X
-                        </span>
-                      ) : null}
                     </div>
+                  ) : null}
+                  {isLosingPick ? (
+                    <span className="prize-reveal-picked-cross" aria-hidden="true">
+                      X
+                    </span>
                   ) : null}
                 </button>
               );

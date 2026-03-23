@@ -133,54 +133,50 @@ export function ExitScreen() {
                 <p className="editorial-body">{loserCopy.body}</p>
               </div>
 
-              <div className="sonar-panel sonar-panel-highlight p-5">
-                <div className="space-y-4">
-                  <p className="editorial-body">{loserCopy.bodySecondary}</p>
-                  <BonusDrawPanel
-                    copy={bonusCopy}
-                    storageKey={`sonar_bonus_prediction:${session.session_id}:${session.claim?.submitted_at ?? session.valid_completed_at ?? "current"}`}
-                    onSelect={(value) => {
-                      trackClick("bonus_prediction_exit", {
-                        target: `bonus_prediction_${value}`,
-                        role: "button",
-                        ctaKind: "secondary",
-                        value,
-                      });
-                      pushTelemetry({
-                        event_type: "custom",
-                        event_name: "bonus_prediction_selected",
-                        screen_name: "exit",
-                        value,
-                        payload: {
-                          session_id: session.session_id,
-                          referral_code: session.referral_code,
-                        },
-                      });
-                    }}
-                  >
-                    <a
-                      href={whatsappLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={() =>
-                        trackClick("share_whatsapp", {
-                          target: "share_whatsapp",
-                          role: "link",
-                          ctaKind: "secondary",
-                          payload: {
-                            referralCode: session.referral_code,
-                            referralSource: "whatsapp",
-                            bonusPredictionStored: true,
-                          },
-                        })
-                      }
-                      className="sonar-share-button w-full"
-                    >
-                      {loserCopy.shareLabel}
-                    </a>
-                  </BonusDrawPanel>
-                </div>
-              </div>
+              <BonusDrawPanel
+                copy={bonusCopy}
+                storageKey={`sonar_bonus_prediction:${session.session_id}:${session.claim?.submitted_at ?? session.valid_completed_at ?? "current"}`}
+                inviteStorageKey={`sonar_bonus_invite:${session.session_id}:${session.claim?.submitted_at ?? session.valid_completed_at ?? "current"}`}
+                onSelect={(value) => {
+                  trackClick("bonus_prediction_exit", {
+                    target: `bonus_prediction_${value}`,
+                    role: "button",
+                    ctaKind: "secondary",
+                    value,
+                  });
+                  pushTelemetry({
+                    event_type: "custom",
+                    event_name: "bonus_prediction_selected",
+                    screen_name: "exit",
+                    value,
+                    payload: {
+                      session_id: session.session_id,
+                      referral_code: session.referral_code,
+                    },
+                  });
+                }}
+              >
+                <a
+                  href={whatsappLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() =>
+                    trackClick("share_whatsapp", {
+                      target: "share_whatsapp",
+                      role: "link",
+                      ctaKind: "secondary",
+                      payload: {
+                        referralCode: session.referral_code,
+                        referralSource: "whatsapp",
+                        bonusPredictionStored: true,
+                      },
+                    })
+                  }
+                  className="sonar-share-button w-full"
+                >
+                  {loserCopy.shareLabel}
+                </a>
+              </BonusDrawPanel>
 
               <div className="sonar-panel p-5">
                 <p className="editorial-small">

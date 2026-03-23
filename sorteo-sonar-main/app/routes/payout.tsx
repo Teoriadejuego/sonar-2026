@@ -259,52 +259,52 @@ export default function PayoutRoute() {
               </p>
             </div>
 
-            <div className="sonar-panel sonar-panel-highlight p-5">
-              <div className="space-y-4">
-                <p className="editorial-body">{paymentCopy.successSecondary}</p>
-                <BonusDrawPanel
-                  copy={bonusCopy}
-                  storageKey={
-                    successBonusStorageKey ??
-                    `sonar_bonus_prediction:payout:${code.trim().toUpperCase() || "unknown"}:success`
-                  }
-                  onSelect={(value) => {
-                    trackClick("bonus_prediction_payout_success", {
-                      target: `bonus_prediction_${value}`,
-                      role: "button",
-                      ctaKind: "secondary",
-                      value,
-                    });
-                    pushTelemetry({
-                      event_type: "custom",
-                      event_name: "bonus_prediction_selected",
-                      screen_name: "payout_success",
-                      value,
-                      payload: {
-                        payment_code: code.trim().toUpperCase() || null,
-                        donation_requested: wasDonationRequest,
-                      },
-                    });
-                  }}
-                >
-                  <a
-                    href={whatsappLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() =>
-                      trackClick("payment_success_share_whatsapp", {
-                        target: "payment_success_share_whatsapp",
-                        role: "link",
-                        ctaKind: "secondary",
-                      })
-                    }
-                    className="sonar-share-button w-full"
-                  >
-                    {paymentCopy.successShareLabel}
-                  </a>
-                </BonusDrawPanel>
-              </div>
-            </div>
+            <BonusDrawPanel
+              copy={bonusCopy}
+              storageKey={
+                successBonusStorageKey ??
+                `sonar_bonus_prediction:payout:${code.trim().toUpperCase() || "unknown"}:success`
+              }
+              inviteStorageKey={
+                successBonusStorageKey
+                  ? `${successBonusStorageKey}:invite`
+                  : `sonar_bonus_invite:payout:${code.trim().toUpperCase() || "unknown"}:success`
+              }
+              onSelect={(value) => {
+                trackClick("bonus_prediction_payout_success", {
+                  target: `bonus_prediction_${value}`,
+                  role: "button",
+                  ctaKind: "secondary",
+                  value,
+                });
+                pushTelemetry({
+                  event_type: "custom",
+                  event_name: "bonus_prediction_selected",
+                  screen_name: "payout_success",
+                  value,
+                  payload: {
+                    payment_code: code.trim().toUpperCase() || null,
+                    donation_requested: wasDonationRequest,
+                  },
+                });
+              }}
+            >
+              <a
+                href={whatsappLink}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() =>
+                  trackClick("payment_success_share_whatsapp", {
+                    target: "payment_success_share_whatsapp",
+                    role: "link",
+                    ctaKind: "secondary",
+                  })
+                }
+                className="sonar-share-button w-full"
+              >
+                {paymentCopy.successShareLabel}
+              </a>
+            </BonusDrawPanel>
 
             <div className="sonar-panel p-5">
               <p className="editorial-small">
