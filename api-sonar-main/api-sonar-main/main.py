@@ -1498,12 +1498,13 @@ def get_or_create_snapshot_record(db: Session, session_id: str) -> SnapshotRecor
 def get_or_create_screen_spell(
     db: Session, *, session_id: str, spell_id: str, screen_name: str
 ) -> ScreenSpell:
-    spell = db.exec(
-        select(ScreenSpell).where(
-            ScreenSpell.session_id == session_id,
-            ScreenSpell.spell_id == spell_id,
-        )
-    ).first()
+    with db.no_autoflush:
+        spell = db.exec(
+            select(ScreenSpell).where(
+                ScreenSpell.session_id == session_id,
+                ScreenSpell.spell_id == spell_id,
+            )
+        ).first()
     if spell:
         return spell
     spell = ScreenSpell(

@@ -94,6 +94,7 @@ class TelemetryPipelineTests(unittest.TestCase):
     def test_high_resolution_telemetry_is_persisted_and_exported(self) -> None:
         session = self.access_session("10000020")
         session_id = session["session_id"]
+        base_client_ts = 1_774_191_605_666
 
         telemetry_response = self.client.post(
             "/v1/telemetry/batch",
@@ -104,7 +105,7 @@ class TelemetryPipelineTests(unittest.TestCase):
                         "event_type": "screen_enter",
                         "event_name": "screen_enter",
                         "screen_name": "landing",
-                        "client_ts": 1_000,
+                        "client_ts": base_client_ts,
                         "event_sequence_number": 1,
                         "timezone_offset_minutes": -60,
                         "app_language": "es",
@@ -120,7 +121,7 @@ class TelemetryPipelineTests(unittest.TestCase):
                         "event_type": "click",
                         "event_name": "start_session",
                         "screen_name": "landing",
-                        "client_ts": 1_220,
+                        "client_ts": base_client_ts + 220,
                         "event_sequence_number": 2,
                         "spell_id": "landing-1",
                         "interaction_target": "start_session",
@@ -131,7 +132,7 @@ class TelemetryPipelineTests(unittest.TestCase):
                         "event_type": "network",
                         "event_name": "api_success",
                         "screen_name": "landing",
-                        "client_ts": 1_280,
+                        "client_ts": base_client_ts + 280,
                         "event_sequence_number": 3,
                         "endpoint_name": "/v1/session/access",
                         "request_method": "POST",
@@ -142,7 +143,7 @@ class TelemetryPipelineTests(unittest.TestCase):
                         "event_type": "lifecycle",
                         "event_name": "blur",
                         "screen_name": "landing",
-                        "client_ts": 1_320,
+                        "client_ts": base_client_ts + 320,
                         "event_sequence_number": 4,
                         "spell_id": "landing-1",
                     },
@@ -150,7 +151,7 @@ class TelemetryPipelineTests(unittest.TestCase):
                         "event_type": "screen_exit",
                         "event_name": "screen_exit",
                         "screen_name": "landing",
-                        "client_ts": 2_100,
+                        "client_ts": base_client_ts + 1_100,
                         "event_sequence_number": 5,
                         "spell_id": "landing-1",
                         "duration_ms": 1_100,
@@ -178,7 +179,7 @@ class TelemetryPipelineTests(unittest.TestCase):
                         "event_type": "error",
                         "event_name": "js_error",
                         "screen_name": "landing",
-                        "client_ts": 2_150,
+                        "client_ts": base_client_ts + 1_150,
                         "event_sequence_number": 6,
                         "error_name": "TypeError",
                         "payload": {"message": "Synthetic render failure"},
@@ -213,6 +214,7 @@ class TelemetryPipelineTests(unittest.TestCase):
         self.assertIn("event_sequence_number", telemetry_rows[0])
         self.assertIn("client_clock_skew_estimate_ms", telemetry_rows[0])
         self.assertTrue(any(row["spell_id"] == "landing-1" for row in telemetry_rows))
+        self.assertTrue(any(row["client_ts"] == str(base_client_ts) for row in telemetry_rows))
 
         screen_rows = self.parse_csv(
             self.client.get("/admin/export/screen_events.csv").content

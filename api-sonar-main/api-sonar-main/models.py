@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from typing import Optional
 from uuid import uuid4
 
-from sqlalchemy import Column, Float, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Column, Float, Text, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -257,7 +257,9 @@ class Throw(SQLModel, table=True):
     session_id: str = Field(foreign_key="sessions.id", index=True)
     attempt_index: int = Field(index=True)
     result_value: int
-    reaction_ms: Optional[int] = None
+    reaction_ms: Optional[int] = Field(
+        default=None, sa_column=Column(BigInteger, nullable=True)
+    )
     delivered_at: datetime = Field(default_factory=utcnow)
     idempotency_key: str = Field(index=True)
 
@@ -274,7 +276,9 @@ class ConsentRecord(SQLModel, table=True):
     participation_accepted: bool
     data_accepted: bool
     accepted_at: datetime = Field(default_factory=utcnow)
-    landing_visible_ms: Optional[int] = None
+    landing_visible_ms: Optional[int] = Field(
+        default=None, sa_column=Column(BigInteger, nullable=True)
+    )
     info_panels_opened_json: Optional[str] = Field(default=None, sa_column=Column(Text))
     info_panel_durations_json: Optional[str] = Field(default=None, sa_column=Column(Text))
     info_panel_open_count: int = Field(default=0)
@@ -360,22 +364,40 @@ class ScreenSpell(SQLModel, table=True):
     spell_id: str = Field(index=True)
     screen_name: str = Field(index=True)
     entry_origin: Optional[str] = None
-    entered_client_ts: Optional[int] = None
+    entered_client_ts: Optional[int] = Field(
+        default=None, sa_column=Column(BigInteger, nullable=True)
+    )
     entered_server_ts: datetime = Field(default_factory=utcnow)
-    exited_client_ts: Optional[int] = None
+    exited_client_ts: Optional[int] = Field(
+        default=None, sa_column=Column(BigInteger, nullable=True)
+    )
     exited_server_ts: Optional[datetime] = None
-    duration_total_ms: Optional[int] = None
-    visible_ms: Optional[int] = None
-    hidden_ms: Optional[int] = None
-    blur_ms: Optional[int] = None
+    duration_total_ms: Optional[int] = Field(
+        default=None, sa_column=Column(BigInteger, nullable=True)
+    )
+    visible_ms: Optional[int] = Field(
+        default=None, sa_column=Column(BigInteger, nullable=True)
+    )
+    hidden_ms: Optional[int] = Field(
+        default=None, sa_column=Column(BigInteger, nullable=True)
+    )
+    blur_ms: Optional[int] = Field(
+        default=None, sa_column=Column(BigInteger, nullable=True)
+    )
     focus_change_count: int = Field(default=0)
     visibility_change_count: int = Field(default=0)
     click_count: int = Field(default=0)
     primary_click_count: int = Field(default=0)
     secondary_click_count: int = Field(default=0)
-    first_click_ms: Optional[int] = None
-    primary_cta_ms: Optional[int] = None
-    secondary_cta_ms: Optional[int] = None
+    first_click_ms: Optional[int] = Field(
+        default=None, sa_column=Column(BigInteger, nullable=True)
+    )
+    primary_cta_ms: Optional[int] = Field(
+        default=None, sa_column=Column(BigInteger, nullable=True)
+    )
+    secondary_cta_ms: Optional[int] = Field(
+        default=None, sa_column=Column(BigInteger, nullable=True)
+    )
     first_click_target: Optional[str] = None
     click_targets_json: Optional[str] = Field(default=None, sa_column=Column(Text))
     entered_via_resume: bool = Field(default=False)
@@ -418,7 +440,9 @@ class Claim(SQLModel, table=True):
     last_seen_value: Optional[int] = None
     matches_last_seen: bool = Field(default=False)
     matches_any_seen: bool = Field(default=False)
-    reaction_ms: Optional[int] = None
+    reaction_ms: Optional[int] = Field(
+        default=None, sa_column=Column(BigInteger, nullable=True)
+    )
     quality_flags_json: Optional[str] = Field(default=None, sa_column=Column(Text))
     antifraud_flags_json: Optional[str] = Field(default=None, sa_column=Column(Text))
     submitted_at: datetime = Field(default_factory=utcnow)
@@ -488,11 +512,17 @@ class TelemetryEvent(SQLModel, table=True):
     event_type: str = Field(index=True)
     event_name: str = Field(index=True)
     screen_name: Optional[str] = Field(default=None, index=True)
-    client_ts: Optional[int] = None
+    client_ts: Optional[int] = Field(
+        default=None, sa_column=Column(BigInteger, nullable=True)
+    )
     event_sequence_number: Optional[int] = Field(default=None, index=True)
     timezone_offset_minutes: Optional[int] = None
-    client_clock_skew_estimate_ms: Optional[int] = None
-    duration_ms: Optional[int] = None
+    client_clock_skew_estimate_ms: Optional[int] = Field(
+        default=None, sa_column=Column(BigInteger, nullable=True)
+    )
+    duration_ms: Optional[int] = Field(
+        default=None, sa_column=Column(BigInteger, nullable=True)
+    )
     value: Optional[int] = None
     app_language: Optional[str] = Field(default=None, index=True)
     browser_language: Optional[str] = Field(default=None, index=True)
@@ -503,7 +533,9 @@ class TelemetryEvent(SQLModel, table=True):
     endpoint_name: Optional[str] = Field(default=None, index=True)
     request_method: Optional[str] = Field(default=None, index=True)
     status_code: Optional[int] = None
-    latency_ms: Optional[int] = None
+    latency_ms: Optional[int] = Field(
+        default=None, sa_column=Column(BigInteger, nullable=True)
+    )
     attempt_number: Optional[int] = None
     is_retry: bool = Field(default=False, index=True)
     error_name: Optional[str] = None
