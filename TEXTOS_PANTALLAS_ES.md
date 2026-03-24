@@ -80,7 +80,7 @@ Errores:
 - `Selecciona tu numero`
 
 ### Social
-- `En un grupo de {denominator} resultados antes de ti, {count} personas reportaron un {target}.`
+- `En un grupo de {denominator} resultados antes de ti, el numero de personas que reportaron un {target} fue {count}.`
 
 ## Pantalla 7. Figuras
 - `Seleccion final`

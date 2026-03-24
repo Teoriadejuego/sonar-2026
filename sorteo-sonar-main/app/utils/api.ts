@@ -316,7 +316,7 @@ export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
       control:
         "Tu respuesta se registrara de forma anonima. Indica el numero de tu primera tirada.",
       social_template:
-        "En un grupo de {denominator} resultados antes de ti, {count} personas reportaron un {target}.",
+        "En un grupo de {denominator} resultados antes de ti, el numero de personas que reportaron un {target} fue {count}.",
     },
     winner: {
       eyebrow: "Has sido seleccionado",

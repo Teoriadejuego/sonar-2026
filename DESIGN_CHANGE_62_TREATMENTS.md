@@ -19,7 +19,7 @@ Existen exactamente 62 tratamientos:
 - `control`
 
 Interpretacion:
-- `norm_k`: el participante ve `En un grupo de 60 resultados antes de ti, k personas reportaron un 6.`
+- `norm_k`: el participante ve `En un grupo de 60 resultados antes de ti, el numero de personas que reportaron un 6 fue k.`
 - `control`: se muestra la caja neutra sin mensaje social
 
 ### Asignacion

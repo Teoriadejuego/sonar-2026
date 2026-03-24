@@ -496,7 +496,7 @@ const es = withServerErrors({
     controlTitle: "Tu respuesta es anónima",
     controlBody: "Selecciona tu número",
     socialMessageTemplate:
-      "En un grupo de {denominator} resultados antes de ti, {count} personas reportaron un {target}.",
+      "En un grupo de {denominator} resultados antes de ti, el numero de personas que reportaron un {target} fue {count}.",
   },
   bonusDraw: {
     title: "Consigue opciones extra para el sorteo de SONAR 2027",
@@ -711,7 +711,7 @@ const ca = withServerErrors({
     controlTitle: "La teva resposta és anònima",
     controlBody: "Selecciona el teu número",
     socialMessageTemplate:
-      "En un grup de {denominator} resultats abans de tu, {count} persones van informar d'un {target}.",
+      "En un grup de {denominator} resultats abans de tu, el nombre de persones que van informar d'un {target} va ser {count}.",
   },
   bonusDraw: {
     title: "Aconsegueix opcions extra per al sorteig de SONAR 2027",
@@ -925,7 +925,7 @@ const en = withServerErrors({
     controlTitle: "Your response is anonymous",
     controlBody: "Select your number",
     socialMessageTemplate:
-      "In a group of {denominator} results before you, {count} people reported a {target}.",
+      "In a group of {denominator} results before you, the number of people who reported a {target} was {count}.",
   },
   bonusDraw: {
     title: "Get extra entries for the SONAR 2027 draw",
@@ -1140,7 +1140,7 @@ const fr = withServerErrors({
     controlTitle: "Votre réponse est anonyme",
     controlBody: "Sélectionnez votre nombre",
     socialMessageTemplate:
-      "Dans un groupe de {denominator} resultats avant vous, {count} personnes ont declare un {target}.",
+      "Dans un groupe de {denominator} resultats avant vous, le nombre de personnes ayant declare un {target} etait de {count}.",
   },
   bonusDraw: {
     title: "Obtenez des chances supplémentaires pour le tirage SONAR 2027",
@@ -1355,7 +1355,7 @@ const pt = withServerErrors({
     controlTitle: "A tua resposta é anónima",
     controlBody: "Seleciona o teu número",
     socialMessageTemplate:
-      "Num grupo de {denominator} resultados antes de ti, {count} pessoas disseram que saiu {target}.",
+      "Num grupo de {denominator} resultados antes de ti, o numero de pessoas que disseram ter saído {target} foi {count}.",
   },
   bonusDraw: {
     title: "Consegue entradas extra para o sorteio de SONAR 2027",

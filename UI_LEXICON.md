@@ -48,10 +48,10 @@ No se mantienen 61 mensajes hardcodeados. El banner social usa un template param
 `socialMessageTemplate(count, denominator, target)`
 
 Ejemplo en espanol:
-- `En un grupo de {denominator} resultados antes de ti, {count} personas reportaron un {target}.`
+- `En un grupo de {denominator} resultados antes de ti, el numero de personas que reportaron un {target} fue {count}.`
 
 Ejemplo en ingles:
-- `In a group of {denominator} results before you, {count} people reported a {target}.`
+- `In a group of {denominator} results before you, the number of people who reported a {target} was {count}.`
 
 Para `control` no se usa ese template. Se muestra la caja neutra del bloque `treatment`.
 
