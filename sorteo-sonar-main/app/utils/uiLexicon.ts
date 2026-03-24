@@ -161,10 +161,12 @@ export type UiCopy = {
     successTitle: string;
     successBody: string;
     successDonationBody: string;
+    successSkipBody: string;
     successSecondary: string;
     successFooter: string;
     successShareLabel: string;
     successShareMessageTemplate: string;
+    skipMismatchLabel: string;
     errorDefault: string;
   };
   accessibility: {
@@ -572,11 +574,14 @@ const es = withServerErrors({
     successBody: "Tu solicitud de Bizum ha quedado registrada correctamente.",
     successDonationBody:
       "Tu solicitud de donación a una ONG ha quedado registrada correctamente.",
+    successSkipBody:
+      "Tu participación ya ha quedado registrada. Puedes continuar sin reclamar el premio.",
     successSecondary:
       "Además, sigues participando en el sorteo de 2 entradas VIP.",
     successFooter: "Sabrás más sobre el estudio y sus resultados agregados en cotec.es, y el código ganador al finalizar el festival.",
     successShareLabel: "Invitar por WhatsApp",
     successShareMessageTemplate: "Si estás ahora en Sónar, haz esta prueba de 60 segundos: puedes entrar en el sorteo de 2 entradas VIP para Sónar 2027 y optar a premios en dinero de hasta 60 €. Participa aquí: {link}",
+    skipMismatchLabel: "Continuar sin reclamar premio",
     errorDefault: "Error al enviar",
   },
   accessibility: {
@@ -787,11 +792,14 @@ const ca = withServerErrors({
     successBody: "La teva sol·licitud de Bizum ha quedat registrada correctament.",
     successDonationBody:
       "La teva sol·licitud de donació a una ONG ha quedat registrada correctament.",
+    successSkipBody:
+      "La teva participació ja ha quedat registrada. Pots continuar sense reclamar el premi.",
     successSecondary:
       "A més, continues participant en el sorteig de 2 entrades VIP.",
     successFooter: "Sabràs més sobre l'estudi i els seus resultats agregats a cotec.es, i el codi guanyador en acabar el festival.",
     successShareLabel: "Convidar per WhatsApp",
     successShareMessageTemplate: "Si ets ara al Sónar, prova això: dura 60 segons i pots entrar al sorteig de 2 entrades VIP per al Sónar 2027 i optar a premis en diners de fins a 60 €. Participa aquí: {link}",
+    skipMismatchLabel: "Continuar sense reclamar el premi",
     errorDefault: "Error en enviar",
   },
   accessibility: {
@@ -1001,11 +1009,14 @@ const en = withServerErrors({
     successBody: "Your Bizum request has been recorded successfully.",
     successDonationBody:
       "Your NGO donation request has been recorded successfully.",
+    successSkipBody:
+      "Your participation has already been recorded. You can continue without claiming the prize.",
     successSecondary:
       "You are also still entered in the draw for 2 VIP tickets.",
     successFooter: "You will be able to learn more about the study and its aggregated results at cotec.es, and about the winning code at the end of the festival.",
     successShareLabel: "Invite on WhatsApp",
     successShareMessageTemplate: "If you are at Sónar right now, try this: it takes 60 seconds and you can enter the draw for 2 VIP tickets for Sónar 2027 and cash prizes up to 60 €. Join here: {link}",
+    skipMismatchLabel: "Continue without claiming prize",
     errorDefault: "Error sending request",
   },
   accessibility: {
@@ -1216,11 +1227,14 @@ const fr = withServerErrors({
     successBody: "Votre demande de Bizum a bien été enregistrée.",
     successDonationBody:
       "Votre demande de don à une ONG a bien été enregistrée.",
+    successSkipBody:
+      "Votre participation a déjà été enregistrée. Vous pouvez continuer sans réclamer le prix.",
     successSecondary:
       "Vous participez aussi toujours au tirage de 2 billets VIP.",
     successFooter: "Vous en saurez plus sur l'étude et ses résultats agrégés sur cotec.es, ainsi que sur le code gagnant à la fin du festival.",
     successShareLabel: "Inviter sur WhatsApp",
     successShareMessageTemplate: "Si vous êtes au Sónar en ce moment, essayez ceci : cela dure 60 secondes et vous pouvez participer au tirage de 2 billets VIP pour le Sónar 2027 ainsi qu'à des prix en argent jusqu'à 60 €. Participez ici : {link}",
+    skipMismatchLabel: "Continuer sans réclamer le prix",
     errorDefault: "Erreur lors de l'envoi",
   },
   accessibility: {
@@ -1431,11 +1445,14 @@ const pt = withServerErrors({
     successBody: "O teu pedido de Bizum ficou registado corretamente.",
     successDonationBody:
       "O teu pedido de doação a uma ONG ficou registado corretamente.",
+    successSkipBody:
+      "A tua participação já ficou registada. Podes continuar sem reclamar o prémio.",
     successSecondary:
       "Além disso, continuas a participar no sorteio de 2 entradas VIP.",
     successFooter: "Saberás mais sobre o estudo e os seus resultados agregados em cotec.es, e sobre o código vencedor no final do festival.",
     successShareLabel: "Convidar por WhatsApp",
     successShareMessageTemplate: "Se estás agora no Sónar, experimenta isto: demora 60 segundos e podes entrar no sorteio de 2 entradas VIP para o Sónar 2027 e optar a prémios em dinheiro até 60 €. Participa aqui: {link}",
+    skipMismatchLabel: "Continuar sem reclamar o prémio",
     errorDefault: "Erro ao enviar",
   },
   accessibility: {
@@ -1588,6 +1605,8 @@ const it = withServerErrors({
     successBody: "La tua richiesta di Bizum e stata registrata correttamente.",
     successDonationBody:
       "La tua richiesta di donazione a una ONG e stata registrata correttamente.",
+    successSkipBody:
+      "La tua partecipazione e gia stata registrata. Puoi continuare senza reclamare il premio.",
     successSecondary:
       "Inoltre continui a partecipare al sorteggio di 2 biglietti VIP.",
     successFooter:
@@ -1595,6 +1614,7 @@ const it = withServerErrors({
     successShareLabel: "Invita via WhatsApp",
     successShareMessageTemplate:
       "Se sei al Sónar in questo momento, prova questo: ti richiede 60 secondi e puoi entrare nel sorteggio di 2 biglietti VIP per il Sónar 2027 e concorrere a premi in denaro fino a 60 euro. Partecipa qui: {link}",
+    skipMismatchLabel: "Continua senza reclamare il premio",
     errorDefault: "Errore durante l'invio",
   },
   accessibility: {

@@ -107,12 +107,13 @@ export default function PayoutRoute() {
   const [hasPaymentConsent, setHasPaymentConsent] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [completionMode, setCompletionMode] = useState<
+    "claim" | "donation" | "skip" | null
+  >(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusTone, setStatusTone] = useState<"neutral" | "error" | "success">(
     "neutral",
   );
-  const [wasDonationRequest, setWasDonationRequest] = useState(false);
   const [successBonusStorageKey, setSuccessBonusStorageKey] = useState<string | null>(
     null,
   );
@@ -222,6 +223,10 @@ export default function PayoutRoute() {
     void handleLookup(code, "auto");
   }, [code]);
 
+  const isSubmitted = completionMode !== null;
+  const isBraceletMismatch =
+    statusTone === "error" && statusMessage === braceletCopy.mismatch;
+
   const handleSubmit = async (donationRequested: boolean) => {
     const normalizedCode = code.trim().toUpperCase();
     const normalizedBraceletId = braceletId.trim().toUpperCase();
@@ -274,7 +279,7 @@ export default function PayoutRoute() {
         donationRequested ? "" : normalizedPhone,
         donationRequested,
       );
-      setWasDonationRequest(donationRequested);
+      setCompletionMode(donationRequested ? "donation" : "claim");
       setSuccessBonusStorageKey(
         `sonar_bonus_prediction:payout:${normalizedCode}:${Date.now()}`,
       );
@@ -294,7 +299,6 @@ export default function PayoutRoute() {
           payment_code: normalizedCode,
         },
       });
-      setIsSubmitted(true);
     } catch (error) {
       setStatusTone("error");
       setStatusMessage(
@@ -305,6 +309,29 @@ export default function PayoutRoute() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSkipClaim = () => {
+    const normalizedCode = code.trim().toUpperCase() || "unknown";
+    setStatusMessage(null);
+    setStatusTone("neutral");
+    setSuccessBonusStorageKey(
+      `sonar_bonus_prediction:payout:${normalizedCode}:skip:${Date.now()}`,
+    );
+    setCompletionMode("skip");
+    trackClick("payment_skip_claim", {
+      target: "payment_skip_claim",
+      role: "button",
+      ctaKind: "secondary",
+    });
+    pushTelemetry({
+      event_type: "custom",
+      event_name: "payment_claim_skipped_after_mismatch",
+      screen_name: "payout",
+      payload: {
+        payment_code: normalizedCode,
+      },
+    });
   };
 
   const footerMatch = useMemo(
@@ -326,9 +353,11 @@ export default function PayoutRoute() {
 
             <div className="sonar-panel p-5">
               <p className="editorial-body">
-                {wasDonationRequest
+                {completionMode === "donation"
                   ? paymentCopy.successDonationBody
-                  : paymentCopy.successBody}
+                  : completionMode === "skip"
+                    ? paymentCopy.successSkipBody
+                    : paymentCopy.successBody}
               </p>
             </div>
 
@@ -357,7 +386,8 @@ export default function PayoutRoute() {
                   value,
                   payload: {
                     payment_code: code.trim().toUpperCase() || null,
-                    donation_requested: wasDonationRequest,
+                    donation_requested: completionMode === "donation",
+                    skipped_claim: completionMode === "skip",
                   },
                 });
               }}
@@ -515,6 +545,17 @@ export default function PayoutRoute() {
               {statusMessage}
             </div>
           )}
+
+          {isBraceletMismatch ? (
+            <button
+              type="button"
+              onClick={handleSkipClaim}
+              disabled={isSubmitting}
+              className="sonar-secondary-button w-full"
+            >
+              {paymentCopy.skipMismatchLabel}
+            </button>
+          ) : null}
 
           <div className="mt-auto space-y-3">
             <button
