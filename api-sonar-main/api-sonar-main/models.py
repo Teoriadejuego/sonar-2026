@@ -147,6 +147,96 @@ class DeckPosition(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
 
 
+class TreatmentDeck(SQLModel, table=True):
+    __tablename__ = "treatment_decks"
+
+    id: str = Field(default_factory=make_uuid, primary_key=True)
+    deck_index: int = Field(unique=True, index=True)
+    deck_seed: str
+    legacy_root_id: Optional[str] = Field(
+        default=None, foreign_key="series_roots.id", index=True
+    )
+    card_count: int = Field(default=62)
+    status: str = Field(default="active", index=True)
+    created_at: datetime = Field(default_factory=utcnow)
+    closed_at: Optional[datetime] = None
+
+
+class TreatmentDeckCard(SQLModel, table=True):
+    __tablename__ = "treatment_deck_cards"
+    __table_args__ = (
+        UniqueConstraint("deck_id", "card_position", name="uq_treatment_deck_position"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    deck_id: str = Field(foreign_key="treatment_decks.id", index=True)
+    legacy_series_id: Optional[str] = Field(
+        default=None, foreign_key="series.id", index=True
+    )
+    card_position: int = Field(index=True)
+    treatment_key: str = Field(index=True)
+    assigned_session_id: Optional[str] = Field(
+        default=None, foreign_key="sessions.id", unique=True, index=True
+    )
+    assigned_at: Optional[datetime] = None
+
+
+class ResultDeck(SQLModel, table=True):
+    __tablename__ = "result_decks"
+
+    id: str = Field(default_factory=make_uuid, primary_key=True)
+    deck_index: int = Field(unique=True, index=True)
+    deck_seed: str
+    card_count: int = Field(default=24)
+    status: str = Field(default="active", index=True)
+    created_at: datetime = Field(default_factory=utcnow)
+    closed_at: Optional[datetime] = None
+
+
+class ResultDeckCard(SQLModel, table=True):
+    __tablename__ = "result_deck_cards"
+    __table_args__ = (
+        UniqueConstraint("deck_id", "card_position", name="uq_result_deck_position"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    deck_id: str = Field(foreign_key="result_decks.id", index=True)
+    card_position: int = Field(index=True)
+    result_value: int = Field(index=True)
+    assigned_session_id: Optional[str] = Field(
+        default=None, foreign_key="sessions.id", unique=True, index=True
+    )
+    assigned_at: Optional[datetime] = None
+
+
+class PaymentDeck(SQLModel, table=True):
+    __tablename__ = "payment_decks"
+
+    id: str = Field(default_factory=make_uuid, primary_key=True)
+    deck_index: int = Field(unique=True, index=True)
+    deck_seed: str
+    card_count: int = Field(default=100)
+    status: str = Field(default="active", index=True)
+    created_at: datetime = Field(default_factory=utcnow)
+    closed_at: Optional[datetime] = None
+
+
+class PaymentDeckCard(SQLModel, table=True):
+    __tablename__ = "payment_deck_cards"
+    __table_args__ = (
+        UniqueConstraint("deck_id", "card_position", name="uq_payment_deck_position"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    deck_id: str = Field(foreign_key="payment_decks.id", index=True)
+    card_position: int = Field(index=True)
+    payout_eligible: bool = Field(default=False, index=True)
+    assigned_session_id: Optional[str] = Field(
+        default=None, foreign_key="sessions.id", unique=True, index=True
+    )
+    assigned_at: Optional[datetime] = None
+
+
 class SessionRecord(SQLModel, table=True):
     __tablename__ = "sessions"
     __table_args__ = (
@@ -172,8 +262,17 @@ class SessionRecord(SQLModel, table=True):
     telemetry_version: str
     lexicon_version: str
     treatment_key: str = Field(index=True)
+    treatment_type: str = Field(index=True)
     treatment_family: str = Field(index=True)
     norm_target_value: Optional[int] = Field(default=None, index=True)
+    displayed_count_target: Optional[int] = None
+    displayed_denominator: Optional[int] = None
+    treatment_deck_id: str = Field(foreign_key="treatment_decks.id", index=True)
+    treatment_card_position: int = Field(index=True)
+    result_deck_id: str = Field(foreign_key="result_decks.id", index=True)
+    result_card_position: int = Field(index=True)
+    payment_deck_id: str = Field(foreign_key="payment_decks.id", index=True)
+    payment_card_position: int = Field(index=True)
     language_at_access: Optional[str] = Field(default=None, index=True)
     language_at_claim: Optional[str] = Field(default=None, index=True)
     language_changed_during_session: bool = Field(default=False)
@@ -297,6 +396,7 @@ class SnapshotRecord(SQLModel, table=True):
     treatment_key: Optional[str] = Field(default=None, index=True)
     treatment_family: Optional[str] = Field(default=None, index=True)
     norm_target_value: Optional[int] = Field(default=None, index=True)
+    is_control: Optional[bool] = Field(default=None, index=True)
     displayed_count_target: Optional[int] = None
     displayed_denominator: Optional[int] = None
     displayed_message_text: Optional[str] = Field(default=None, sa_column=Column(Text))

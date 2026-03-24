@@ -3,14 +3,17 @@
 Fuente de verdad:
 - [uiLexicon.ts](/C:/Users/Usuario/Desktop/AAC/codex/2026%20SONAR/sorteo-sonar-main/app/utils/uiLexicon.ts)
 
-Idiomas activos:
+## Idiomas activos
 - `es`
 - `ca`
 - `en`
 - `fr`
 - `pt`
+- `it`
 
-## Estructura actual
+La cobertura se valida con `validateLexiconCoverage()`.
+
+## Estructura principal
 - `common`
 - `languageEntry`
 - `landing`
@@ -19,107 +22,113 @@ Idiomas activos:
 - `comprehension`
 - `game`
 - `report`
+- `prizeReveal`
 - `treatment`
+- `bonusDraw`
 - `winner`
 - `loser`
 - `paused`
 - `paymentPage`
 - `accessibility`
+- `errors`
 - `serverErrors`
 
-## Base espanola actual
+## Regla de internacionalizacion
+Todo texto visible debe salir de `UI_LEXICON`.
 
-### `languageEntry`
-- `title`: `SONAR 2026`
-- `subtitle`: `Selecciona idioma`
+No se deben hardcodear:
+- mensajes de tratamiento
+- labels de payout
+- textos de sorteo extra
+- mensajes de error mostrados al usuario
+
+## Mensaje social del nuevo diseno
+No se mantienen 61 mensajes hardcodeados. El banner social usa un template parametrico:
+
+`socialMessageTemplate(count, denominator, target)`
+
+Ejemplo en espanol:
+- `En un grupo de {denominator} resultados antes de ti, {count} personas reportaron un {target}.`
+
+Ejemplo en ingles:
+- `In a group of {denominator} results before you, {count} people reported a {target}.`
+
+Para `control` no se usa ese template. Se muestra la caja neutra del bloque `treatment`.
+
+## Secciones relevantes del flujo actual
 
 ### `landing`
-- `eyebrow`: `Sorteo expres`
-- `title`: `Participa en 1 minuto`
-- `subtitle`: `y gana hasta 60 €`
-- `intro`: `Actividad de investigacion universitaria / Voluntaria · Menos de 90 segundos · +18`
-- `braceletLabel`: `ID de pulsera`
-- `braceletPlaceholder`: `Ej: 10000001`
-- `moreInfoButton`: `Mas informacion`
-- `ageCheckbox`: `Tengo 18 anos o mas`
-- `participationCheckbox`: `Acepto participar`
-- `dataCheckbox`: `Acepto el tratamiento de datos`
-- `cta`: `Comenzar`
-
-### `infoModal.sections`
-- `Actividad` -> `Actividad sobre decisiones individuales`
-- `Uso` -> `Uso cientifico de resultados`
-- `Tarea` -> `Veras una tirada privada / y elegiras un numero`
-- `Datos` -> `Datos agregados / Sin publicacion de identidades`
-- `Salida` -> `Puedes salir antes de enviar`
-- `Contacto` -> `lbl@uloyola.es`
+Incluye:
+- etiqueta de pulsera
+- validaciones de consentimiento
+- acceso a modal etico
 
 ### `instructions`
-- `title`: `Como funciona`
-- `intro`: `Veras una tirada privada`
-- `body`: `Puedes comprobar el sistema`
-- `odds`: `1 de cada 100 recibe pago`
-- `cta`: `Continuar`
-
-### `comprehension`
-- `eyebrow`: `Antes de seguir`
-- `title`: `Que numero cuenta?`
-- `options`: `Primera tirada`, `Ultima tirada`, `Mas alta`
-- `cta`: `Seguir`
+Describe:
+- que la primera tirada es la que cuenta
+- que el premio depende del numero reportado
+- que 1 de cada 100 recibe el pago
 
 ### `game`
-- `title`: `Tirada`
-- `firstResultTemplate`: `Tu primera tirada: {value}`
-- `firstRollCta`: `Lanzar`
-- `rerollCta`: `Ver otra tirada`
-- `continueCta`: `Continuar`
-- `attemptsTemplate`: `Tiradas registradas: {count}/{max}`
+Incluye:
+- copy de primera tirada
+- CTA `Lanzar`
+- CTA `Continuar`
+- copy de rerolls
 
 ### `report`
-- `title`: `Indica tu numero`
-- `body`: `Selecciona tu primera tirada`
+Incluye:
+- titulo sobre la primera tirada
+- instruccion para marcar el numero que salio en el primer lanzamiento
 
-### `treatment`
-- `controlTitle`: `Tu respuesta es anonima`
-- `controlBody`: `Selecciona tu numero`
-- `socialHeadlineTemplate`: `{count} de cada {denominator} personas`
-- `socialBodyTemplate`: `eligieron {target}`
+### `prizeReveal`
+Incluye:
+- helper para las 100 figuras
+- copy de ganador y perdedor
 
-### `winner`
-- `eyebrow`: `Has sido seleccionado`
-- `title`: `Premio confirmado`
-- `amountLabel`: `Premio`
-- `codeLabelTemplate`: `Codigo: {code}`
-- `cta`: `Cobrar premio`
-
-### `loser`
-- `eyebrow`: `Gracias por participar`
-- `title`: `Aun puedes ganar`
-- `body`: `Participas en el sorteo / de 2 entradas VIP`
-- `bodySecondary`: `Invita a otras personas / para aumentar tus opciones`
-- `bodyFooter`: `El resultado se publicara al finalizar`
-- `shareLabel`: `Invitar por WhatsApp`
-
-### `paused`
-- `eyebrow`: `Gracias`
-- `title`: `Todos los premios ya han sido repartidos`
-- `body`: `La actividad esta cerrada por ahora`
-- `bodySecondary`: `Si quieres recibir avisos, deja tu email`
-- `cta`: `Avisarme`
+### `bonusDraw`
+Incluye:
+- papeleta base
+- prediccion de numero mas reportado
+- incentivo por WhatsApp
 
 ### `paymentPage`
-- `eyebrow`: `Cobro`
-- `title`: `Introduce tu codigo / y tu telefono`
-- `codeLabel`: `Codigo`
-- `phoneLabel`: `Telefono`
-- `messageLabel`: `Mensaje (opcional)`
-- `donationHint`: `Puedes escribir ONG para donar`
-- `lookupLabel`: `Validar codigo`
-- `submitLabel`: `Enviar`
+Incluye:
+- cobro por Bizum
+- opcion de donacion
+- consentimiento especifico de pago
+- modal de privacidad del pago
+- pantalla final tras payout
 
-## Reglas tecnicas
-- Todo texto visible debe salir de `UI_LEXICON`.
-- El selector de idioma usa `common.languageNames` y `common.welcomeWords`.
-- El sistema valida cobertura de claves con `validateLexiconCoverage()`.
-- `LanguageContext` persiste idioma en `localStorage`.
-- La sesion guarda `language_at_access`, `language_at_claim` y `language_changed_during_session`.
+## Elementos tecnicos acoplados al backend
+El frontend espera del backend:
+- `treatment_key`
+- `displayed_count_target`
+- `displayed_denominator`
+- `norm_target_value`
+- `is_control`
+- `displayed_message_text` o capacidad de reconstruirlo con `socialMessageTemplate`
+
+## Selector de idioma
+- usa `common.languageNames`
+- usa `common.welcomeWords`
+- persiste idioma en `localStorage`
+- la sesion backend guarda `language_at_access`, `language_at_claim` y `language_changed_during_session`
+
+## Mensajes demo utiles
+La configuracion publica expone demo IDs y el frontend mantiene fallbacks:
+- `CTRL1234`
+- `NORM0000`
+- `NORM0001`
+
+Su significado es:
+- `CTRL1234`: control y ganador
+- `NORM0000`: `norm_0` y no ganador
+- `NORM0001`: `norm_1` y no ganador
+
+## Mantenimiento
+Si se cambia una pantalla o un CTA:
+1. actualizar `uiLexicon.ts`
+2. mantener coherencia entre idiomas
+3. revisar `TEXTOS_PANTALLAS_ES.md` si cambia el flujo visible en espanol
+4. ejecutar build frontend y tests estaticos

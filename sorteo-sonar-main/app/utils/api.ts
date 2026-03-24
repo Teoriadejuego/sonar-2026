@@ -23,6 +23,27 @@ function resolveApiBaseUrl() {
 
 const API_BASE_URL = resolveApiBaseUrl();
 
+const DEFAULT_TREATMENTS = [
+  ...Array.from({ length: 61 }, (_, index) => `norm_${index}`),
+  "control",
+];
+
+const DEFAULT_TREATMENT_DISPLAY_COUNTS = Object.fromEntries(
+  DEFAULT_TREATMENTS.map((treatmentKey) => [
+    treatmentKey,
+    treatmentKey === "control"
+      ? null
+      : Number.parseInt(treatmentKey.replace("norm_", ""), 10),
+  ]),
+) as Record<string, number | null>;
+
+const DEFAULT_TREATMENT_TARGETS = Object.fromEntries(
+  DEFAULT_TREATMENTS.map((treatmentKey) => [
+    treatmentKey,
+    treatmentKey === "control" ? null : 6,
+  ]),
+) as Record<string, number | null>;
+
 export type PublicConfig = {
   schema_version: string;
   experiment_version: string;
@@ -31,9 +52,15 @@ export type PublicConfig = {
   max_attempts: number;
   participant_limit: number;
   window_size: number;
+  displayed_denominator: number;
+  treatment_deck_size: number;
+  result_deck_size: number;
+  payment_deck_size: number;
+  payment_winners_per_deck: number;
   prize_eur: Record<string, number>;
   treatments: string[];
   seed_initial_counts: Record<string, number>;
+  treatment_display_counts: Record<string, number | null>;
   treatment_targets: Record<string, number | null>;
   collapse_consecutive_claims: number;
   treatment_version: string;
@@ -42,6 +69,11 @@ export type PublicConfig = {
   site_code: string;
   campaign_code: string;
   environment_label: string;
+  demo_ids?: {
+    winner_control?: string;
+    loser_norm_0?: string;
+    loser_norm_1?: string;
+  };
   experiment_control: {
     status: "active" | "paused";
     paused: boolean;
@@ -150,31 +182,39 @@ export type PublicConfig = {
 };
 
 export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
-  schema_version: "sonar-2026-v8",
-  experiment_version: "sonar-2026-field-v4",
-  current_phase: "phase_1_main",
+  schema_version: "sonar-2026-v9",
+  experiment_version: "sonar-2026-field-v5",
+  current_phase: "design_62_treatments_v1",
   phase_transition_threshold: 6000,
   max_attempts: 10,
   participant_limit: 120,
   window_size: 60,
+  displayed_denominator: 60,
+  treatment_deck_size: 62,
+  result_deck_size: 24,
+  payment_deck_size: 100,
+  payment_winners_per_deck: 1,
   prize_eur: { "1": 10, "2": 20, "3": 30, "4": 40, "5": 50, "6": 60 },
-  treatments: ["control", "seed_low", "seed_high"],
-  seed_initial_counts: {
-    seed_low: 10,
-    seed_high: 50,
-  },
-  treatment_targets: {
-    control: null,
-    seed_low: 6,
-    seed_high: 6,
-  },
-  collapse_consecutive_claims: 10,
-  treatment_version: "phase_1_six_norms_v3",
-  allocation_version: "phase_1_10_45_45_v3",
+  treatments: DEFAULT_TREATMENTS,
+  seed_initial_counts: Object.fromEntries(
+    Object.entries(DEFAULT_TREATMENT_DISPLAY_COUNTS)
+      .filter(([, value]) => value !== null)
+      .map(([key, value]) => [key, value as number]),
+  ) as Record<string, number>,
+  treatment_display_counts: DEFAULT_TREATMENT_DISPLAY_COUNTS,
+  treatment_targets: DEFAULT_TREATMENT_TARGETS,
+  collapse_consecutive_claims: 0,
+  treatment_version: "treatment_deck_62_v1",
+  allocation_version: "balanced_assignment_v1",
   deployment_context: "main_event",
   site_code: "SONAR2026",
   campaign_code: "festival_main",
   environment_label: "local",
+  demo_ids: {
+    winner_control: "CTRL1234",
+    loser_norm_0: "NORM0000",
+    loser_norm_1: "NORM0001",
+  },
   experiment_control: {
     status: "active",
     paused: false,
@@ -276,7 +316,7 @@ export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
       control:
         "Tu respuesta se registrara de forma anonima. Indica el numero de tu primera tirada.",
       social_template:
-        "{count} de los {denominator} participantes anteriores reportaron un {target}.",
+        "En un grupo de {denominator} resultados antes de ti, {count} personas reportaron un {target}.",
     },
     winner: {
       eyebrow: "Has sido seleccionado",
@@ -437,8 +477,12 @@ export type SessionPayload = {
   telemetry_version: string;
   lexicon_version: string;
   treatment_key: string;
+  treatment_type?: string;
   treatment_family: string;
   norm_target_value: number | null;
+  displayed_count_target?: number | null;
+  displayed_denominator?: number | null;
+  is_control?: boolean;
   language_at_access: string | null;
   language_at_claim: string | null;
   language_changed_during_session: boolean;
@@ -469,7 +513,13 @@ export type SessionPayload = {
     note_text: string | null;
   } | null;
   position_index: number;
-  root_sequence: number;
+  root_sequence: number | null;
+  treatment_deck_index?: number | null;
+  treatment_card_position?: number | null;
+  result_deck_index?: number | null;
+  result_card_position?: number | null;
+  payment_deck_index?: number | null;
+  payment_card_position?: number | null;
   selected_for_payment: boolean;
   max_attempts: number;
   first_result_value: number | null;
@@ -504,8 +554,11 @@ export type SessionPayload = {
   series: {
     experiment_phase: string;
     treatment_key: string;
+    treatment_type?: string;
     treatment_family: string;
     norm_target_value: number | null;
+    displayed_count_target?: number | null;
+    displayed_denominator?: number | null;
     completed_count: number;
     visible_count_target: number;
     actual_count_target: number;

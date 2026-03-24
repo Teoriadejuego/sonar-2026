@@ -1,31 +1,22 @@
 # Textos Pantallas ES
 
-Documento rapido de revision del copy visible en espanol.
+Documento de revision rapida del copy visible en espanol.
 
 Fuente tecnica:
 - [uiLexicon.ts](/C:/Users/Usuario/Desktop/AAC/codex/2026%20SONAR/sorteo-sonar-main/app/utils/uiLexicon.ts)
 
 ## Pantalla 1. Idioma
-- `SONAR 2026`
-- `Selecciona idioma`
-- `Bienvenido`
-- `Benvingut`
-- `Welcome`
-- `Bienvenue`
-- `Bem-vindo`
+- `Select your language`
 
-## Pantalla 2. Consentimiento
-- `Sorteo expres`
-- `Participa en 1 minuto`
-- `y gana hasta 60 €`
-- `Actividad de investigacion universitaria`
-- `Voluntaria · Menos de 90 segundos · +18`
-- `ID de pulsera`
-- `Ej: 10000001`
+## Pantalla 2. Acceso y consentimiento
+- `Participa, 60 seg, y sorteamos:`
+- `2 entradas VIP para SONAR 2027 y cientos de premios de hasta 60 euros`
+- `ID de la pulsera`
+- `Ej: AB12CD34`
+- `Mas informacion`
 - `Tengo 18 anos o mas`
 - `Acepto participar`
 - `Acepto el tratamiento de datos`
-- `Mas informacion`
 - `Comenzar`
 
 Errores:
@@ -33,57 +24,42 @@ Errores:
 - `Marca las tres casillas para continuar`
 - `Entrando...`
 
-## Modal informacion
-- `Informacion`
-- `Actividad`
-- `Actividad sobre decisiones individuales`
-- `Uso`
-- `Uso cientifico de resultados`
-- `Tarea`
-- `Veras una tirada privada`
-- `y elegiras un numero`
-- `Datos`
-- `Datos agregados`
-- `Sin publicacion de identidades`
-- `Salida`
-- `Puedes salir antes de enviar`
+## Modal de informacion
+Secciones:
+- `Que es esta actividad`
+- `Que tendras que hacer`
+- `Pago e incentivos`
+- `Privacidad y datos`
+- `Participacion voluntaria`
 - `Contacto`
-- `lbl@uloyola.es`
-- `Cerrar`
 
 ## Pantalla 3. Instrucciones
 - `Como funciona`
-- `Veras una tirada privada`
-- `Puedes comprobar el sistema`
-- `1 de cada 100 recibe pago`
-- `Tabla`
-- `1 -> 10 €`
-- `2 -> 20 €`
-- `3 -> 30 €`
-- `4 -> 40 €`
-- `5 -> 50 €`
-- `6 -> 60 €`
+- `Lanza un dado en la siguiente pantalla. Despues te preguntaremos que numero salio en tu primera tirada.`
+- `La primera tirada es la que cuenta. Segun el numero que nos indiques que salio en esa primera tirada, puedes ganar el premio que aparece en la tabla.`
+- `1 de cada 100 recibe el pago.`
+- `Tabla de premios`
 - `Continuar`
 
 ## Pantalla 4. Comprension
 - `Antes de seguir`
-- `Que numero cuenta?`
+- `Que numero te pediremos que nos digas despues?`
 - `Primera tirada`
 - `Ultima tirada`
-- `Mas alta`
+- `La mas alta`
 - `Seguir`
 
 Errores:
 - `Selecciona una opcion`
-- `Recuerda: cuenta la primera tirada`
+- `Recuerda: te pediremos el numero de la primera tirada`
 
 ## Pantalla 5. Juego
 - `Tirada`
+- `Pulsa el dado o el boton Lanzar para hacer tu primera tirada.`
+- `Pulsa el dado para ver otra tirada.`
 - `Tu primera tirada: {value}`
 - `Lanzar`
 - `Continuar`
-- `Ver otra tirada`
-- `Tiradas registradas: {count}/{max}`
 
 Errores:
 - `No hay sesion activa`
@@ -91,79 +67,85 @@ Errores:
 - `Accion no disponible`
 
 ## Pantalla 6. Reporte
-- `Indica tu numero`
-- `Selecciona tu primera tirada`
+- `Tu primera tirada`
+- `Indica el numero que te salio al tirar el dado la primera vez tocando ese numero.`
 
 Errores:
 - `No se pudo guardar la respuesta`
 
-## Control
+## Caja de tratamiento
+
+### Control
 - `Tu respuesta es anonima`
 - `Selecciona tu numero`
 
-## Banner social
-- `{count} de cada {denominator} personas`
-- `eligieron {target}`
+### Social
+- `En un grupo de {denominator} resultados antes de ti, {count} personas reportaron un {target}.`
 
-## Pantalla final. Ganador
+## Pantalla 7. Figuras
+- `Seleccion final`
+- `Clica una`
+- `Elige una figura y, si es la premiada, ganas {amount} EUR.`
+- ganador: `Esta era la figura premiada. Ganas {amount} EUR.`
+- perdedor: `La figura premiada era otra. El premio era {amount} EUR.`
+
+## Pantalla final de no ganador
+- `Gracias por participar.`
+- `Aun puedes ganar`
+- `No has sido seleccionado para el premio en metalico.`
+- `Sigues participando en el sorteo de 2 entradas VIP.`
+- `Invitar por WhatsApp`
+- `Sabras mas sobre el estudio y sus resultados agregados en cotec.es, y el codigo ganador al finalizar el festival.`
+
+## Bloque de sorteo extra
+- `Consigue opciones extra para el sorteo de SONAR 2027`
+- `Ya tienes 1 papeleta para el sorteo de 2 entradas para SONAR 2027 por haber participado.`
+- `Si quieres una extra, adivina que numero crees que mas veces nos dira la gente que le salio en su primera tirada.`
+- `1 papeleta por participar`
+- `1 extra si aciertas la prediccion`
+- `1 extra por cada persona del festival que invites y participe`
+- `Conseguida`
+
+## Pantalla final de ganador
 - `Has sido seleccionado`
 - `Premio confirmado`
-- `Premio`
-- `{amount} €`
+- `Importe`
 - `Codigo: {code}`
 - `Cobrar premio`
 
 ## Pagina de cobro
 - `Cobro`
-- `Introduce tu codigo`
-- `y tu telefono`
+- `Para recibir un Bizum`
+- `Tu codigo ya esta preparado. Si quieres recibir un Bizum, introduce tu telefono y autoriza la gestion del pago. Si prefieres donar el importe a una ONG, puedes hacerlo directamente.`
 - `Codigo`
-- `Telefono`
-- `Mensaje (opcional)`
-- `Puedes escribir ONG para donar`
-- `Validar codigo`
-- `Enviar`
+- `Telefono (solo para Bizum)`
+- `Solicitar Bizum`
+- `Donar a una ONG`
+- `Mas informacion`
 
 Mensajes:
-- `Solicitud enviada`
+- `Codigo valido · {amount} EUR`
 - `Codigo no valido`
 - `Codigo ya usado`
-- `Codigo valido · {amount} EUR`
+- `Solicitud enviada`
 - `Error al enviar`
+- `Pulsera erronea, no coincide con la registrada inicialmente.`
 
-## Pantalla final. No ganador
-- `Gracias por participar`
+## Pantalla final tras cobro o donacion
+- `Solicitud enviada`
 - `Aun puedes ganar`
-- `Participas en el sorteo`
-- `de 2 entradas VIP`
-- `Invita a otras personas`
-- `para aumentar tus opciones`
+- `Tu solicitud de Bizum ha quedado registrada correctamente.`
+- `Tu solicitud de donacion a una ONG ha quedado registrada correctamente.`
+- `Ademas, sigues participando en el sorteo de 2 entradas VIP.`
 - `Invitar por WhatsApp`
-- `El resultado se publicara al finalizar`
+- `Sabras mas sobre el estudio y sus resultados agregados en cotec.es, y el codigo ganador al finalizar el festival.`
 
-## Pantalla de experimento parado
+## Pantalla de experimento pausado
 - `Gracias`
 - `Todos los premios ya han sido repartidos`
-- `La actividad esta cerrada por ahora`
-- `Si quieres recibir avisos, deja tu email`
-- `Email`
+- `La actividad esta cerrada por ahora.`
+- `Si quieres recibir avisos sobre estudios similares, deja tu email.`
 - `Avisarme`
-- `Solo usaremos tu email para avisarte`
 
-Mensajes:
-- `Email guardado`
-- `Introduce un email valido`
-- `Error inesperado`
-
-## Textos tecnicos
-- `Recuperando sesion`
-- `Preparando experiencia`
-- `Cerrar`
-- `Seleccionar idioma`
-
-## Errores backend normalizados
-- `Pulsera no encontrada`
-- `Acceso no valido`
-- `Sesion no encontrada`
-- `Accion no disponible`
-- `Error inesperado`
+## Cierre final
+- `Muchas gracias, has terminado. Cierra el navegador y disfruta de la experiencia SONAR 2026.`

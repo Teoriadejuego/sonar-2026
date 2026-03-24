@@ -15,63 +15,120 @@ from sqlmodel import Session, select
 from experiment import (
     CAMPAIGN_CODE,
     CONSENT_VERSION,
+    CONTROL_TREATMENT_KEY,
     DECK_VERSION,
     DEPLOYMENT_CONTEXT,
     ENVIRONMENT_LABEL,
     EXPERIMENT_VERSION,
     LEXICON_VERSION,
     PAYMENT_VERSION,
+    PHASE_1_MAIN,
     SCHEMA_VERSION,
     SITE_CODE,
     TELEMETRY_VERSION,
+    TREATMENT_KEYS,
     UI_VERSION,
+    public_support,
 )
 from models import (
     AuditEvent,
     Claim,
     ConsentRecord,
-    DeckPosition,
     ExperimentState,
     FraudFlag,
     InterestSignup,
     OperationalNote,
     Payment,
+    PaymentDeck,
+    PaymentDeckCard,
     PayoutRequest,
-    Series,
-    SeriesRoot,
-    SessionRecord,
+    ResultDeck,
+    ResultDeckCard,
     SessionClientContext,
-    ScreenSpell,
+    SessionRecord,
     SnapshotRecord,
+    ScreenSpell,
     TelemetryEvent,
     Throw,
+    TreatmentDeck,
+    TreatmentDeckCard,
 )
 
 
 DATASET_DESCRIPTIONS: dict[str, dict[str, str]] = {
     "sessions": {
         "category": "analytic",
-        "description": "Sesion analitica derivada, lista para modelos y tablas.",
+        "description": "Sesion analitica derivada con tratamiento, resultado y pago reconstruibles sin ambiguedad.",
         "sensitivity": "baja",
     },
     "throws": {
         "category": "analytic",
-        "description": "Plan de tiradas servidas por sesion e intento.",
+        "description": "Tiradas servidas por sesion e intento, incluyendo primera tirada balanceada y rerolls reproducibles.",
         "sensitivity": "baja",
     },
     "claims": {
         "category": "analytic",
-        "description": "Claims finales y snapshot congelado del reporte.",
+        "description": "Claims finales con snapshot del mensaje mostrado al participante.",
         "sensitivity": "baja",
+    },
+    "referrals": {
+        "category": "analytic",
+        "description": "Red de referidos, QR y procedencia de WhatsApp.",
+        "sensitivity": "baja",
+    },
+    "treatment_decks": {
+        "category": "analytic",
+        "description": "Estado de los mazos de tratamientos de 62 cartas.",
+        "sensitivity": "baja",
+    },
+    "treatment_deck_cards": {
+        "category": "analytic",
+        "description": "Cartas individuales de tratamiento y su asignacion por sesion.",
+        "sensitivity": "baja",
+    },
+    "result_decks": {
+        "category": "analytic",
+        "description": "Estado de los mazos de resultados de 24 cartas.",
+        "sensitivity": "baja",
+    },
+    "result_deck_cards": {
+        "category": "analytic",
+        "description": "Cartas individuales de resultado para la primera tirada.",
+        "sensitivity": "baja",
+    },
+    "payment_decks": {
+        "category": "analytic",
+        "description": "Estado de los mazos de pago de 100 cartas con 1 ganador exacto.",
+        "sensitivity": "baja",
+    },
+    "payment_deck_cards": {
+        "category": "analytic",
+        "description": "Cartas individuales de elegibilidad de pago asignadas por sesion.",
+        "sensitivity": "baja",
+    },
+    "quality_flags": {
+        "category": "analytic",
+        "description": "Flags de calidad explotados por sesion.",
+        "sensitivity": "baja",
+    },
+    "consent_records": {
+        "category": "analytic",
+        "description": "Consentimientos, idioma y paneles eticos abiertos.",
+        "sensitivity": "media",
+    },
+    "snapshot_records": {
+        "category": "analytic",
+        "description": "Snapshot auditable de lo que vio y recibio el participante.",
+        "sensitivity": "media",
     },
     "payments_admin": {
         "category": "administrative",
-        "description": "Pagos, codigos de cobro y solicitudes administrativas.",
+        "description": "Pagos, codigos de cobro y solicitudes administrativas de Bizum o donacion.",
         "sensitivity": "alta",
     },
     "interest_signups": {
         "category": "administrative",
-        "description": "Emails voluntarios para futuros experimentos cuando el estudio esta cerrado.",
+        "description": "Emails voluntarios para futuras olas si el experimento esta detenido.",
         "sensitivity": "alta",
     },
     "telemetry": {
@@ -81,12 +138,12 @@ DATASET_DESCRIPTIONS: dict[str, dict[str, str]] = {
     },
     "technical_events": {
         "category": "operational",
-        "description": "Errores, latencias, retries y eventos tecnicos de red.",
+        "description": "Errores, latencias, retries y eventos tecnicos.",
         "sensitivity": "media",
     },
     "screen_events": {
         "category": "operational",
-        "description": "Estancias en pantalla agregadas por spell.",
+        "description": "Spells agregados por pantalla con tiempos visibles y clicks.",
         "sensitivity": "media",
     },
     "client_contexts": {
@@ -94,49 +151,19 @@ DATASET_DESCRIPTIONS: dict[str, dict[str, str]] = {
         "description": "Contexto de navegador, dispositivo y viewport por sesion.",
         "sensitivity": "media",
     },
-    "referrals": {
-        "category": "analytic",
-        "description": "Red de referidos y profundidad de invitacion.",
-        "sensitivity": "baja",
-    },
-    "series_state": {
-        "category": "analytic",
-        "description": "Estado de roots y series por fase y tratamiento.",
-        "sensitivity": "baja",
-    },
-    "position_plan": {
-        "category": "analytic",
-        "description": "Plan preasignado de resultados y payout por posicion.",
-        "sensitivity": "baja",
-    },
-    "quality_flags": {
-        "category": "analytic",
-        "description": "Flags de calidad explotados por sesion.",
-        "sensitivity": "baja",
-    },
     "fraud_flags": {
         "category": "operational",
         "description": "Flags antifraude generados por el backend.",
         "sensitivity": "media",
     },
-    "consent_records": {
-        "category": "analytic",
-        "description": "Consentimientos, idioma y uso de paneles informativos.",
-        "sensitivity": "media",
-    },
-    "snapshot_records": {
-        "category": "analytic",
-        "description": "Snapshot auditable de lo que vio el participante.",
-        "sensitivity": "media",
-    },
     "audit_events": {
         "category": "operational",
-        "description": "Trazabilidad de acciones y transiciones criticas.",
+        "description": "Trazabilidad de acciones criticas, asignacion, claims y pagos.",
         "sensitivity": "media",
     },
     "operational_notes": {
         "category": "operational",
-        "description": "Notas operativas activadas desde soporte y su momento efectivo.",
+        "description": "Notas operativas activadas durante el trabajo de campo.",
         "sensitivity": "media",
     },
 }
@@ -157,9 +184,7 @@ def isoformat_or_none(value: Optional[datetime]) -> Optional[str]:
     return value.isoformat() if value else None
 
 
-def safe_ms_delta(
-    later: Optional[datetime], earlier: Optional[datetime]
-) -> Optional[int]:
+def safe_ms_delta(later: Optional[datetime], earlier: Optional[datetime]) -> Optional[int]:
     if later is None or earlier is None:
         return None
     return int((later - earlier).total_seconds() * 1000)
@@ -191,7 +216,7 @@ def parse_json_dict(raw_value: Optional[str]) -> dict[str, Any]:
         return {}
 
 
-def load_lookup_table(db: Session, model: Any, key_field: str) -> dict[str, Any]:
+def load_lookup_table(db: Session, model: Any, key_field: str) -> dict[Any, Any]:
     rows = db.exec(select(model)).all()
     return {getattr(item, key_field): item for item in rows}
 
@@ -215,6 +240,35 @@ def build_referral_depth_map(records: list[SessionRecord]) -> dict[str, int]:
     return memo
 
 
+def deck_summary_rows(
+    deck_rows: list[Any],
+    deck_cards: list[Any],
+    *,
+    deck_kind: str,
+) -> list[dict[str, Any]]:
+    counts_by_deck: dict[str, int] = {}
+    for card in deck_cards:
+        if getattr(card, "assigned_session_id", None):
+            counts_by_deck[card.deck_id] = counts_by_deck.get(card.deck_id, 0) + 1
+    rows: list[dict[str, Any]] = []
+    for deck in deck_rows:
+        assigned_count = counts_by_deck.get(deck.id, 0)
+        rows.append(
+            {
+                f"{deck_kind}_deck_id": deck.id,
+                "deck_index": deck.deck_index,
+                "deck_seed": deck.deck_seed,
+                "status": deck.status,
+                "card_count": deck.card_count,
+                "assigned_count": assigned_count,
+                "remaining_count": max(deck.card_count - assigned_count, 0),
+                "created_at": isoformat_or_none(deck.created_at),
+                "closed_at": isoformat_or_none(deck.closed_at),
+            }
+        )
+    return rows
+
+
 def analytic_sessions_rows(db: Session) -> list[dict[str, Any]]:
     sessions = db.exec(select(SessionRecord).order_by(SessionRecord.created_at)).all()
     claims_by_session = load_lookup_table(db, Claim, "session_id")
@@ -222,10 +276,14 @@ def analytic_sessions_rows(db: Session) -> list[dict[str, Any]]:
     consent_by_session = load_lookup_table(db, ConsentRecord, "session_id")
     snapshot_by_session = load_lookup_table(db, SnapshotRecord, "session_id")
     client_context_by_session = load_lookup_table(db, SessionClientContext, "session_id")
+    treatment_decks = load_lookup_table(db, TreatmentDeck, "id")
+    result_decks = load_lookup_table(db, ResultDeck, "id")
+    payment_decks = load_lookup_table(db, PaymentDeck, "id")
     throws = db.exec(select(Throw).order_by(Throw.session_id, Throw.attempt_index)).all()
     screen_spells = db.exec(
         select(ScreenSpell).order_by(ScreenSpell.session_id, ScreenSpell.entered_server_ts)
     ).all()
+
     seen_by_session: dict[str, list[int]] = {}
     screen_metrics_by_session: dict[str, dict[str, int]] = {}
     for throw in throws:
@@ -233,18 +291,29 @@ def analytic_sessions_rows(db: Session) -> list[dict[str, Any]]:
     for spell in screen_spells:
         key_prefix = spell.screen_name
         bucket = screen_metrics_by_session.setdefault(spell.session_id, {})
-        bucket[f"{key_prefix}_visible_ms"] = bucket.get(
-            f"{key_prefix}_visible_ms", 0
-        ) + int(spell.visible_ms or 0)
-        bucket[f"{key_prefix}_hidden_ms"] = bucket.get(
-            f"{key_prefix}_hidden_ms", 0
-        ) + int(spell.hidden_ms or 0)
-        bucket[f"{key_prefix}_blur_ms"] = bucket.get(
-            f"{key_prefix}_blur_ms", 0
-        ) + int(spell.blur_ms or 0)
-        bucket[f"{key_prefix}_click_count"] = bucket.get(
-            f"{key_prefix}_click_count", 0
-        ) + int(spell.click_count or 0)
+        for metric_key in [
+            "visible_ms",
+            "hidden_ms",
+            "blur_ms",
+            "click_count",
+            "primary_click_count",
+            "secondary_click_count",
+        ]:
+            bucket[f"{key_prefix}_{metric_key}"] = bucket.get(
+                f"{key_prefix}_{metric_key}",
+                0,
+            ) + int(getattr(spell, metric_key) or 0)
+        for first_metric_key in ["first_click_ms", "primary_cta_ms", "secondary_cta_ms"]:
+            metric_value = getattr(spell, first_metric_key)
+            if metric_value is None:
+                continue
+            bucket_key = f"{key_prefix}_{first_metric_key}"
+            current_value = bucket.get(bucket_key)
+            bucket[bucket_key] = (
+                int(metric_value)
+                if current_value is None
+                else min(int(current_value), int(metric_value))
+            )
     referral_depths = build_referral_depth_map(sessions)
 
     rows: list[dict[str, Any]] = []
@@ -253,8 +322,20 @@ def analytic_sessions_rows(db: Session) -> list[dict[str, Any]]:
         consent = consent_by_session.get(record.id)
         snapshot = snapshot_by_session.get(record.id)
         client_context = client_context_by_session.get(record.id)
+        treatment_deck = treatment_decks.get(record.treatment_deck_id)
+        result_deck = result_decks.get(record.result_deck_id)
+        payment_deck = payment_decks.get(record.payment_deck_id)
         seen_values = seen_by_session.get(record.id, [])
         screen_metrics = screen_metrics_by_session.get(record.id, {})
+        consent_panel_total_ms = 0
+        if consent and consent.info_panel_durations_json:
+            try:
+                consent_panel_total_ms = sum(
+                    int(value or 0)
+                    for value in json.loads(consent.info_panel_durations_json).values()
+                )
+            except (TypeError, ValueError, json.JSONDecodeError):
+                consent_panel_total_ms = 0
         reported_value = claim.reported_value if claim else record.reported_value
         true_first_result = claim.true_first_result if claim else record.first_result_value
         rows.append(
@@ -263,6 +344,7 @@ def analytic_sessions_rows(db: Session) -> list[dict[str, Any]]:
                 "experiment_version": record.experiment_version,
                 "experiment_phase": record.experiment_phase,
                 "phase_version": record.phase_version,
+                "phase_activation_status": record.phase_activation_status,
                 "ui_version": record.ui_version,
                 "consent_version": record.consent_version,
                 "treatment_version": record.treatment_version,
@@ -280,26 +362,35 @@ def analytic_sessions_rows(db: Session) -> list[dict[str, Any]]:
                 "language_at_claim": record.language_at_claim,
                 "language_changed_during_session": record.language_changed_during_session,
                 "treatment_key": record.treatment_key,
+                "treatment_type": record.treatment_type,
                 "treatment_family": record.treatment_family,
+                "is_control": int(record.treatment_key == CONTROL_TREATMENT_KEY),
+                "displayed_count_target": record.report_snapshot_count_target
+                if record.report_snapshot_count_target is not None
+                else record.displayed_count_target,
+                "displayed_denominator": record.report_snapshot_denominator
+                if record.report_snapshot_denominator is not None
+                else record.displayed_denominator,
                 "norm_target_value": record.norm_target_value,
+                "displayed_message_version": record.report_snapshot_message_version,
+                "displayed_message_text": snapshot.displayed_message_text
+                if snapshot
+                else record.report_snapshot_message,
                 "position_index": record.position_index,
                 "root_id": record.root_id,
                 "series_id": record.series_id,
+                "treatment_deck_index": treatment_deck.deck_index if treatment_deck else None,
+                "treatment_card_position": record.treatment_card_position,
+                "result_deck_index": result_deck.deck_index if result_deck else None,
+                "result_card_position": record.result_card_position,
+                "payment_deck_index": payment_deck.deck_index if payment_deck else None,
+                "payment_card_position": record.payment_card_position,
                 "selected_for_payment": record.selected_for_payment,
+                "payout_eligible": int(record.selected_for_payment),
                 "reported_value": reported_value,
                 "true_first_result": true_first_result,
                 "reported_six": int(reported_value == 6) if reported_value is not None else None,
-                "reported_five": int(reported_value == 5) if reported_value is not None else None,
-                "reported_high": int(reported_value in {5, 6}) if reported_value is not None else None,
                 "is_honest": record.is_honest,
-                "lie_to_six": int(reported_value == 6 and true_first_result != 6)
-                if reported_value is not None and true_first_result is not None
-                else None,
-                "overreport_amount": (
-                    reported_value - true_first_result
-                    if reported_value is not None and true_first_result is not None
-                    else None
-                ),
                 "reroll_count": record.reroll_count,
                 "used_any_reroll": int(record.reroll_count > 0),
                 "last_seen_value": record.last_seen_value,
@@ -317,11 +408,6 @@ def analytic_sessions_rows(db: Session) -> list[dict[str, Any]]:
                 "reported_matches_any_seen": (
                     int(reported_value in seen_values) if reported_value is not None else None
                 ),
-                "reported_unseen": (
-                    int(reported_value not in seen_values)
-                    if reported_value is not None and seen_values
-                    else None
-                ),
                 "report_rt_ms": (
                     claim.reaction_ms
                     if claim and claim.reaction_ms is not None
@@ -329,13 +415,15 @@ def analytic_sessions_rows(db: Session) -> list[dict[str, Any]]:
                 ),
                 "game_decision_rt_ms": safe_ms_delta(record.report_prepared_at, record.first_roll_at),
                 "total_session_ms": safe_ms_delta(record.completed_at, record.created_at),
-                "displayed_count_target": record.report_snapshot_count_target,
-                "displayed_denominator": record.report_snapshot_denominator,
-                "displayed_message_version": record.report_snapshot_message_version,
-                "displayed_message_text": snapshot.displayed_message_text if snapshot else record.report_snapshot_message,
-                "control_message_text": snapshot.control_message_text if snapshot else None,
-                "final_message_text": snapshot.final_message_text if snapshot else None,
                 "landing_visible_ms": consent.landing_visible_ms if consent else None,
+                "landing_to_start_ms": screen_metrics.get("landing_primary_cta_ms")
+                if screen_metrics.get("landing_primary_cta_ms") is not None
+                else screen_metrics.get("landing_first_click_ms"),
+                "consent_total_ms": (
+                    int(consent.landing_visible_ms or 0) + consent_panel_total_ms
+                    if consent
+                    else None
+                ),
                 "referral_code": record.referral_code,
                 "invited_by_session_id": record.invited_by_session_id,
                 "invited_by_referral_code": record.invited_by_referral_code,
@@ -370,8 +458,6 @@ def analytic_sessions_rows(db: Session) -> list[dict[str, Any]]:
                 "estimated_downlink": client_context.estimated_downlink if client_context else None,
                 "estimated_rtt": client_context.estimated_rtt if client_context else None,
                 "timezone_offset_minutes": client_context.timezone_offset_minutes if client_context else None,
-                "landing_to_start_ms": consent.landing_visible_ms if consent else None,
-                "consent_total_ms": consent.landing_visible_ms if consent else None,
                 "instructions_visible_ms": screen_metrics.get("instructions_visible_ms"),
                 "comprehension_visible_ms": screen_metrics.get("comprehension_visible_ms"),
                 "game_visible_ms": screen_metrics.get("game_visible_ms"),
@@ -407,9 +493,12 @@ def throws_rows(db: Session) -> list[dict[str, Any]]:
             "session_id": throw.session_id,
             "experiment_phase": sessions[throw.session_id].experiment_phase,
             "treatment_key": sessions[throw.session_id].treatment_key,
-            "position_index": sessions[throw.session_id].position_index,
+            "treatment_type": sessions[throw.session_id].treatment_type,
             "attempt_index": throw.attempt_index,
             "result_value": throw.result_value,
+            "result_source": "result_deck" if throw.attempt_index == 1 else "reroll_rng",
+            "result_deck_id": sessions[throw.session_id].result_deck_id if throw.attempt_index == 1 else None,
+            "result_card_position": sessions[throw.session_id].result_card_position if throw.attempt_index == 1 else None,
             "reaction_ms": throw.reaction_ms,
             "delivered_at": isoformat_or_none(throw.delivered_at),
         }
@@ -435,10 +524,10 @@ def claims_rows(db: Session) -> list[dict[str, Any]]:
             "is_honest": claim.is_honest,
             "reroll_count": claim.reroll_count,
             "displayed_treatment_key": claim.displayed_treatment_key,
+            "is_control": int(claim.displayed_treatment_key == CONTROL_TREATMENT_KEY),
             "displayed_count_target": claim.displayed_count_target,
             "displayed_denominator": claim.displayed_denominator,
             "displayed_target_value": claim.displayed_target_value,
-            "displayed_window_version": claim.displayed_window_version,
             "displayed_message": claim.displayed_message,
             "displayed_message_version": claim.displayed_message_version,
             "operational_note_id": claim.operational_note_id,
@@ -468,6 +557,8 @@ def payments_admin_rows(db: Session) -> list[dict[str, Any]]:
                 "session_id": payment.session_id,
                 "experiment_phase": session_record.experiment_phase if session_record else None,
                 "treatment_key": session_record.treatment_key if session_record else None,
+                "payment_deck_id": session_record.payment_deck_id if session_record else None,
+                "payment_card_position": session_record.payment_card_position if session_record else None,
                 "eligible": payment.eligible,
                 "amount_cents": payment.amount_cents,
                 "amount_eur": int(payment.amount_cents / 100),
@@ -497,6 +588,9 @@ def telemetry_rows(db: Session) -> list[dict[str, Any]]:
             "telemetry_id": event.id,
             "session_id": event.session_id,
             "experiment_phase": session_map[event.session_id].experiment_phase
+            if event.session_id in session_map
+            else None,
+            "treatment_key": session_map[event.session_id].treatment_key
             if event.session_id in session_map
             else None,
             "event_type": event.event_type,
@@ -615,9 +709,7 @@ def screen_events_rows(db: Session) -> list[dict[str, Any]]:
 
 
 def client_contexts_rows(db: Session) -> list[dict[str, Any]]:
-    contexts = db.exec(
-        select(SessionClientContext).order_by(SessionClientContext.captured_at)
-    ).all()
+    contexts = db.exec(select(SessionClientContext).order_by(SessionClientContext.captured_at)).all()
     return [
         {
             "client_context_id": context.id,
@@ -681,40 +773,80 @@ def referrals_rows(db: Session) -> list[dict[str, Any]]:
     ]
 
 
-def series_state_rows(db: Session) -> list[dict[str, Any]]:
-    roots = db.exec(select(SeriesRoot).order_by(SeriesRoot.root_sequence)).all()
-    rows: list[dict[str, Any]] = []
-    for root in roots:
-        series_items = db.exec(
-            select(Series).where(Series.root_id == root.id).order_by(Series.treatment_key)
-        ).all()
-        for series in series_items:
-            rows.append(
-                {
-                    "root_id": root.id,
-                    "root_sequence": root.root_sequence,
-                    "root_phase": root.experiment_phase,
-                    "root_status": root.status,
-                    "root_close_reason": root.close_reason,
-                    "root_created_at": isoformat_or_none(root.created_at),
-                    "root_closed_at": isoformat_or_none(root.closed_at),
-                    "series_id": series.id,
-                    "treatment_key": series.treatment_key,
-                    "treatment_family": series.treatment_family,
-                    "norm_target_value": series.norm_target_value,
-                    "assignment_weight": series.assignment_weight,
-                    "position_counter": series.position_counter,
-                    "completed_count": series.completed_count,
-                    "visible_count_target": series.visible_count_target,
-                    "actual_count_target": series.actual_count_target,
-                    "visible_window_version": series.visible_window_version,
-                    "actual_window_version": series.actual_window_version,
-                    "full_target_streak": series.full_target_streak,
-                    "is_closed": series.is_closed,
-                    "close_reason": series.close_reason,
-                }
-            )
+def treatment_decks_rows(db: Session) -> list[dict[str, Any]]:
+    decks = db.exec(select(TreatmentDeck).order_by(TreatmentDeck.deck_index)).all()
+    cards = db.exec(select(TreatmentDeckCard)).all()
+    rows = deck_summary_rows(decks, cards, deck_kind="treatment")
+    for row, deck in zip(rows, decks):
+        row["legacy_root_id"] = deck.legacy_root_id
     return rows
+
+
+def treatment_deck_cards_rows(db: Session) -> list[dict[str, Any]]:
+    decks = load_lookup_table(db, TreatmentDeck, "id")
+    cards = db.exec(
+        select(TreatmentDeckCard).order_by(TreatmentDeckCard.deck_id, TreatmentDeckCard.card_position)
+    ).all()
+    return [
+        {
+            "deck_id": card.deck_id,
+            "deck_index": decks[card.deck_id].deck_index if card.deck_id in decks else None,
+            "card_position": card.card_position,
+            "treatment_key": card.treatment_key,
+            "legacy_series_id": card.legacy_series_id,
+            "assigned_session_id": card.assigned_session_id,
+            "assigned_at": isoformat_or_none(card.assigned_at),
+        }
+        for card in cards
+    ]
+
+
+def result_decks_rows(db: Session) -> list[dict[str, Any]]:
+    decks = db.exec(select(ResultDeck).order_by(ResultDeck.deck_index)).all()
+    cards = db.exec(select(ResultDeckCard)).all()
+    return deck_summary_rows(decks, cards, deck_kind="result")
+
+
+def result_deck_cards_rows(db: Session) -> list[dict[str, Any]]:
+    decks = load_lookup_table(db, ResultDeck, "id")
+    cards = db.exec(
+        select(ResultDeckCard).order_by(ResultDeckCard.deck_id, ResultDeckCard.card_position)
+    ).all()
+    return [
+        {
+            "deck_id": card.deck_id,
+            "deck_index": decks[card.deck_id].deck_index if card.deck_id in decks else None,
+            "card_position": card.card_position,
+            "result_value": card.result_value,
+            "assigned_session_id": card.assigned_session_id,
+            "assigned_at": isoformat_or_none(card.assigned_at),
+        }
+        for card in cards
+    ]
+
+
+def payment_decks_rows(db: Session) -> list[dict[str, Any]]:
+    decks = db.exec(select(PaymentDeck).order_by(PaymentDeck.deck_index)).all()
+    cards = db.exec(select(PaymentDeckCard)).all()
+    return deck_summary_rows(decks, cards, deck_kind="payment")
+
+
+def payment_deck_cards_rows(db: Session) -> list[dict[str, Any]]:
+    decks = load_lookup_table(db, PaymentDeck, "id")
+    cards = db.exec(
+        select(PaymentDeckCard).order_by(PaymentDeckCard.deck_id, PaymentDeckCard.card_position)
+    ).all()
+    return [
+        {
+            "deck_id": card.deck_id,
+            "deck_index": decks[card.deck_id].deck_index if card.deck_id in decks else None,
+            "card_position": card.card_position,
+            "payout_eligible": card.payout_eligible,
+            "assigned_session_id": card.assigned_session_id,
+            "assigned_at": isoformat_or_none(card.assigned_at),
+        }
+        for card in cards
+    ]
 
 
 def interest_signups_rows(db: Session) -> list[dict[str, Any]]:
@@ -753,29 +885,6 @@ def operational_notes_rows(db: Session) -> list[dict[str, Any]]:
             "updated_at": isoformat_or_none(note.updated_at),
         }
         for note in notes
-    ]
-
-
-def position_plan_rows(db: Session) -> list[dict[str, Any]]:
-    roots = load_lookup_table(db, SeriesRoot, "id")
-    positions = db.exec(
-        select(DeckPosition).order_by(
-            DeckPosition.root_id, DeckPosition.position_index, DeckPosition.attempt_index
-        )
-    ).all()
-    return [
-        {
-            "root_id": item.root_id,
-            "root_sequence": roots[item.root_id].root_sequence if item.root_id in roots else None,
-            "experiment_phase": roots[item.root_id].experiment_phase if item.root_id in roots else None,
-            "position_index": item.position_index,
-            "attempt_index": item.attempt_index,
-            "result_value": item.result_value,
-            "payout_eligible": item.payout_eligible,
-            "commitment_hash": item.commitment_hash,
-            "created_at": isoformat_or_none(item.created_at),
-        }
-        for item in positions
     ]
 
 
@@ -818,6 +927,7 @@ def consent_records_rows(db: Session) -> list[dict[str, Any]]:
         {
             "consent_id": consent.id,
             "session_id": consent.session_id,
+            "bracelet_id": consent.bracelet_id,
             "consent_version": consent.consent_version,
             "language_at_access": consent.language_at_access,
             "age_confirmed": consent.age_confirmed,
@@ -846,6 +956,7 @@ def snapshot_records_rows(db: Session) -> list[dict[str, Any]]:
             "treatment_key": snapshot.treatment_key,
             "treatment_family": snapshot.treatment_family,
             "norm_target_value": snapshot.norm_target_value,
+            "is_control": snapshot.is_control,
             "displayed_count_target": snapshot.displayed_count_target,
             "displayed_denominator": snapshot.displayed_denominator,
             "displayed_message_text": snapshot.displayed_message_text,
@@ -889,19 +1000,23 @@ DATASET_BUILDERS = {
     "sessions": analytic_sessions_rows,
     "throws": throws_rows,
     "claims": claims_rows,
+    "referrals": referrals_rows,
+    "treatment_decks": treatment_decks_rows,
+    "treatment_deck_cards": treatment_deck_cards_rows,
+    "result_decks": result_decks_rows,
+    "result_deck_cards": result_deck_cards_rows,
+    "payment_decks": payment_decks_rows,
+    "payment_deck_cards": payment_deck_cards_rows,
+    "quality_flags": quality_flags_rows,
+    "consent_records": consent_records_rows,
+    "snapshot_records": snapshot_records_rows,
     "payments_admin": payments_admin_rows,
     "interest_signups": interest_signups_rows,
     "telemetry": telemetry_rows,
     "technical_events": technical_events_rows,
     "screen_events": screen_events_rows,
     "client_contexts": client_contexts_rows,
-    "referrals": referrals_rows,
-    "series_state": series_state_rows,
-    "position_plan": position_plan_rows,
-    "quality_flags": quality_flags_rows,
     "fraud_flags": fraud_flags_rows,
-    "consent_records": consent_records_rows,
-    "snapshot_records": snapshot_records_rows,
     "audit_events": audit_events_rows,
     "operational_notes": operational_notes_rows,
 }
@@ -936,8 +1051,12 @@ def bundle_datasets(bundle_name: str) -> list[str]:
             "throws",
             "claims",
             "referrals",
-            "series_state",
-            "position_plan",
+            "treatment_decks",
+            "treatment_deck_cards",
+            "result_decks",
+            "result_deck_cards",
+            "payment_decks",
+            "payment_deck_cards",
             "quality_flags",
             "consent_records",
             "snapshot_records",
@@ -974,9 +1093,9 @@ def export_readme_content(bundle_name: str, datasets: list[str]) -> str:
         [
             "",
             "Capas:",
-            "- analytic: datos listos para analisis cientifico.",
-            "- operational: logs y telemetria cruda.",
-            "- administrative: cobros y datos administrativos sensibles.",
+            "- analytic: datos listos para analisis cientifico y reconstruccion del tratamiento.",
+            "- operational: logs, spells, auditoria y telemetria cruda.",
+            "- administrative: pagos y datos administrativos sensibles.",
         ]
     )
     return "\n".join(lines)
@@ -1097,46 +1216,36 @@ def exports_page_html(
       .warn {{ color:#8a4b00; }}
     </style>
   </head>
-      <body>
+  <body>
     <div class="wrap">
       <p>Investigador</p>
       <h1>Data Exports</h1>
-      <p>Fase actual: <strong>{state.current_phase}</strong> | Estado: <strong>{state.experiment_status}</strong> | Validos completados: <strong>{state.valid_completed_count}</strong> / {state.phase_transition_threshold} | Personas premiadas: <strong>{prize_stats.get('winner_count', 0)}</strong> | Total repartido: <strong>{prize_stats.get('total_prize_amount_eur', 0)} EUR</strong> | Registros administrativos de premios: <strong>{payments_admin_stats.get('records', 0)}</strong></p>
+      <p>Diseno actual: <strong>{state.current_phase}</strong> | Estado: <strong>{state.experiment_status}</strong> | Validos completados: <strong>{state.valid_completed_count}</strong> / {state.phase_transition_threshold} | Ganadores: <strong>{prize_stats.get('winner_count', 0)}</strong> | Total comprometido: <strong>{prize_stats.get('total_prize_amount_eur', 0)} EUR</strong> | Registros administrativos: <strong>{payments_admin_stats.get('records', 0)}</strong></p>
       <div class="grid">
         <div class="card">
           <h2>Analitico</h2>
-          <p>Dataset listo para modelos y publicaciones.</p>
+          <p>Sessions, claims, tiradas, referidos y mazos balanceados.</p>
           <a class="button" href="/admin/export/bundle/analytic.zip">Exportar dataset analitico completo</a>
         </div>
         <div class="card">
           <h2>Operativo</h2>
-          <p>Telemetria cruda, screen spells, contexto de cliente, fraude y auditoria.</p>
+          <p>Telemetria cruda, screen spells, auditoria y contexto cliente.</p>
           <a class="button" href="/admin/export/bundle/operational.zip">Exportar telemetria completa</a>
         </div>
         <div class="card">
           <h2>Administrativo</h2>
-          <p class="warn">Contiene datos sensibles de cobro y emails voluntarios para futuros estudios.</p>
+          <p class="warn">Contiene datos sensibles de cobro y emails voluntarios.</p>
           <a class="button" href="/admin/export/bundle/administrative.zip">Exportar pagos administrativos</a>
         </div>
         <div class="card">
           <h2>Todo</h2>
           <p>ZIP completo con manifest, README y codebook.</p>
-          <a class="button" href="/admin/export/bundle/all.zip">Generar paquete para analisis</a>
-        </div>
-        <div class="card">
-          <h2>Red de referidos</h2>
-          <p>Trazabilidad de invitador, invitado y profundidad de red.</p>
-          <a class="button" href="/admin/export/referrals.csv">Exportar red de referidos</a>
-        </div>
-        <div class="card">
-          <h2>Posicion y series</h2>
-          <p>Estado de roots, series espejo y plan preasignado por posicion.</p>
-          <a class="button" href="/admin/export/series_state.csv">Exportar posicion y series</a>
+          <a class="button" href="/admin/export/bundle/all.zip">Generar paquete completo</a>
         </div>
       </div>
       <h2>Datasets</h2>
       <table>
-        <thead><tr><th>Nombre</th><th>Capa</th><th>Sensibilidad</th><th>Registros</th><th>Tamaño aprox.</th><th>Generado</th><th>Descripcion</th><th>Exportar</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Capa</th><th>Sensibilidad</th><th>Registros</th><th>Tamano aprox.</th><th>Generado</th><th>Descripcion</th><th>Exportar</th></tr></thead>
         <tbody>{''.join(rows_html)}</tbody>
       </table>
       <p style="margin-top:16px;"><a class="secondary" href="/admin/dashboard">Abrir dashboard cientifico-operativo</a></p>
@@ -1144,6 +1253,20 @@ def exports_page_html(
   </body>
 </html>
 """
+
+
+def _rows_from_counter(counter: dict[Any, Any]) -> str:
+    return "".join(
+        f"<tr><td>{escape(str(key))}</td><td>{escape(str(value))}</td></tr>"
+        for key, value in sorted(counter.items(), key=lambda item: str(item[0]))
+    ) or "<tr><td colspan='2'>Sin datos</td></tr>"
+
+
+def _rows_from_decks(rows: list[dict[str, Any]], *, deck_label: str) -> str:
+    return "".join(
+        f"<tr><td>{escape(str(row['deck_index']))}</td><td>{escape(str(row['status']))}</td><td>{escape(str(row['assigned_count']))}</td><td>{escape(str(row['remaining_count']))}</td><td>{escape(str(row['card_count']))}</td></tr>"
+        for row in rows
+    ) or f"<tr><td colspan='5'>Sin mazos de {escape(deck_label)}</td></tr>"
 
 
 def dashboard_page_html(db: Session) -> str:
@@ -1160,12 +1283,13 @@ def dashboard_page_html(db: Session) -> str:
     screen_spells = db.exec(select(ScreenSpell)).all()
     fraud_flags = db.exec(select(FraudFlag)).all()
     interest_signups = db.exec(select(InterestSignup)).all()
-    series_rows = series_state_rows(db)
+    treatment_decks = treatment_decks_rows(db)
+    result_decks = result_decks_rows(db)
+    payment_decks = payment_decks_rows(db)
 
     completed_valid = [item for item in sessions if item.is_valid_completed]
     dropout_by_screen: dict[str, int] = {}
-    treatment_balance: dict[str, int] = {}
-    phase_balance: dict[str, int] = {}
+    treatment_balance: dict[str, int] = {treatment_key: 0 for treatment_key in TREATMENT_KEYS}
     reported_distribution = {value: 0 for value in range(1, 7)}
     truth_distribution = {value: 0 for value in range(1, 7)}
     quality_distribution: dict[str, int] = {}
@@ -1178,14 +1302,14 @@ def dashboard_page_html(db: Session) -> str:
         if item.event_type == "error" or (item.status_code or 0) >= 400
     ]
     eligible_payments = [item for item in payments if item.eligible]
-    total_prize_amount_eur = round(
-        sum(item.amount_cents for item in eligible_payments) / 100,
-        2,
-    )
+    total_prize_amount_eur = round(sum(item.amount_cents for item in eligible_payments) / 100, 2)
+    demo_id_lines = [
+        "CTRL1234 -> control + ganador",
+        "NORM0000 -> norm_0 + perder",
+        "NORM0001 -> norm_1 + perder",
+    ]
     escaped_pause_reason = escape(state.pause_reason) if state and state.pause_reason else ""
-    escaped_operational_note = (
-        escape(active_operational_note.note_text) if active_operational_note else ""
-    )
+    escaped_operational_note = escape(active_operational_note.note_text) if active_operational_note else ""
     escaped_operational_note_since = (
         active_operational_note.effective_from.isoformat() if active_operational_note else ""
     )
@@ -1193,9 +1317,6 @@ def dashboard_page_html(db: Session) -> str:
     for session_record in sessions:
         treatment_balance[session_record.treatment_key] = (
             treatment_balance.get(session_record.treatment_key, 0) + 1
-        )
-        phase_balance[session_record.experiment_phase] = (
-            phase_balance.get(session_record.experiment_phase, 0) + 1
         )
         if not session_record.completed_at:
             dropout_by_screen[session_record.screen_cursor] = (
@@ -1217,21 +1338,10 @@ def dashboard_page_html(db: Session) -> str:
     for flag in fraud_flags:
         fraud_distribution[flag.flag_key] = fraud_distribution.get(flag.flag_key, 0) + 1
 
-    def rows_from_counter(counter: dict[Any, Any]) -> str:
-        return "".join(
-            f"<tr><td>{key}</td><td>{value}</td></tr>"
-            for key, value in sorted(counter.items(), key=lambda item: str(item[0]))
-        ) or "<tr><td colspan='2'>Sin datos</td></tr>"
-
     screen_stats_rows = "".join(
-        f"<tr><td>{screen}</td><td>{len(values)}</td><td>{mean(values) or 0}</td></tr>"
+        f"<tr><td>{escape(screen)}</td><td>{len(values)}</td><td>{mean(values) or 0}</td></tr>"
         for screen, values in sorted(screen_durations.items())
     ) or "<tr><td colspan='3'>Sin datos</td></tr>"
-
-    series_html = "".join(
-        f"<tr><td>{row['root_sequence']}</td><td>{row['root_phase']}</td><td>{row['treatment_key']}</td><td>{row['position_counter']}</td><td>{row['completed_count']}</td><td>{row['visible_count_target']}</td><td>{row['actual_count_target']}</td></tr>"
-        for row in series_rows
-    ) or "<tr><td colspan='7'>Sin datos</td></tr>"
 
     return f"""
 <!doctype html>
@@ -1249,6 +1359,7 @@ def dashboard_page_html(db: Session) -> str:
       table {{ width:100%; border-collapse:collapse; background:white; border-radius:20px; overflow:hidden; margin-bottom:20px; }}
       th,td {{ padding:12px 14px; border-bottom:1px solid rgba(0,0,0,.08); text-align:left; }}
       .two {{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }}
+      .three {{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }}
       .controls {{ display:grid; gap:12px; }}
       .control-row {{ display:flex; gap:12px; flex-wrap:wrap; }}
       .status {{ font-size:14px; color:#555; }}
@@ -1256,6 +1367,7 @@ def dashboard_page_html(db: Session) -> str:
       textarea {{ min-height:110px; resize:vertical; }}
       button {{ padding:12px 18px; border:none; border-radius:999px; background:#111; color:white; font-weight:700; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; }}
       button.secondary {{ background:white; color:#111; border:1px solid rgba(0,0,0,.12); }}
+      ul {{ margin:0; padding-left:18px; }}
     </style>
   </head>
   <body>
@@ -1263,30 +1375,26 @@ def dashboard_page_html(db: Session) -> str:
       <p>Investigador</p>
       <h1>Dashboard cientifico-operativo</h1>
       <div class="grid">
-        <div class="card"><strong>Fase actual</strong><div>{state.current_phase if state else '-'}</div></div>
-        <div class="card"><strong>Estado del experimento</strong><div>{state.experiment_status if state else '-'}</div></div>
+        <div class="card"><strong>Diseno</strong><div>{escape(state.current_phase if state else PHASE_1_MAIN)}</div></div>
+        <div class="card"><strong>Estado</strong><div>{escape(state.experiment_status if state else 'active')}</div></div>
         <div class="card"><strong>Sesiones iniciadas</strong><div>{len(sessions)}</div></div>
         <div class="card"><strong>Completadas validas</strong><div>{len(completed_valid)}</div></div>
-        <div class="card"><strong>Claims totales</strong><div>{len(claims)}</div></div>
-        <div class="card"><strong>Personas premiadas</strong><div>{len(eligible_payments)}</div></div>
-        <div class="card"><strong>Importe total de premios</strong><div>{total_prize_amount_eur} EUR</div></div>
-        <div class="card"><strong>Emails para futuros estudios</strong><div>{len(interest_signups)}</div></div>
+        <div class="card"><strong>Claims</strong><div>{len(claims)}</div></div>
+        <div class="card"><strong>Ganadores</strong><div>{len(eligible_payments)}</div></div>
+        <div class="card"><strong>Importe comprometido</strong><div>{total_prize_amount_eur} EUR</div></div>
+        <div class="card"><strong>Emails interes</strong><div>{len(interest_signups)}</div></div>
         <div class="card"><strong>Media rerolls</strong><div>{mean(rerolls) or 0}</div></div>
-        <div class="card"><strong>Errores de red/tecnicos</strong><div>{len(network_errors)}</div></div>
-        <div class="card"><strong>Reportes de 5</strong><div>{reported_distribution[5]}</div></div>
+        <div class="card"><strong>Errores tecnicos</strong><div>{len(network_errors)}</div></div>
         <div class="card"><strong>Reportes de 6</strong><div>{reported_distribution[6]}</div></div>
-        <div class="card"><strong>Reportes de 5 o 6</strong><div>{sum(reported_distribution[v] for v in [5, 6])}</div></div>
-        <div class="card"><strong>Verdades de 5</strong><div>{truth_distribution[5]}</div></div>
         <div class="card"><strong>Verdades de 6</strong><div>{truth_distribution[6]}</div></div>
-        <div class="card"><strong>Verdades de 5 o 6</strong><div>{sum(truth_distribution[v] for v in [5, 6])}</div></div>
       </div>
       <div class="card controls">
         <h2>Control del experimento</h2>
         <div class="status">
-          Estado actual: <strong>{state.experiment_status if state else '-'}</strong>
+          Estado actual: <strong>{escape(state.experiment_status if state else 'active')}</strong>
           {" | Pausado en: " + state.paused_at.isoformat() if state and state.paused_at else ""}
         </div>
-        <input id="experiment-reason" placeholder="Motivo interno opcional: fraude, incidencia de premios, pausa operativa..." />
+        <input id="experiment-reason" placeholder="Motivo interno opcional: pausa operativa, incidencia tecnica, control de campo..." />
         {"<div class='status'>Ultimo motivo de pausa: <strong>" + escaped_pause_reason + "</strong></div>" if escaped_pause_reason else ""}
         <div class="control-row">
           <button id="pause-button">Parar experimento</button>
@@ -1300,7 +1408,7 @@ def dashboard_page_html(db: Session) -> str:
           {"Nota activa desde: <strong>" + escaped_operational_note_since + "</strong>" if escaped_operational_note_since else "No hay nota operativa activa."}
         </div>
         {"<div class='status'><strong>Nota actual:</strong> " + escaped_operational_note + "</div>" if escaped_operational_note else ""}
-        <textarea id="operational-note-text" placeholder="Escribe aqui incidencias operativas, cambio de localizacion, ajuste de carteles, pausa de premios, etc. Todo lo nuevo quedara trazado desde este momento.">{escaped_operational_note}</textarea>
+        <textarea id="operational-note-text" placeholder="Escribe aqui incidencias operativas, cambios de ubicacion, pausas o anotaciones de campo.">{escaped_operational_note}</textarea>
         <div class="control-row">
           <button id="operational-note-save">Guardar nota activa</button>
           <button id="operational-note-clear" class="secondary">Cerrar nota activa</button>
@@ -1308,31 +1416,51 @@ def dashboard_page_html(db: Session) -> str:
         <div id="operational-note-status" class="status"></div>
       </div>
       <div class="two">
-        <div><h2>Balance por tratamiento</h2><table><tbody>{rows_from_counter(treatment_balance)}</tbody></table></div>
-        <div><h2>Balance por fase</h2><table><tbody>{rows_from_counter(phase_balance)}</tbody></table></div>
+        <div><h2>Balance por tratamiento</h2><table><tbody>{_rows_from_counter(treatment_balance)}</tbody></table></div>
+        <div><h2>Dropout por pantalla</h2><table><tbody>{_rows_from_counter(dropout_by_screen)}</tbody></table></div>
       </div>
       <div class="two">
-        <div><h2>Dropout por pantalla</h2><table><tbody>{rows_from_counter(dropout_by_screen)}</tbody></table></div>
-        <div><h2>Flags de calidad</h2><table><tbody>{rows_from_counter(quality_distribution)}</tbody></table></div>
+        <div><h2>Distribucion de reportes</h2><table><tbody>{_rows_from_counter(reported_distribution)}</tbody></table></div>
+        <div><h2>Distribucion real primera tirada</h2><table><tbody>{_rows_from_counter(truth_distribution)}</tbody></table></div>
       </div>
       <div class="two">
-        <div><h2>Distribucion de reportes 1-6</h2><table><tbody>{rows_from_counter(reported_distribution)}</tbody></table></div>
-        <div><h2>Distribucion de verdad 1-6</h2><table><tbody>{rows_from_counter(truth_distribution)}</tbody></table></div>
+        <div><h2>Flags de calidad</h2><table><tbody>{_rows_from_counter(quality_distribution)}</tbody></table></div>
+        <div><h2>Flags de fraude</h2><table><tbody>{_rows_from_counter(fraud_distribution)}</tbody></table></div>
       </div>
       <div class="two">
         <div>
           <h2>Screen timings</h2>
           <table><thead><tr><th>Pantalla</th><th>Eventos</th><th>Media ms</th></tr></thead><tbody>{screen_stats_rows}</tbody></table>
         </div>
-        <div><h2>Flags de fraude</h2><table><tbody>{rows_from_counter(fraud_distribution)}</tbody></table></div>
+        <div class="card">
+          <h2>Demo IDs</h2>
+          <ul>{''.join(f'<li>{escape(item)}</li>' for item in demo_id_lines)}</ul>
+          <p style="margin-top:12px;">WhatsApp de soporte cobro: {escape(public_support()['winner_whatsapp_phone'])}</p>
+        </div>
       </div>
-      <h2>Evolucion temporal de series</h2>
-      <table>
-        <thead><tr><th>Root</th><th>Fase</th><th>Tratamiento</th><th>Asignados</th><th>Completados</th><th>Visible target</th><th>Actual target</th></tr></thead>
-        <tbody>
-          {series_html}
-        </tbody>
-      </table>
+      <div class="three">
+        <div>
+          <h2>Mazos de tratamientos</h2>
+          <table>
+            <thead><tr><th>Deck</th><th>Estado</th><th>Asignadas</th><th>Restantes</th><th>Cartas</th></tr></thead>
+            <tbody>{_rows_from_decks(treatment_decks, deck_label='tratamientos')}</tbody>
+          </table>
+        </div>
+        <div>
+          <h2>Mazos de resultados</h2>
+          <table>
+            <thead><tr><th>Deck</th><th>Estado</th><th>Asignadas</th><th>Restantes</th><th>Cartas</th></tr></thead>
+            <tbody>{_rows_from_decks(result_decks, deck_label='resultados')}</tbody>
+          </table>
+        </div>
+        <div>
+          <h2>Mazos de pago</h2>
+          <table>
+            <thead><tr><th>Deck</th><th>Estado</th><th>Asignadas</th><th>Restantes</th><th>Cartas</th></tr></thead>
+            <tbody>{_rows_from_decks(payment_decks, deck_label='pagos')}</tbody>
+          </table>
+        </div>
+      </div>
       <p><a href="/admin/exports">Ir a Data Exports</a></p>
     </div>
     <script>
@@ -1348,7 +1476,7 @@ def dashboard_page_html(db: Session) -> str:
           }});
           const data = await response.json();
           if (!response.ok) throw new Error(data.detail || 'No se pudo actualizar el estado');
-          status.textContent = `Estado actualizado: ${{data.experiment_status}}. Personas premiadas: ${{data.prizes.winner_count}}. Total repartido: ${{data.prizes.total_prize_amount_eur}} EUR.`;
+          status.textContent = `Estado actualizado: ${{data.experiment_status}}. Ganadores: ${{data.prizes.winner_count}}. Total comprometido: ${{data.prizes.total_prize_amount_eur}} EUR.`;
           window.setTimeout(() => window.location.reload(), 700);
         }} catch (error) {{
           status.textContent = error.message || 'No se pudo actualizar el estado';

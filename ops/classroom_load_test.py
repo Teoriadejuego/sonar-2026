@@ -15,6 +15,7 @@ import httpx
 
 
 DEFAULT_TIMEOUT = 30.0
+LOAD_TEST_BRACELET_PREFIX = "LOAD"
 
 
 @dataclass
@@ -23,6 +24,7 @@ class FlowResult:
     session_id: str | None
     series_id: str | None
     treatment_key: str | None
+    treatment_deck_index: int | None
     position_index: int | None
     final_state: str | None
     payment_selected: bool
@@ -43,7 +45,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-url", default="http://127.0.0.1:8000")
     parser.add_argument("--users", type=int, default=60)
     parser.add_argument("--concurrency", type=int, default=60)
-    parser.add_argument("--bracelet-start", type=int, default=10002000)
+    parser.add_argument("--bracelet-start", type=int, default=1)
     parser.add_argument("--language", default="es")
     parser.add_argument("--admin-username", default="")
     parser.add_argument("--admin-password", default="")
@@ -60,6 +62,10 @@ def parse_args() -> argparse.Namespace:
 
 def idempotency_key(prefix: str, bracelet_id: str) -> str:
     return f"{prefix}-{bracelet_id}-{uuid4().hex}"
+
+
+def bracelet_code(seed: int) -> str:
+    return f"{LOAD_TEST_BRACELET_PREFIX}{seed % 10000:04d}"
 
 
 def basic_auth_tuple(args: argparse.Namespace) -> tuple[str, str] | None:
@@ -95,6 +101,7 @@ async def run_participant(
         session_id = None
         series_id = None
         treatment_key = None
+        treatment_deck_index = None
         position_index = None
         final_state = None
         payment_selected = False
@@ -140,6 +147,7 @@ async def run_participant(
             session_id = session_payload["session_id"]
             series_id = session_payload["series_id"]
             treatment_key = session_payload["treatment_key"]
+            treatment_deck_index = session_payload.get("treatment_deck_index")
             position_index = session_payload["position_index"]
 
             roll_data, roll_ms = await timed_post(
@@ -181,6 +189,7 @@ async def run_participant(
                 session_id=session_id,
                 series_id=series_id,
                 treatment_key=treatment_key,
+                treatment_deck_index=treatment_deck_index,
                 position_index=position_index,
                 final_state=final_state,
                 payment_selected=payment_selected,
@@ -200,6 +209,7 @@ async def run_participant(
                 session_id=session_id,
                 series_id=series_id,
                 treatment_key=treatment_key,
+                treatment_deck_index=treatment_deck_index,
                 position_index=position_index,
                 final_state=final_state,
                 payment_selected=payment_selected,
@@ -231,9 +241,9 @@ def summarize_results(results: list[FlowResult]) -> dict[str, Any]:
     successful = [item for item in results if item.success]
     failures = [item for item in results if not item.success]
     positions = [
-        (item.series_id, item.position_index)
+        (item.treatment_deck_index, item.position_index)
         for item in successful
-        if item.series_id and item.position_index is not None
+        if item.treatment_deck_index is not None and item.position_index is not None
     ]
     duplicate_positions = len(positions) - len(set(positions))
     state_counts: dict[str, int] = {}
@@ -250,7 +260,7 @@ def summarize_results(results: list[FlowResult]) -> dict[str, Any]:
         "requested_users": len(results),
         "successful_users": len(successful),
         "failed_users": len(failures),
-        "duplicate_series_positions": duplicate_positions,
+        "duplicate_treatment_positions": duplicate_positions,
         "all_states_completed": all(
             item.final_state in {"completed_win", "completed_no_win"}
             for item in successful
@@ -301,30 +311,62 @@ async def enrich_with_admin_checks(
     summary: dict[str, Any],
 ) -> dict[str, Any]:
     roots = await fetch_admin_json(client, url=f"{base_url}/admin/roots")
-    series_rows = await fetch_admin_csv(
+    session_rows = await fetch_admin_csv(
         client,
-        url=f"{base_url}/admin/export/series_state.csv",
+        url=f"{base_url}/admin/export/sessions.csv",
     )
-    invalid_series_rows = []
-    for row in series_rows:
+    invalid_session_rows = []
+    seen_treatment_positions: set[tuple[str, str]] = set()
+    seen_result_positions: set[tuple[str, str]] = set()
+    seen_payment_positions: set[tuple[str, str]] = set()
+    for row in session_rows:
         try:
-            visible = int(row.get("visible_count_target") or 0)
-            actual = int(row.get("actual_count_target") or 0)
-            sample_size = int(row.get("sample_size") or 0)
-            completed = int(row.get("completed_count") or 0)
-            position_counter = int(row.get("position_counter") or 0)
+            treatment_deck_index = str(int(row.get("treatment_deck_index") or 0))
+            treatment_card_position = str(int(row.get("treatment_card_position") or 0))
+            result_deck_index = str(int(row.get("result_deck_index") or 0))
+            result_card_position = str(int(row.get("result_card_position") or 0))
+            payment_deck_index = str(int(row.get("payment_deck_index") or 0))
+            payment_card_position = str(int(row.get("payment_card_position") or 0))
         except ValueError:
-            invalid_series_rows.append({"series_id": row.get("series_id"), "reason": "parse_error"})
+            invalid_session_rows.append(
+                {"session_id": row.get("session_id"), "reason": "parse_error"}
+            )
             continue
-        if visible < 0 or actual < 0 or visible > sample_size or actual > sample_size:
-            invalid_series_rows.append({"series_id": row.get("series_id"), "reason": "window_bounds"})
-        if completed > position_counter:
-            invalid_series_rows.append({"series_id": row.get("series_id"), "reason": "completed_gt_position_counter"})
+
+        treatment_position = (treatment_deck_index, treatment_card_position)
+        result_position = (result_deck_index, result_card_position)
+        payment_position = (payment_deck_index, payment_card_position)
+
+        if treatment_position in seen_treatment_positions:
+            invalid_session_rows.append(
+                {
+                    "session_id": row.get("session_id"),
+                    "reason": "duplicate_treatment_position",
+                }
+            )
+        if result_position in seen_result_positions:
+            invalid_session_rows.append(
+                {
+                    "session_id": row.get("session_id"),
+                    "reason": "duplicate_result_position",
+                }
+            )
+        if payment_position in seen_payment_positions:
+            invalid_session_rows.append(
+                {
+                    "session_id": row.get("session_id"),
+                    "reason": "duplicate_payment_position",
+                }
+            )
+
+        seen_treatment_positions.add(treatment_position)
+        seen_result_positions.add(result_position)
+        seen_payment_positions.add(payment_position)
 
     summary["admin_checks"] = {
         "root_count": len(roots),
-        "invalid_series_rows": invalid_series_rows,
-        "series_rows_checked": len(series_rows),
+        "invalid_session_rows": invalid_session_rows,
+        "sessions_rows_checked": len(session_rows),
     }
     return summary
 
@@ -346,6 +388,7 @@ def write_outputs(
                 "session_id",
                 "series_id",
                 "treatment_key",
+                "treatment_deck_index",
                 "position_index",
                 "final_state",
                 "payment_selected",
@@ -384,7 +427,7 @@ async def async_main(args: argparse.Namespace) -> int:
         health_response = await client.get(f"{base_url}/health/ready")
         health_response.raise_for_status()
         bracelets = [
-            str(args.bracelet_start + offset)
+            bracelet_code(args.bracelet_start + offset)
             for offset in range(args.users)
         ]
         tasks = [
@@ -407,9 +450,9 @@ async def async_main(args: argparse.Namespace) -> int:
             )
         write_outputs(output_dir, results, summary)
         print(json.dumps(summary, indent=2, ensure_ascii=False))
-        if summary["failed_users"] > 0 or summary["duplicate_series_positions"] > 0:
+        if summary["failed_users"] > 0 or summary["duplicate_treatment_positions"] > 0:
             return 1
-        if "admin_checks" in summary and summary["admin_checks"]["invalid_series_rows"]:
+        if "admin_checks" in summary and summary["admin_checks"]["invalid_session_rows"]:
             return 1
         return 0
 

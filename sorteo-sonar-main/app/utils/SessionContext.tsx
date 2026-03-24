@@ -104,8 +104,10 @@ const DEMO_SESSION_PREFIX = "demo-session-";
 type DemoScenario = {
   braceletId: string;
   treatmentKey: string;
+  treatmentType: string;
   treatmentFamily: string;
   countTarget: number | null;
+  denominator: number | null;
   targetValue: number | null;
   selectedForPayment: boolean;
   throwSequence: number[];
@@ -214,56 +216,23 @@ function isExperimentPausedError(message: string) {
   return /temporalmente detenido/i.test(message);
 }
 
-function resolveDemoTreatment(
-  publicConfig: PublicConfig,
-  braceletId: string,
-): Pick<DemoScenario, "treatmentKey" | "treatmentFamily" | "countTarget" | "targetValue"> | null {
-  const normalized = braceletId.trim().toUpperCase();
-  const nonControlTreatments = publicConfig.treatments.filter(
-    (item) => item !== "control",
-  );
-
-  if (normalized === "12341") {
-    return {
-      treatmentKey: "control",
-      treatmentFamily: "control",
-      countTarget: null,
-      targetValue: null,
-    };
-  }
-  if (normalized === "12342" || normalized === "12343") {
-    const index = normalized === "12342" ? 0 : 1;
-    const treatmentKey =
-      nonControlTreatments[index] ??
-      nonControlTreatments[0] ??
-      "control";
-    const targetValue = publicConfig.treatment_targets[treatmentKey] ?? null;
-    return {
-      treatmentKey,
-      treatmentFamily:
-        treatmentKey === "control"
-          ? "control"
-          : targetValue === 5
-            ? "five_norm"
-            : "six_norm",
-      countTarget: publicConfig.seed_initial_counts[treatmentKey] ?? null,
-      targetValue,
-    };
-  }
-  return null;
-}
-
 function getDemoScenario(
   publicConfig: PublicConfig,
   braceletId: string,
 ): DemoScenario | null {
   const normalized = braceletId.trim().toUpperCase();
-  if (normalized === "1234") {
+  const controlDemo = publicConfig.demo_ids?.winner_control ?? "CTRL1234";
+  const normZeroDemo = publicConfig.demo_ids?.loser_norm_0 ?? "NORM0000";
+  const normOneDemo = publicConfig.demo_ids?.loser_norm_1 ?? "NORM0001";
+
+  if (normalized === controlDemo) {
     return {
       braceletId: normalized,
       treatmentKey: "control",
+      treatmentType: "control",
       treatmentFamily: "control",
       countTarget: null,
+      denominator: null,
       targetValue: null,
       selectedForPayment: true,
       throwSequence: [6, 4, 5, 3, 6, 2, 4, 5, 1, 6],
@@ -271,23 +240,30 @@ function getDemoScenario(
     };
   }
 
-  const treatment = resolveDemoTreatment(publicConfig, normalized);
-  if (!treatment) {
-    return null;
+  if (normalized === normZeroDemo || normalized === normOneDemo) {
+    const treatmentKey = normalized === normZeroDemo ? "norm_0" : "norm_1";
+    const countTarget =
+      publicConfig.treatment_display_counts?.[treatmentKey] ??
+      publicConfig.seed_initial_counts[treatmentKey] ??
+      Number.parseInt(treatmentKey.replace("norm_", ""), 10);
+    return {
+      braceletId: normalized,
+      treatmentKey,
+      treatmentType: "social_norm",
+      treatmentFamily: "six_norm",
+      countTarget,
+      denominator: publicConfig.displayed_denominator ?? publicConfig.window_size,
+      targetValue: publicConfig.treatment_targets[treatmentKey] ?? 6,
+      selectedForPayment: false,
+      throwSequence:
+        normalized === normZeroDemo
+          ? [4, 2, 5, 3, 1, 4, 6, 2, 5, 3]
+          : [5, 6, 4, 2, 3, 5, 1, 4, 6, 2],
+      referenceCode: null,
+    };
   }
 
-  return {
-    braceletId: normalized,
-    ...treatment,
-    selectedForPayment: false,
-    throwSequence:
-      normalized === "12341"
-        ? [4, 2, 5, 3, 1, 4, 6, 2, 5, 3]
-        : normalized === "12342"
-          ? [4, 5, 2, 3, 6, 4, 1, 2, 5, 6]
-          : [4, 6, 5, 6, 3, 4, 6, 2, 5, 6],
-    referenceCode: null,
-  };
+  return null;
 }
 
 function isDemoSession(session: SessionPayload | null | undefined) {
@@ -375,15 +351,14 @@ function buildDemoReportSnapshot(
     ? `${copy.treatment.controlTitle}. ${copy.treatment.controlBody}`
     : formatCopy(copy.treatment.socialMessageTemplate, {
         count: scenario.countTarget ?? "-",
-        denominator: publicConfig.window_size,
+        denominator: scenario.denominator ?? publicConfig.displayed_denominator,
         target: scenario.targetValue ?? "-",
       });
 
   return {
     treatment_key: scenario.treatmentKey,
     count_target: scenario.countTarget,
-    denominator:
-      scenario.treatmentKey === "control" ? null : publicConfig.window_size,
+    denominator: scenario.treatmentKey === "control" ? null : scenario.denominator,
     target_value: scenario.targetValue,
     window_version: 1,
     message,
@@ -416,8 +391,12 @@ function buildDemoSession(
     telemetry_version: "demo_telemetry_v1",
     lexicon_version: "demo_lexicon_v1",
     treatment_key: scenario.treatmentKey,
+    treatment_type: scenario.treatmentType,
     treatment_family: scenario.treatmentFamily,
     norm_target_value: scenario.targetValue,
+    displayed_count_target: scenario.countTarget,
+    displayed_denominator: scenario.denominator,
+    is_control: scenario.treatmentKey === "control",
     language_at_access: language,
     language_at_claim: language,
     language_changed_during_session: false,
@@ -446,6 +425,12 @@ function buildDemoSession(
     operational_note: null,
     position_index: 0,
     root_sequence: 0,
+    treatment_deck_index: null,
+    treatment_card_position: null,
+    result_deck_index: null,
+    result_card_position: null,
+    payment_deck_index: null,
+    payment_card_position: null,
     selected_for_payment: scenario.selectedForPayment,
     max_attempts: publicConfig.max_attempts,
     first_result_value: null,
@@ -505,6 +490,7 @@ function buildDemoSession(
     series: {
       experiment_phase: publicConfig.current_phase,
       treatment_key: scenario.treatmentKey,
+      treatment_type: scenario.treatmentType,
       treatment_family: scenario.treatmentFamily,
       norm_target_value: scenario.targetValue,
       completed_count: 0,
@@ -1196,7 +1182,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
             amount_eur: amountEur,
             status: current.selected_for_payment ? "pending" : "not_eligible",
             reference_code: current.selected_for_payment
-              ? current.payment.reference_code ?? `DEMO-${braceletId || "1234"}`
+              ? current.payment.reference_code ?? `DEMO-${braceletId || "CTRL1234"}`
               : null,
           },
           snapshot_record: buildDemoSnapshotRecord(current, {

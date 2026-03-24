@@ -110,12 +110,13 @@ class ResearchExportsTests(unittest.TestCase):
         self.assertEqual(exports_response.status_code, 200)
         self.assertIn("Data Exports", exports_response.text)
         self.assertIn("Exportar dataset analitico completo", exports_response.text)
-        self.assertIn("Exportar red de referidos", exports_response.text)
+        self.assertIn("Exportar telemetria completa", exports_response.text)
 
         dashboard_response = self.client.get("/admin/dashboard")
         self.assertEqual(dashboard_response.status_code, 200)
         self.assertIn("Dashboard cientifico-operativo", dashboard_response.text)
         self.assertIn(completed["experiment_phase"], dashboard_response.text)
+        self.assertIn("Mazos de tratamientos", dashboard_response.text)
 
     def test_sessions_csv_is_analytic_and_sanitized(self) -> None:
         self.complete_session(bracelet_code(2))
@@ -126,6 +127,14 @@ class ResearchExportsTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertIn("session_id", rows[0])
         self.assertIn("reported_six", rows[0])
+        self.assertIn("treatment_key", rows[0])
+        self.assertIn("is_control", rows[0])
+        self.assertIn("displayed_count_target", rows[0])
+        self.assertIn("displayed_denominator", rows[0])
+        self.assertIn("treatment_deck_index", rows[0])
+        self.assertIn("result_deck_index", rows[0])
+        self.assertIn("payment_deck_index", rows[0])
+        self.assertIn("payout_eligible", rows[0])
         self.assertNotIn("requested_phone", rows[0])
         self.assertNotIn("payout_reference_shown", rows[0])
 
@@ -139,6 +148,9 @@ class ResearchExportsTests(unittest.TestCase):
         self.assertIn("sessions.csv", names)
         self.assertIn("throws.csv", names)
         self.assertIn("claims.csv", names)
+        self.assertIn("treatment_decks.csv", names)
+        self.assertIn("result_decks.csv", names)
+        self.assertIn("payment_decks.csv", names)
         self.assertIn("manifest.json", names)
         self.assertIn("README_EXPORT.md", names)
         self.assertIn("DATASETS_CODEBOOK.md", names)
@@ -147,7 +159,30 @@ class ResearchExportsTests(unittest.TestCase):
         manifest = json.loads(archive.read("manifest.json").decode("utf-8"))
         exported_datasets = {item["dataset"] for item in manifest["tables"]}
         self.assertIn("sessions", exported_datasets)
+        self.assertIn("treatment_deck_cards", exported_datasets)
+        self.assertIn("result_deck_cards", exported_datasets)
+        self.assertIn("payment_deck_cards", exported_datasets)
         self.assertNotIn("payments_admin", exported_datasets)
+
+    def test_deck_exports_allow_unambiguous_reconstruction(self) -> None:
+        self.complete_session(bracelet_code(4))
+
+        treatment_cards = self.parse_csv(
+            self.client.get("/admin/export/treatment_deck_cards.csv").content
+        )
+        result_cards = self.parse_csv(
+            self.client.get("/admin/export/result_deck_cards.csv").content
+        )
+        payment_cards = self.parse_csv(
+            self.client.get("/admin/export/payment_deck_cards.csv").content
+        )
+
+        self.assertTrue(any(row["assigned_session_id"] for row in treatment_cards))
+        self.assertTrue(any(row["assigned_session_id"] for row in result_cards))
+        self.assertTrue(any(row["assigned_session_id"] for row in payment_cards))
+        self.assertIn("deck_index", treatment_cards[0])
+        self.assertIn("result_value", result_cards[0])
+        self.assertIn("payout_eligible", payment_cards[0])
 
 
 if __name__ == "__main__":

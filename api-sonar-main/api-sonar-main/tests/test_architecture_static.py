@@ -52,7 +52,7 @@ class ArchitectureStaticTests(unittest.TestCase):
         script_text = script_path.read_text(encoding="utf-8")
         self.assertIn("/v1/session/access", script_text)
         self.assertIn("/v1/session/{session_id}/roll", script_text)
-        self.assertIn("/admin/export/series_state.csv", script_text)
+        self.assertIn("/admin/export/sessions.csv", script_text)
 
 
 if __name__ == "__main__":

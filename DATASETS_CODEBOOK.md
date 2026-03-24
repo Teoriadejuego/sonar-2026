@@ -1,176 +1,207 @@
 # Datasets Codebook
 
 ## Capas de datos
-- `analytic`: listas para análisis científico y preregistro.
-- `operational`: telemetría cruda, errores, red, spells de pantalla y auditoría técnica.
-- `administrative`: cobro y operaciones sensibles separadas del dataset analítico.
+- `analytic`: datasets para analisis experimental y reconstruccion de tratamiento, resultado y pago.
+- `operational`: telemetria, eventos tecnicos, spells de pantalla y auditoria.
+- `administrative`: cobro y opt-ins, separados del dataset analitico.
 
 ## sessions
-Una fila por sesión.
+Una fila por sesion.
 
-Variables clave:
-- versionado completo: `experiment_version`, `experiment_phase`, `phase_version`, `ui_version`, `consent_version`, `treatment_version`, `allocation_version`, `deck_version`, `payment_version`, `telemetry_version`, `lexicon_version`
-- tratamiento y diseño: `treatment_key`, `treatment_family`, `norm_target_value`, `position_index`, `root_id`, `series_id`
-- outcomes: `reported_value`, `true_first_result`, `reported_six`, `reported_five`, `reported_high`, `is_honest`, `lie_to_six`, `overreport_amount`
-- juego: `reroll_count`, `used_any_reroll`, `last_seen_value`, `max_seen_value`, `reported_matches_first`, `reported_matches_last`, `reported_matches_any_seen`, `reported_unseen`
-- tiempos derivados: `landing_to_start_ms`, `consent_total_ms`, `instructions_visible_ms`, `comprehension_visible_ms`, `game_visible_ms`, `report_visible_ms`, `exit_visible_ms`, `report_rt_ms`, `game_decision_rt_ms`, `total_session_ms`
-- interacción y atención: `click_count_total`, `click_count_by_screen_json`, `focus_loss_pre_claim`, `multiple_focus_loss`, `reload_count`, `resume_count`, `network_error_count`, `retry_count`, `consent_panels_opened_count`, `screen_changes_count`, `language_change_count`
-- idioma y contexto: `language_at_access`, `language_at_claim`, `language_changed_during_session`, `language_browser`, `browser_family`, `os_family`, `device_type`, `screen_width`, `viewport_width`, `orientation`, `connection_type`
-- referidos: `referral_code`, `invited_by_session_id`, `invited_by_referral_code`, `referral_source`, `referral_medium`, `referral_campaign`, `referral_link_id`, `referral_arrived_at`, `referral_depth`
+Columnas clave:
+- versionado: `experiment_version`, `experiment_phase`, `phase_version`, `ui_version`, `consent_version`, `treatment_version`, `allocation_version`, `deck_version`, `payment_version`, `telemetry_version`, `lexicon_version`
+- tratamiento: `treatment_key`, `treatment_type`, `treatment_family`, `is_control`, `displayed_count_target`, `displayed_denominator`, `norm_target_value`, `displayed_message_version`, `displayed_message_text`
+- decks: `treatment_deck_index`, `treatment_card_position`, `result_deck_index`, `result_card_position`, `payment_deck_index`, `payment_card_position`
+- resultado y reporte: `reported_value`, `true_first_result`, `reported_six`, `is_honest`, `reroll_count`, `used_any_reroll`, `last_seen_value`, `max_seen_value`, `reported_matches_first`, `reported_matches_last`, `reported_matches_any_seen`
+- pago: `selected_for_payment`, `payout_eligible`
+- tiempos: `landing_visible_ms`, `landing_to_start_ms`, `consent_total_ms`, `instructions_visible_ms`, `comprehension_visible_ms`, `game_visible_ms`, `report_visible_ms`, `exit_visible_ms`, `report_rt_ms`, `game_decision_rt_ms`, `total_session_ms`
+- interaccion: `click_count_total`, `click_count_by_screen_json`, `focus_loss_pre_claim`, `multiple_focus_loss`, `reload_count`, `resume_count`, `network_error_count`, `retry_count`, `consent_panels_opened_count`, `screen_changes_count`, `language_change_count`
+- contexto tecnico: `browser_family`, `browser_version`, `os_family`, `os_version`, `device_type`, `platform`, `language_browser`, `screen_width`, `screen_height`, `viewport_width`, `viewport_height`, `device_pixel_ratio`, `orientation`, `touch_capable`, `hardware_concurrency`, `max_touch_points`, `color_scheme_preference`, `online_status`, `connection_type`, `estimated_downlink`, `estimated_rtt`, `timezone_offset_minutes`
+- referidos: `referral_code`, `invited_by_session_id`, `invited_by_referral_code`, `referral_source`, `referral_medium`, `referral_campaign`, `referral_link_id`, `qr_entry_code`, `referral_arrived_at`, `referral_depth`
+
+Interpretacion:
+- `treatment_key` identifica el mensaje social asignado al individuo: `norm_0` a `norm_60` o `control`.
+- `true_first_result` identifica la primera tirada real asignada desde el mazo de resultados.
+- `payout_eligible` identifica si esa sesion ocupa la carta ganadora del mazo de pagos.
 
 ## throws
 Una fila por tirada servida por backend.
 
-Variables clave:
+Columnas clave:
 - `session_id`, `attempt_index`, `result_value`, `reaction_ms`, `delivered_at`
-- contexto experimental: `experiment_phase`, `treatment_key`, `position_index`
+- `attempt_index = 1`: primera tirada balanceada por mazo de resultados
+- `attempt_index > 1`: rerolls autoritativos generados por semilla reproducible
 
 ## claims
-Una fila por claim final.
+Una fila por reporte final.
 
-Variables clave:
-- `reported_value`, `true_first_result`, `is_honest`, `reroll_count`
-- snapshot del tratamiento: `displayed_treatment_key`, `displayed_count_target`, `displayed_denominator`, `displayed_target_value`, `displayed_window_version`, `displayed_message`, `displayed_message_version`
-- interpretación conductual: `max_seen_value`, `last_seen_value`, `matches_last_seen`, `matches_any_seen`, `reaction_ms`
+Columnas clave:
+- `session_id`, `reported_value`, `true_first_result`, `is_honest`, `reroll_count`, `reaction_ms`
+- snapshot mostrado: `displayed_treatment_key`, `displayed_count_target`, `displayed_denominator`, `displayed_target_value`, `displayed_message`, `displayed_message_version`
+- consistencia conductual: `max_seen_value`, `last_seen_value`, `matches_last_seen`, `matches_any_seen`
+
+## referrals
+Una fila por evento de llegada o enlace compartido.
+
+Columnas clave:
+- `session_id`, `referral_code`, `invited_by_session_id`, `invited_by_referral_code`
+- `source`, `medium`, `campaign`, `link_id`, `qr_entry_code`
+
+## treatment_decks
+Una fila por mazo de tratamiento.
+
+Columnas clave:
+- `id`, `deck_index`, `deck_seed`, `status`, `created_at`
+
+Interpretacion:
+- cada mazo contiene exactamente 62 cartas
+- cada tratamiento aparece exactamente una vez
+
+## treatment_deck_cards
+Una fila por carta de mazo de tratamiento.
+
+Columnas clave:
+- `deck_id`, `card_position`, `treatment_key`, `assigned_session_id`, `assigned_at`
+
+Interpretacion:
+- una carta asignada queda consumida y no se recicla
+
+## result_decks
+Una fila por mazo de resultados.
+
+Columnas clave:
+- `id`, `deck_index`, `deck_seed`, `status`, `created_at`
+
+Interpretacion:
+- cada mazo contiene 24 cartas
+- los valores `1` a `6` aparecen exactamente 4 veces cada uno
+
+## result_deck_cards
+Una fila por carta del mazo de resultados.
+
+Columnas clave:
+- `deck_id`, `card_position`, `result_value`, `assigned_session_id`, `assigned_at`
+
+## payment_decks
+Una fila por mazo de pagos.
+
+Columnas clave:
+- `id`, `deck_index`, `deck_seed`, `status`, `created_at`
+
+Interpretacion:
+- cada mazo contiene 100 cartas
+- exactamente 1 carta tiene `payout_eligible = true`
+
+## payment_deck_cards
+Una fila por carta del mazo de pagos.
+
+Columnas clave:
+- `deck_id`, `card_position`, `payout_eligible`, `assigned_session_id`, `assigned_at`
+
+## consent_records
+Una fila por consentimiento.
+
+Columnas clave:
+- `language_at_access`, `accepted_at`
+- `landing_visible_ms`
+- `info_panels_opened_json`, `info_panel_durations_json`, `info_panel_open_count`
+- `checkbox_order_json`, `checkbox_timestamps_json`, `continue_blocked_count`
+
+## snapshot_records
+Una fila por snapshot visible persistido.
+
+Columnas clave:
+- `treatment_key`, `treatment_family`, `norm_target_value`, `is_control`
+- `displayed_count_target`, `displayed_denominator`
+- `displayed_message_text`, `displayed_message_version`
+- `first_result_value`, `last_seen_value`, `seen_values_json`, `reroll_values_json`
+- `final_outcome`, `winner_message_text`, `loser_message_text`, `payment_code_displayed`
 
 ## telemetry
-Una fila por evento crudo.
+Una fila por evento crudo del cliente.
 
-Variables clave:
+Columnas clave:
 - `server_ts`, `client_ts`, `event_sequence_number`, `timezone_offset_minutes`, `client_clock_skew_estimate_ms`
 - `event_type`, `event_name`, `screen_name`, `spell_id`
 - `interaction_target`, `interaction_role`, `cta_kind`
 - `endpoint_name`, `request_method`, `status_code`, `latency_ms`, `attempt_number`, `is_retry`, `error_name`
 - `app_language`, `browser_language`, `network_status`, `visibility_state`, `payload_json`
 
-## technical_events
-Subconjunto operativo de errores, red, retries, viewport y eventos técnicos.
-
-Útil para:
-- depuración
-- auditoría de latencias
-- separar fricción técnica de comportamiento experimental
-
 ## screen_events
-Una fila por screen spell.
+Una fila por spell de pantalla.
 
-Variables clave:
-- `session_id`, `spell_id`, `screen_name`, `entry_origin`, `entered_via_resume`
+Columnas clave:
+- `session_id`, `spell_id`, `screen_name`, `entry_origin`
 - `entered_client_ts`, `entered_server_ts`, `exited_client_ts`, `exited_server_ts`
 - `duration_total_ms`, `visible_ms`, `hidden_ms`, `blur_ms`
 - `focus_change_count`, `visibility_change_count`
 - `click_count`, `primary_click_count`, `secondary_click_count`
 - `first_click_ms`, `primary_cta_ms`, `secondary_cta_ms`
 - `first_click_target`, `click_targets_json`
-- `language_at_entry`, `language_at_exit`, `language_changed_during_spell`
-- `event_sequence_start`, `event_sequence_end`
+
+## technical_events
+Subconjunto operativo de telemetria tecnica.
+
+Utilidad:
+- errores JS
+- fallos de red
+- latencias de endpoints
+- reintentos y estados del navegador
 
 ## client_contexts
-Una fila por sesión con el contexto técnico consolidado del dispositivo y navegador.
+Una fila por sesion con contexto tecnico consolidado.
 
-Variables clave:
-- `user_agent_hash`
+Columnas clave:
 - `browser_family`, `browser_version`
 - `os_family`, `os_version`
 - `device_type`, `platform`
 - `language_browser`, `language_app_selected`
 - `screen_width`, `screen_height`, `viewport_width`, `viewport_height`, `device_pixel_ratio`
 - `orientation`, `touch_capable`, `hardware_concurrency`, `max_touch_points`
-- `color_scheme_preference`, `online_status`, `connection_type`, `estimated_downlink`, `estimated_rtt`
-- `timezone_offset_minutes`, `context_json`
-
-## referrals
-Una fila por sesión con trazabilidad de red.
-
-Variables clave:
-- `referral_code`
-- `invited_by_session_id`
-- `invited_by_referral_code`
-- `referral_source`, `referral_medium`, `referral_campaign`, `referral_link_id`
-- `referral_landing_path`, `referral_arrived_at`, `referral_depth`
-
-## series_state
-Estado de raíces y series por fase.
-
-Variables clave:
-- `root_sequence`, `root_phase`, `root_status`, `root_close_reason`
-- `treatment_key`, `treatment_family`, `norm_target_value`
-- `position_counter`, `completed_count`
-- `visible_count_target`, `actual_count_target`
-- `visible_window_version`, `actual_window_version`
-
-## position_plan
-Plan preasignado por posición e intento.
-
-Variables clave:
-- `root_id`, `root_sequence`, `experiment_phase`, `position_index`, `attempt_index`
-- `result_value`, `payout_eligible`, `commitment_hash`
+- `color_scheme_preference`, `online_status`, `connection_type`, `estimated_downlink`, `estimated_rtt`, `timezone_offset_minutes`
 
 ## quality_flags
-Una fila por flag de calidad derivado.
+Una fila por sesion con flags derivados de calidad.
 
-Ejemplos:
-- `fast_consent`
-- `fast_instructions`
-- `fast_report`
-- `blur_pre_claim`
-- `reroll_ge_5`
+Utilidad:
+- excluir sesiones problematicas
+- construir filtros preregistrados de atencion o friccion tecnica
 
 ## fraud_flags
-Una fila por flag antifraude generado por backend.
-
-Variables clave:
-- `session_id`, `user_id`, `flag_key`, `severity`, `payload_json`, `created_at`
-
-## consent_records
-Una fila por consentimiento.
-
-Variables clave:
-- `language_at_access`
-- `accepted_at`
-- `landing_visible_ms`
-- `info_panels_opened_json`, `info_panel_durations_json`, `info_panel_open_count`
-- `checkbox_order_json`, `checkbox_timestamps_json`
-- `continue_blocked_count`
-
-## snapshot_records
-Una fila por snapshot visible congelado.
-
-Variables clave:
-- `language_used`
-- `treatment_key`, `treatment_family`, `norm_target_value`
-- `displayed_count_target`, `displayed_denominator`, `displayed_message_text`, `displayed_message_version`
-- `control_message_text`
-- `first_result_value`, `last_seen_value`, `all_values_seen_json`, `rerolls_visible_json`
-- `final_state_shown`, `final_message_text`, `final_amount_eur`
-- `payout_reference_shown`, `payout_phone_shown`
-
-## payments_admin
-Una fila por pago administrativo.
-
-Variables sensibles:
-- `payout_reference`
-- `requested_phone`
-- `request_message_text`
+Eventos o indicadores antifraude y de integridad operativa.
 
 ## audit_events
-Una fila por evento crítico del backend.
+Auditoria backend de operaciones relevantes.
 
-Variables clave:
-- `entity_type`, `entity_id`, `action`
-- `old_state`, `new_state`
-- `idempotency_key`
-- `payload_json`
-- `created_at`
+Incluye:
+- acceso
+- asignacion de sesion
+- tiradas
+- snapshots
+- claims
+- cobro
+- notas operativas
+
+## payments_admin
+Dataset administrativo separado.
+
+Columnas clave:
+- `session_id`, `payment_id`, `payout_reference`
+- `eligible`, `amount_cents`, `status`
+- `requested_phone`, `donation_requested`
 
 ## interest_signups
-Una fila por email voluntario dejado cuando el experimento esta pausado o cerrado.
+Opt-ins de email cuando el experimento esta pausado o cerrado.
 
-Variables sensibles:
-- `email_normalized`
-- `email_hash`
-- `language_used`
-- `source_screen`
-- `experiment_status`
-- `deployment_context`, `site_code`, `campaign_code`, `environment_label`
-- `created_at`, `updated_at`
+## Reconstruccion minima sin ambiguedad
+Para reconstruir la asignacion experimental de una sesion basta con:
+- `sessions.csv`
+- `treatment_decks.csv` y `treatment_deck_cards.csv`
+- `result_decks.csv` y `result_deck_cards.csv`
+- `payment_decks.csv` y `payment_deck_cards.csv`
+
+Con esas tablas se puede verificar:
+- que tratamiento recibio cada participante
+- que primera tirada real se asigno
+- que elegibilidad de pago recibio
+- que no hubo duplicacion de carta dentro de un mismo bloque

@@ -1,27 +1,36 @@
 {
   "metadata": {
-    "schema_version": "sonar-2026-v8",
-    "experiment_version": "sonar-2026-field-v4",
-    "ui_version": "ui-v6",
+    "schema_version": "sonar-2026-v9",
+    "experiment_version": "sonar-2026-field-v5",
+    "ui_version": "ui-v7",
     "consent_version": "consent-v2",
-    "deck_version": "balanced-deck-v2",
-    "payment_version": "payment-v2",
+    "deck_version": "balanced-decks-v1",
+    "payment_version": "payment-deck-v3",
     "telemetry_version": "telemetry-v3",
-    "lexicon_version": "lexicon-v4",
+    "lexicon_version": "lexicon-v5",
     "deployment_context": "main_event",
     "site_code": "SONAR2026",
     "campaign_code": "festival_main",
     "environment_label": "local"
   },
   "experiment": {
+    "design_key": "design_62_treatments_v1",
+    "phase_version": "design_62_treatments_v1",
+    "treatment_version": "treatment_deck_62_v1",
+    "allocation_version": "balanced_assignment_v1",
+    "displayed_message_version": "social_message_60_results_v1",
     "window_size": 60,
+    "displayed_denominator": 60,
+    "norm_target_value": 6,
     "max_attempts": 10,
     "participant_limit": 120,
-    "deck_block_size": 24,
     "demo_pulsera_count": 12000,
-    "payout_rate_denominator": 100,
-    "collapse_consecutive_claims": 10,
     "bracelet_pattern": "^(?=(?:.*[A-Z]){4})(?=(?:.*\\d){4})[A-Z0-9]{8}$",
+    "treatment_deck_size": 62,
+    "result_deck_size": 24,
+    "payment_deck_size": 100,
+    "payment_winners_per_deck": 1,
+    "collapse_consecutive_claims": 0,
     "phase_transition_valid_completed_threshold": 6000,
     "prize_eur": {
       "1": 10,
@@ -31,86 +40,21 @@
       "5": 50,
       "6": 60
     },
-    "phases": {
-      "phase_1_main": {
-        "label": "Fase 1 principal",
-        "phase_version": "phase_1_main_v3",
-        "treatment_version": "phase_1_six_norms_v3",
-        "allocation_version": "phase_1_10_45_45_v3",
-        "displayed_message_version": "phase_1_messages_v3",
-        "treatments": {
-          "control": {
-            "label": "Control",
-            "assignment_weight": 0.1,
-            "treatment_family": "control",
-            "norm_target_value": null,
-            "seed_initial_count": null
-          },
-          "seed_low": {
-            "label": "Seed low sobre 6",
-            "assignment_weight": 0.45,
-            "treatment_family": "six_norm",
-            "norm_target_value": 6,
-            "seed_initial_count": 10,
-            "seed_fill_order": "target_last"
-          },
-          "seed_high": {
-            "label": "Seed high sobre 6",
-            "assignment_weight": 0.45,
-            "treatment_family": "six_norm",
-            "norm_target_value": 6,
-            "seed_initial_count": 50,
-            "seed_fill_order": "target_first"
-          }
-        }
+    "demo_ids": {
+      "CTRL1234": {
+        "treatment_key": "control",
+        "result_value": 6,
+        "payout_eligible": true
       },
-      "phase_2_robustness": {
-        "label": "Fase 2 robustez",
-        "phase_version": "phase_2_robustness_v3",
-        "treatment_version": "phase_2_five_norms_v3",
-        "allocation_version": "phase_2_10_20_20_25_25_v3",
-        "displayed_message_version": "phase_2_messages_v3",
-        "treatments": {
-          "control": {
-            "label": "Control",
-            "assignment_weight": 0.1,
-            "treatment_family": "control",
-            "norm_target_value": null,
-            "seed_initial_count": null
-          },
-          "seed_low": {
-            "label": "Seed low sobre 6",
-            "assignment_weight": 0.2,
-            "treatment_family": "six_norm",
-            "norm_target_value": 6,
-            "seed_initial_count": 10,
-            "seed_fill_order": "target_last"
-          },
-          "seed_high": {
-            "label": "Seed high sobre 6",
-            "assignment_weight": 0.2,
-            "treatment_family": "six_norm",
-            "norm_target_value": 6,
-            "seed_initial_count": 50,
-            "seed_fill_order": "target_first"
-          },
-          "seed_low_5": {
-            "label": "Seed low sobre 5",
-            "assignment_weight": 0.25,
-            "treatment_family": "five_norm",
-            "norm_target_value": 5,
-            "seed_initial_count": 10,
-            "seed_fill_order": "target_last"
-          },
-          "seed_high_5": {
-            "label": "Seed high sobre 5",
-            "assignment_weight": 0.25,
-            "treatment_family": "five_norm",
-            "norm_target_value": 5,
-            "seed_initial_count": 50,
-            "seed_fill_order": "target_first"
-          }
-        }
+      "NORM0000": {
+        "treatment_key": "norm_0",
+        "result_value": 4,
+        "payout_eligible": false
+      },
+      "NORM0001": {
+        "treatment_key": "norm_1",
+        "result_value": 5,
+        "payout_eligible": false
       }
     },
     "quality_thresholds": {
@@ -129,7 +73,7 @@
       "subtitle": "Participa en 1 minuto y gana hasta 60 EUR.",
       "intro": "Investigacion universitaria, participacion voluntaria, menos de 90 segundos y solo para mayores de 18 anos.",
       "bracelet_label": "ID de tu pulsera",
-      "bracelet_placeholder": "Ej: 10000001",
+      "bracelet_placeholder": "Ej: AB12CD34",
       "panel_links": {
         "study": "Informacion del estudio",
         "data_protection": "Proteccion de datos",
@@ -153,11 +97,11 @@
           },
           {
             "title": "Que haras",
-            "body": "Introduciras el codigo de tu pulsera, veras una tirada privada, podras hacer lanzamientos extra de comprobacion y, al final, indicaras el numero de tu primera tirada."
+            "body": "Introduciras el codigo de tu pulsera, haras una primera tirada privada y, despues, indicarás que numero salio en esa primera tirada."
           },
           {
             "title": "Duracion e incentivo",
-            "body": "La participacion dura aproximadamente entre 60 y 90 segundos. La seleccion para pago es aleatoria y, si resultas seleccionado, el importe depende del numero que declares."
+            "body": "La participacion dura aproximadamente entre 60 y 90 segundos. La seleccion para pago es exacta y esta balanceada por backend: 1 de cada 100 participantes queda elegible para cobrar, y el importe depende del numero que declare."
           }
         ]
       },
@@ -215,11 +159,11 @@
         },
         {
           "title": "Que tendras que hacer",
-          "body": "Introduciras el codigo de tu pulsera, veras una tirada privada, podras hacer lanzamientos extra de comprobacion y despues indicar el numero de tu primera tirada. El proceso dura alrededor de un minuto."
+          "body": "Introduciras el codigo de tu pulsera, haras una tirada privada y despues indicarás el numero de tu primera tirada. El proceso dura alrededor de un minuto."
         },
         {
           "title": "Pago e incentivos",
-          "body": "La seleccion para pago es aleatoria. Si eres seleccionado, el importe depende del numero que declares y se gestiona al finalizar la actividad."
+          "body": "La elegibilidad para pago se asigna por backend de forma balanceada: exactamente una persona elegible por cada bloque de 100 participantes. Si eres elegible, el importe depende del numero que declares."
         },
         {
           "title": "Privacidad y datos",
@@ -238,7 +182,7 @@
     "instructions": {
       "eyebrow": "Como funciona",
       "title": "Solo cuenta la primera tirada",
-      "intro": "Veras una tirada privada y podras optar a un pago real. La seleccion para pago es aleatoria e independiente de tu numero.",
+      "intro": "Veras una tirada privada y podras optar a un pago real. La seleccion para pago es exacta, balanceada por backend e independiente de tu numero.",
       "body": "Puedes volver a lanzar para comprobar que el sistema funciona, pero para el pago solo cuenta honestamente tu primera tirada.",
       "cta": "Entendido"
     },
@@ -256,25 +200,7 @@
     },
     "messages": {
       "control": "Tu respuesta se registrara de forma anonima. Indica el numero de tu primera tirada.",
-      "social_template": "{count} de los {denominator} participantes anteriores reportaron un {target}."
-    },
-    "winner": {
-      "eyebrow": "Has sido seleccionado",
-      "title": "Pago confirmado",
-      "body": "Tu respuesta ha quedado registrada y has sido seleccionado para el pago.",
-      "code_label": "Codigo de cobro",
-      "help": "Usa este codigo para validar tu premio y enviar la solicitud de cobro por WhatsApp.",
-      "whatsapp_label": "Cobrar por WhatsApp",
-      "whatsapp_message_template": "he recibido un premio de {amount} euros, con el codigo {code}, quiero cobrarlo recibiendo un bizum en este telefono, si prefieres donar tu premio a una ong, tras este mensaje escribe ONG."
-    },
-    "loser": {
-      "eyebrow": "Gracias por participar",
-      "title": "Aun puedes ganar",
-      "body": "No has sido seleccionado para el pago en esta ocasion, pero aun queda un sorteo de 2 entradas VIP para el ano que viene.",
-      "body_secondary": "Aumenta tus posibilidades invitando a otras personas a participar desde tu enlace.",
-      "body_footer": "El ganador se publicara en nuestra web al finalizar el festival. Guarda tu pulsera y, si te toca, nos vemos el ano que viene.",
-      "share_label": "Invitar por WhatsApp",
-      "share_message_template": "Prueba este reto de Sonar 2026 y participa en el sorteo final: {link}"
+      "social_template": "En un grupo de {denominator} resultados antes de ti, {count} personas reportaron un {target}."
     }
   }
 }

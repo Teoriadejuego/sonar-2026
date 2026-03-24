@@ -496,7 +496,7 @@ const es = withServerErrors({
     controlTitle: "Tu respuesta es anónima",
     controlBody: "Selecciona tu número",
     socialMessageTemplate:
-      "{count} de cada {denominator} personas eligieron {target}.",
+      "En un grupo de {denominator} resultados antes de ti, {count} personas reportaron un {target}.",
   },
   bonusDraw: {
     title: "Consigue opciones extra para el sorteo de SONAR 2027",
@@ -711,7 +711,7 @@ const ca = withServerErrors({
     controlTitle: "La teva resposta és anònima",
     controlBody: "Selecciona el teu número",
     socialMessageTemplate:
-      "{count} de cada {denominator} persones van escollir {target}.",
+      "En un grup de {denominator} resultats abans de tu, {count} persones van informar d'un {target}.",
   },
   bonusDraw: {
     title: "Aconsegueix opcions extra per al sorteig de SONAR 2027",
@@ -925,7 +925,7 @@ const en = withServerErrors({
     controlTitle: "Your response is anonymous",
     controlBody: "Select your number",
     socialMessageTemplate:
-      "{count} out of every {denominator} people chose {target}.",
+      "In a group of {denominator} results before you, {count} people reported a {target}.",
   },
   bonusDraw: {
     title: "Get extra entries for the SONAR 2027 draw",
@@ -1140,7 +1140,7 @@ const fr = withServerErrors({
     controlTitle: "Votre réponse est anonyme",
     controlBody: "Sélectionnez votre nombre",
     socialMessageTemplate:
-      "{count} personnes sur {denominator} ont choisi {target}.",
+      "Dans un groupe de {denominator} resultats avant vous, {count} personnes ont declare un {target}.",
   },
   bonusDraw: {
     title: "Obtenez des chances supplémentaires pour le tirage SONAR 2027",
@@ -1355,7 +1355,7 @@ const pt = withServerErrors({
     controlTitle: "A tua resposta é anónima",
     controlBody: "Seleciona o teu número",
     socialMessageTemplate:
-      "{count} de cada {denominator} pessoas escolheram {target}.",
+      "Num grupo de {denominator} resultados antes de ti, {count} pessoas disseram que saiu {target}.",
   },
   bonusDraw: {
     title: "Consegue entradas extra para o sorteio de SONAR 2027",

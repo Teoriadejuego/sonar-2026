@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Any
 
 
-PHASE_1_MAIN = "phase_1_main"
-PHASE_2_ROBUSTNESS = "phase_2_robustness"
+CONTROL_TREATMENT_KEY = "control"
+LEGACY_PHASE_DISABLED = "legacy_disabled"
 
 
 def project_parameters_path() -> Path:
@@ -40,58 +40,52 @@ def load_project_parameters() -> dict[str, Any]:
 def validate_project_parameters(payload: dict[str, Any]) -> None:
     experiment = payload["experiment"]
     window_size = int(experiment["window_size"])
-    block_size = int(experiment["deck_block_size"])
+    displayed_denominator = int(experiment["displayed_denominator"])
     max_attempts = int(experiment["max_attempts"])
     participant_limit = int(experiment["participant_limit"])
-    phase_threshold = int(experiment["phase_transition_valid_completed_threshold"])
+    treatment_deck_size = int(experiment["treatment_deck_size"])
+    result_deck_size = int(experiment["result_deck_size"])
+    payment_deck_size = int(experiment["payment_deck_size"])
+    payment_winners_per_deck = int(experiment["payment_winners_per_deck"])
     prize_eur = experiment["prize_eur"]
-    phases = experiment["phases"]
+    demo_ids = experiment.get("demo_ids", {})
+    bracelet_pattern = re.compile(experiment["bracelet_pattern"])
 
     if window_size <= 0:
         raise ValueError("window_size debe ser mayor que 0")
+    if displayed_denominator != window_size:
+        raise ValueError("displayed_denominator debe coincidir con window_size")
     if max_attempts <= 0:
         raise ValueError("max_attempts debe ser mayor que 0")
     if participant_limit <= 0:
         raise ValueError("participant_limit debe ser mayor que 0")
-    if phase_threshold <= 0:
-        raise ValueError("phase_transition_valid_completed_threshold debe ser mayor que 0")
-    if block_size <= 0 or block_size % 6 != 0:
-        raise ValueError("deck_block_size debe ser positivo y multiplo de 6")
+    if treatment_deck_size != displayed_denominator + 2:
+        raise ValueError(
+            "treatment_deck_size debe ser exactamente window_size + 2 (norm_0..norm_60 y control)"
+        )
+    if result_deck_size != 24:
+        raise ValueError("result_deck_size debe ser exactamente 24")
+    if payment_deck_size != 100:
+        raise ValueError("payment_deck_size debe ser exactamente 100")
+    if payment_winners_per_deck != 1:
+        raise ValueError("payment_winners_per_deck debe ser exactamente 1")
     if sorted(int(key) for key in prize_eur.keys()) != [1, 2, 3, 4, 5, 6]:
         raise ValueError("prize_eur debe definir valores para 1, 2, 3, 4, 5 y 6")
 
-    if PHASE_1_MAIN not in phases or PHASE_2_ROBUSTNESS not in phases:
-        raise ValueError("phases debe incluir phase_1_main y phase_2_robustness")
-
-    for phase_key, phase_settings in phases.items():
-        treatments = phase_settings["treatments"]
-        if "control" not in treatments:
-            raise ValueError(f"{phase_key} debe incluir el tratamiento control")
-        total_weight = sum(float(item["assignment_weight"]) for item in treatments.values())
-        if abs(total_weight - 1.0) > 1e-9:
-            raise ValueError(f"Los pesos de {phase_key} deben sumar 1.0")
-        for treatment_key, treatment in treatments.items():
-            target_value = treatment["norm_target_value"]
-            seed_initial_count = treatment["seed_initial_count"]
-            seed_fill_order = treatment.get("seed_fill_order")
-            if target_value is not None and int(target_value) not in {1, 2, 3, 4, 5, 6}:
-                raise ValueError(f"{phase_key}.{treatment_key}.norm_target_value no es valido")
-            if seed_initial_count is not None:
-                if int(seed_initial_count) < 0 or int(seed_initial_count) > window_size:
-                    raise ValueError(
-                        f"{phase_key}.{treatment_key}.seed_initial_count debe estar entre 0 y window_size"
-                    )
-                if seed_fill_order is not None and str(seed_fill_order) not in {
-                    "target_first",
-                    "target_last",
-                }:
-                    raise ValueError(
-                        f"{phase_key}.{treatment_key}.seed_fill_order debe ser target_first o target_last"
-                    )
-            if treatment["treatment_family"] not in {"control", "six_norm", "five_norm"}:
-                raise ValueError(
-                    f"{phase_key}.{treatment_key}.treatment_family no es valido"
-                )
+    valid_treatment_keys = {f"norm_{count}" for count in range(window_size + 1)}
+    valid_treatment_keys.add(CONTROL_TREATMENT_KEY)
+    for bracelet_id, config in demo_ids.items():
+        normalized = bracelet_id.strip().upper()
+        if not bracelet_pattern.fullmatch(normalized):
+            raise ValueError(
+                f"demo_ids.{bracelet_id} no cumple el patron 8 alfanumerico con 4 letras y 4 numeros"
+            )
+        treatment_key = str(config["treatment_key"])
+        if treatment_key not in valid_treatment_keys:
+            raise ValueError(f"demo_ids.{bracelet_id}.treatment_key no es valido")
+        result_value = int(config["result_value"])
+        if result_value not in {1, 2, 3, 4, 5, 6}:
+            raise ValueError(f"demo_ids.{bracelet_id}.result_value no es valido")
 
 
 PROJECT_PARAMETERS = load_project_parameters()
@@ -112,20 +106,29 @@ DEPLOYMENT_CONTEXT = os.getenv("DEPLOYMENT_CONTEXT", METADATA["deployment_contex
 SITE_CODE = os.getenv("SITE_CODE", METADATA["site_code"])
 CAMPAIGN_CODE = os.getenv("CAMPAIGN_CODE", METADATA["campaign_code"])
 ENVIRONMENT_LABEL = os.getenv("ENVIRONMENT_LABEL", METADATA["environment_label"])
+
+CURRENT_PHASE = str(EXPERIMENT_SETTINGS["design_key"])
+PHASE_1_MAIN = CURRENT_PHASE
+PHASE_2_ROBUSTNESS = LEGACY_PHASE_DISABLED
+
 WINDOW_SIZE = int(EXPERIMENT_SETTINGS["window_size"])
+DISPLAYED_DENOMINATOR = int(EXPERIMENT_SETTINGS["displayed_denominator"])
+DEFAULT_NORM_TARGET_VALUE = int(EXPERIMENT_SETTINGS["norm_target_value"])
 MAX_ATTEMPTS = int(EXPERIMENT_SETTINGS["max_attempts"])
 PARTICIPANT_LIMIT = int(EXPERIMENT_SETTINGS["participant_limit"])
-BLOCK_SIZE = int(EXPERIMENT_SETTINGS["deck_block_size"])
 DEMO_PULSERA_COUNT = int(EXPERIMENT_SETTINGS["demo_pulsera_count"])
-PAYOUT_RATE_DENOMINATOR = int(EXPERIMENT_SETTINGS["payout_rate_denominator"])
+TREATMENT_DECK_SIZE = int(EXPERIMENT_SETTINGS["treatment_deck_size"])
+RESULT_DECK_SIZE = int(EXPERIMENT_SETTINGS["result_deck_size"])
+PAYMENT_DECK_SIZE = int(EXPERIMENT_SETTINGS["payment_deck_size"])
+PAYMENT_WINNERS_PER_DECK = int(EXPERIMENT_SETTINGS["payment_winners_per_deck"])
+PAYOUT_RATE_DENOMINATOR = PAYMENT_DECK_SIZE
 COLLAPSE_CONSECUTIVE_CLAIMS = int(
-    EXPERIMENT_SETTINGS["collapse_consecutive_claims"]
+    EXPERIMENT_SETTINGS.get("collapse_consecutive_claims", 0)
 )
 PHASE_TRANSITION_VALID_COMPLETED_THRESHOLD = int(
     EXPERIMENT_SETTINGS["phase_transition_valid_completed_threshold"]
 )
 BRACELET_PATTERN = re.compile(EXPERIMENT_SETTINGS["bracelet_pattern"])
-PHASES: dict[str, dict[str, Any]] = EXPERIMENT_SETTINGS["phases"]
 QUALITY_THRESHOLDS = {
     key: int(value)
     for key, value in EXPERIMENT_SETTINGS["quality_thresholds"].items()
@@ -135,64 +138,118 @@ PRIZE_EUR = {
     int(key): int(value) for key, value in EXPERIMENT_SETTINGS["prize_eur"].items()
 }
 
+PHASE_VERSION = str(EXPERIMENT_SETTINGS["phase_version"])
+TREATMENT_VERSION = str(EXPERIMENT_SETTINGS["treatment_version"])
+ALLOCATION_VERSION = str(EXPERIMENT_SETTINGS["allocation_version"])
+DISPLAYED_MESSAGE_VERSION = str(EXPERIMENT_SETTINGS["displayed_message_version"])
 
-def phase_config(phase_key: str) -> dict[str, Any]:
-    if phase_key not in PHASES:
-        raise KeyError(f"Fase no configurada: {phase_key}")
-    return PHASES[phase_key]
-
-
-def phase_treatments(phase_key: str) -> dict[str, dict[str, Any]]:
-    return phase_config(phase_key)["treatments"]
-
-
-def treatment_config(phase_key: str, treatment_key: str) -> dict[str, Any]:
-    treatments = phase_treatments(phase_key)
-    if treatment_key not in treatments:
-        raise KeyError(f"Tratamiento no configurado: {phase_key}/{treatment_key}")
-    return treatments[treatment_key]
+TREATMENT_KEYS = [f"norm_{count}" for count in range(WINDOW_SIZE + 1)] + [
+    CONTROL_TREATMENT_KEY
+]
 
 
-def assignment_weights_for_phase(phase_key: str) -> dict[str, float]:
+def _build_treatment_definitions() -> dict[str, dict[str, Any]]:
+    definitions: dict[str, dict[str, Any]] = {}
+    for count in range(WINDOW_SIZE + 1):
+        treatment_key = f"norm_{count}"
+        definitions[treatment_key] = {
+            "label": f"norm_{count}",
+            "treatment_family": "six_norm",
+            "treatment_type": "social_norm",
+            "norm_target_value": DEFAULT_NORM_TARGET_VALUE,
+            "displayed_count_target": count,
+            "displayed_denominator": DISPLAYED_DENOMINATOR,
+            "assignment_weight": 1.0 / TREATMENT_DECK_SIZE,
+            "is_control": False,
+        }
+    definitions[CONTROL_TREATMENT_KEY] = {
+        "label": "control",
+        "treatment_family": "control",
+        "treatment_type": "control",
+        "norm_target_value": None,
+        "displayed_count_target": None,
+        "displayed_denominator": None,
+        "assignment_weight": 1.0 / TREATMENT_DECK_SIZE,
+        "is_control": True,
+    }
+    return definitions
+
+
+TREATMENT_DEFINITIONS = _build_treatment_definitions()
+DEMO_ID_OVERRIDES = {
+    bracelet_id.strip().upper(): {
+        "treatment_key": str(config["treatment_key"]),
+        "result_value": int(config["result_value"]),
+        "payout_eligible": bool(config["payout_eligible"]),
+    }
+    for bracelet_id, config in EXPERIMENT_SETTINGS.get("demo_ids", {}).items()
+}
+
+
+def phase_config(_phase_key: str) -> dict[str, Any]:
+    return {
+        "label": "Diseno con 62 tratamientos individuales",
+        "phase_version": PHASE_VERSION,
+        "treatment_version": TREATMENT_VERSION,
+        "allocation_version": ALLOCATION_VERSION,
+        "displayed_message_version": DISPLAYED_MESSAGE_VERSION,
+    }
+
+
+def phase_treatments(_phase_key: str) -> dict[str, dict[str, Any]]:
+    return TREATMENT_DEFINITIONS
+
+
+def treatment_config(_phase_key: str, treatment_key: str) -> dict[str, Any]:
+    if treatment_key not in TREATMENT_DEFINITIONS:
+        raise KeyError(f"Tratamiento no configurado: {treatment_key}")
+    return TREATMENT_DEFINITIONS[treatment_key]
+
+
+def assignment_weights_for_phase(_phase_key: str) -> dict[str, float]:
     return {
         treatment_key: float(config["assignment_weight"])
-        for treatment_key, config in phase_treatments(phase_key).items()
+        for treatment_key, config in TREATMENT_DEFINITIONS.items()
     }
 
 
-def series_labels_for_phase(phase_key: str) -> dict[str, str]:
+def series_labels_for_phase(_phase_key: str) -> dict[str, str]:
     return {
         treatment_key: str(config["label"])
-        for treatment_key, config in phase_treatments(phase_key).items()
+        for treatment_key, config in TREATMENT_DEFINITIONS.items()
     }
 
 
-def seed_initial_counts_for_phase(phase_key: str) -> dict[str, int]:
-    counts: dict[str, int] = {}
-    for treatment_key, config in phase_treatments(phase_key).items():
-        if config["seed_initial_count"] is not None:
-            counts[treatment_key] = int(config["seed_initial_count"])
-    return counts
+def seed_initial_counts_for_phase(_phase_key: str) -> dict[str, int]:
+    return {
+        treatment_key: int(config["displayed_count_target"])
+        for treatment_key, config in TREATMENT_DEFINITIONS.items()
+        if config["displayed_count_target"] is not None
+    }
 
 
-def treatment_version_for_phase(phase_key: str) -> str:
-    return str(phase_config(phase_key)["treatment_version"])
+def treatment_version_for_phase(_phase_key: str) -> str:
+    return TREATMENT_VERSION
 
 
-def phase_version_for_phase(phase_key: str) -> str:
-    return str(phase_config(phase_key)["phase_version"])
+def phase_version_for_phase(_phase_key: str) -> str:
+    return PHASE_VERSION
 
 
-def allocation_version_for_phase(phase_key: str) -> str:
-    return str(phase_config(phase_key)["allocation_version"])
+def allocation_version_for_phase(_phase_key: str) -> str:
+    return ALLOCATION_VERSION
 
 
-def displayed_message_version_for_phase(phase_key: str) -> str:
-    return str(phase_config(phase_key)["displayed_message_version"])
+def displayed_message_version_for_phase(_phase_key: str) -> str:
+    return DISPLAYED_MESSAGE_VERSION
 
 
 def app_pepper() -> str:
     return os.getenv("APP_HASH_PEPPER", "sonar-2026-local-pepper")
+
+
+def experiment_master_seed() -> str:
+    return os.getenv("EXPERIMENT_MASTER_SEED", "sonar-2026-master-seed")
 
 
 def normalize_bracelet_id(raw_id: str) -> str:
@@ -212,31 +269,86 @@ def stable_json(payload: Any) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
-def deterministic_seed(root_sequence: int) -> str:
-    base_seed = os.getenv("EXPERIMENT_MASTER_SEED", "sonar-2026-master-seed")
-    return stable_hash(f"{base_seed}:{root_sequence}")
+def deterministic_seed(*parts: Any) -> str:
+    joined = ":".join(str(part) for part in parts)
+    return hashlib.sha256(
+        f"{experiment_master_seed()}::{joined}".encode("utf-8")
+    ).hexdigest()
 
 
-def deck_commitment(root_seed: str) -> str:
-    return hashlib.sha256(f"deck::{root_seed}".encode("utf-8")).hexdigest()
+def deck_commitment(deck_seed: str) -> str:
+    return hashlib.sha256(f"deck::{deck_seed}".encode("utf-8")).hexdigest()
+
+
+def shuffle_values(values: list[Any], deck_seed: str) -> list[Any]:
+    rng = random.Random(deck_seed)
+    shuffled = values[:]
+    rng.shuffle(shuffled)
+    return shuffled
+
+
+def treatment_deck_seed(deck_index: int) -> str:
+    return deterministic_seed("treatment_deck", deck_index)
+
+
+def result_deck_seed(deck_index: int) -> str:
+    return deterministic_seed("result_deck", deck_index)
+
+
+def payment_deck_seed(deck_index: int) -> str:
+    return deterministic_seed("payment_deck", deck_index)
+
+
+def treatment_deck_values(deck_seed: str) -> list[str]:
+    return shuffle_values(TREATMENT_KEYS, deck_seed)
+
+
+def result_deck_values(deck_seed: str) -> list[int]:
+    values: list[int] = []
+    for result_value in range(1, 7):
+        values.extend([result_value] * 4)
+    return shuffle_values(values, deck_seed)
+
+
+def payment_deck_values(deck_seed: str) -> list[bool]:
+    values = [True] * PAYMENT_WINNERS_PER_DECK + [False] * (
+        PAYMENT_DECK_SIZE - PAYMENT_WINNERS_PER_DECK
+    )
+    return shuffle_values(values, deck_seed)
+
+
+def reroll_value_for_session(session_id: str, attempt_index: int) -> int:
+    rng = random.Random(deterministic_seed("reroll", session_id, attempt_index))
+    return rng.randint(1, 6)
 
 
 def balanced_sequence(root_seed: str, attempt_index: int, max_positions: int) -> list[int]:
-    rng = random.Random(f"{root_seed}:attempt:{attempt_index}")
     sequence: list[int] = []
-    base_block = [1, 2, 3, 4, 5, 6] * (BLOCK_SIZE // 6)
-    while len(sequence) < max_positions:
-        block = base_block[:]
-        rng.shuffle(block)
-        sequence.extend(block)
-    return sequence[:max_positions]
+    if attempt_index == 1:
+        block_index = 0
+        while len(sequence) < max_positions:
+            block_seed = hashlib.sha256(
+                f"{root_seed}:result_block:{block_index}".encode("utf-8")
+            ).hexdigest()
+            sequence.extend(result_deck_values(block_seed))
+            block_index += 1
+        return sequence[:max_positions]
+
+    for position_index in range(1, max_positions + 1):
+        seed = deterministic_seed("reroll-compat", root_seed, position_index, attempt_index)
+        rng = random.Random(seed)
+        sequence.append(rng.randint(1, 6))
+    return sequence
 
 
 def payout_eligible(root_seed: str, position_index: int) -> bool:
-    digest = hashlib.sha256(
-        f"{root_seed}:payment:{position_index}".encode("utf-8")
+    block_index = (position_index - 1) // PAYMENT_DECK_SIZE
+    block_seed = hashlib.sha256(
+        f"{root_seed}:payment_block:{block_index}".encode("utf-8")
     ).hexdigest()
-    return int(digest[:8], 16) % PAYOUT_RATE_DENOMINATOR == 0
+    winners = payment_deck_values(block_seed)
+    block_position = (position_index - 1) % PAYMENT_DECK_SIZE
+    return winners[block_position]
 
 
 def payout_amount_for_claim(claimed_value: int, eligible: bool) -> int:
@@ -265,44 +377,13 @@ def referral_code(raw_value: str) -> str:
     return f"r{''.join(reversed(chars))}"
 
 
-def commitment_hash(
-    root_seed: str, position_index: int, attempt_index: int, result_value: int
-) -> str:
-    raw = f"{root_seed}:{position_index}:{attempt_index}:{result_value}"
+def commitment_hash(*parts: Any) -> str:
+    raw = ":".join(str(part) for part in parts)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
-def non_target_seed_pattern(target_value: int) -> list[int]:
-    return [value for value in range(1, 7) if value != target_value]
-
-
-def infer_seed_fill_order(seed_initial_count: int) -> str:
-    return "target_last" if seed_initial_count <= WINDOW_SIZE / 2 else "target_first"
-
-
-def seed_window_values(phase_key: str, treatment_key: str) -> list[int]:
-    treatment = treatment_config(phase_key, treatment_key)
-    target_value = treatment["norm_target_value"]
-    seed_initial_count = treatment["seed_initial_count"]
-
-    if target_value is None or seed_initial_count is None:
-        return []
-
-    initial_target_count = int(seed_initial_count)
-    non_target_count = max(0, WINDOW_SIZE - initial_target_count)
-    pattern = non_target_seed_pattern(int(target_value))
-    non_target_values = [
-        pattern[index % len(pattern)] for index in range(non_target_count)
-    ]
-    target_values = [int(target_value)] * initial_target_count
-    seed_fill_order = str(
-        treatment.get("seed_fill_order")
-        or infer_seed_fill_order(initial_target_count)
-    )
-
-    if seed_fill_order == "target_last":
-        return non_target_values + target_values
-    return target_values + non_target_values
+def seed_window_values(_phase_key: str, _treatment_key: str) -> list[int]:
+    return []
 
 
 def treatment_message(
@@ -311,7 +392,7 @@ def treatment_message(
     denominator: int | None,
     target_value: int | None,
 ) -> str:
-    if treatment_key == "control":
+    if treatment_key == CONTROL_TREATMENT_KEY:
         return COPY_SETTINGS["messages"]["control"]
     template = COPY_SETTINGS["messages"]["social_template"]
     return template.format(
@@ -319,6 +400,10 @@ def treatment_message(
         denominator=denominator,
         target=target_value,
     )
+
+
+def demo_override(bracelet_id: str) -> dict[str, Any] | None:
+    return DEMO_ID_OVERRIDES.get(bracelet_id.strip().upper())
 
 
 def public_copy() -> dict[str, Any]:

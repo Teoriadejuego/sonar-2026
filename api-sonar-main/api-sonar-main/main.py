@@ -18,12 +18,15 @@ from sqlmodel import Session, SQLModel, func, select
 from database import database_ready, engine, get_session
 from experiment import (
     CAMPAIGN_CODE,
+    CONTROL_TREATMENT_KEY,
     CONSENT_VERSION,
     DECK_VERSION,
     DEPLOYMENT_CONTEXT,
     DEMO_PULSERA_COUNT,
+    DISPLAYED_DENOMINATOR,
     ENVIRONMENT_LABEL,
     EXPERIMENT_VERSION,
+    DEFAULT_NORM_TARGET_VALUE,
     LEXICON_VERSION,
     MAX_ATTEMPTS,
     PAYMENT_VERSION,
@@ -43,9 +46,12 @@ from experiment import (
     balanced_sequence,
     commitment_hash,
     deck_commitment,
+    demo_override,
     deterministic_seed,
     displayed_message_version_for_phase,
     normalize_bracelet_id,
+    payment_deck_seed,
+    payment_deck_values,
     phase_treatments,
     phase_version_for_phase,
     public_copy,
@@ -54,15 +60,24 @@ from experiment import (
     payout_eligible,
     payout_reference_code,
     referral_code,
+    reroll_value_for_session,
+    result_deck_seed,
+    result_deck_values,
     seed_initial_counts_for_phase,
     seed_window_values,
     series_labels_for_phase,
     stable_hash,
     stable_json,
+    treatment_deck_seed,
+    treatment_deck_values,
+    TREATMENT_KEYS,
     treatment_config,
     treatment_message,
     treatment_version_for_phase,
     COLLAPSE_CONSECUTIVE_CLAIMS,
+    PAYMENT_DECK_SIZE,
+    RESULT_DECK_SIZE,
+    TREATMENT_DECK_SIZE,
 )
 from research_admin import (
     DATASET_DESCRIPTIONS,
@@ -85,8 +100,12 @@ from models import (
     InterestSignup,
     OperationalNote,
     Payment,
+    PaymentDeck,
+    PaymentDeckCard,
     PayoutRequest,
     Pulsera,
+    ResultDeck,
+    ResultDeckCard,
     Series,
     SeriesRoot,
     SeriesWindowEntry,
@@ -95,8 +114,11 @@ from models import (
     SnapshotRecord,
     ScreenSpell,
     TelemetryEvent,
+    TreatmentDeck,
+    TreatmentDeckCard,
     Throw,
     User,
+    make_uuid,
 )
 from runtime import (
     cache_receipt,
@@ -447,6 +469,12 @@ def schema_needs_reset() -> bool:
         "series",
         "series_window_entries",
         "deck_positions",
+        "treatment_decks",
+        "treatment_deck_cards",
+        "result_decks",
+        "result_deck_cards",
+        "payment_decks",
+        "payment_deck_cards",
         "sessions",
         "throws",
         "claims",
@@ -468,6 +496,24 @@ def schema_needs_reset() -> bool:
     sessions_columns = {column["name"] for column in inspector.get_columns("sessions")}
     roots_columns = {column["name"] for column in inspector.get_columns("series_roots")}
     series_columns = {column["name"] for column in inspector.get_columns("series")}
+    treatment_deck_columns = {
+        column["name"] for column in inspector.get_columns("treatment_decks")
+    }
+    treatment_deck_card_columns = {
+        column["name"] for column in inspector.get_columns("treatment_deck_cards")
+    }
+    result_deck_columns = {
+        column["name"] for column in inspector.get_columns("result_decks")
+    }
+    result_deck_card_columns = {
+        column["name"] for column in inspector.get_columns("result_deck_cards")
+    }
+    payment_deck_columns = {
+        column["name"] for column in inspector.get_columns("payment_decks")
+    }
+    payment_deck_card_columns = {
+        column["name"] for column in inspector.get_columns("payment_deck_cards")
+    }
     claims_columns = {column["name"] for column in inspector.get_columns("claims")}
     consent_columns = {column["name"] for column in inspector.get_columns("consent_records")}
     snapshot_columns = {column["name"] for column in inspector.get_columns("snapshot_records")}
@@ -506,7 +552,16 @@ def schema_needs_reset() -> bool:
         "telemetry_version",
         "lexicon_version",
         "treatment_family",
+        "treatment_type",
         "norm_target_value",
+        "displayed_count_target",
+        "displayed_denominator",
+        "treatment_deck_id",
+        "treatment_card_position",
+        "result_deck_id",
+        "result_card_position",
+        "payment_deck_id",
+        "payment_card_position",
         "language_at_access",
         "language_at_claim",
         "language_changed_during_session",
@@ -547,6 +602,47 @@ def schema_needs_reset() -> bool:
         "treatment_version",
         "allocation_version",
     }
+    required_treatment_deck_columns = {
+        "deck_index",
+        "deck_seed",
+        "legacy_root_id",
+        "card_count",
+        "status",
+    }
+    required_treatment_deck_card_columns = {
+        "deck_id",
+        "legacy_series_id",
+        "card_position",
+        "treatment_key",
+        "assigned_session_id",
+        "assigned_at",
+    }
+    required_result_deck_columns = {
+        "deck_index",
+        "deck_seed",
+        "card_count",
+        "status",
+    }
+    required_result_deck_card_columns = {
+        "deck_id",
+        "card_position",
+        "result_value",
+        "assigned_session_id",
+        "assigned_at",
+    }
+    required_payment_deck_columns = {
+        "deck_index",
+        "deck_seed",
+        "card_count",
+        "status",
+    }
+    required_payment_deck_card_columns = {
+        "deck_id",
+        "card_position",
+        "payout_eligible",
+        "assigned_session_id",
+        "assigned_at",
+    }
     required_series_columns = {
         "experiment_phase",
         "treatment_family",
@@ -579,6 +675,7 @@ def schema_needs_reset() -> bool:
     }
     required_snapshot_columns = {
         "language_used",
+        "is_control",
         "displayed_message_text",
         "control_message_text",
         "final_message_text",
@@ -653,6 +750,14 @@ def schema_needs_reset() -> bool:
         or
         not required_session_columns.issubset(sessions_columns)
         or not required_root_columns.issubset(roots_columns)
+        or not required_treatment_deck_columns.issubset(treatment_deck_columns)
+        or not required_treatment_deck_card_columns.issubset(
+            treatment_deck_card_columns
+        )
+        or not required_result_deck_columns.issubset(result_deck_columns)
+        or not required_result_deck_card_columns.issubset(result_deck_card_columns)
+        or not required_payment_deck_columns.issubset(payment_deck_columns)
+        or not required_payment_deck_card_columns.issubset(payment_deck_card_columns)
         or not required_series_columns.issubset(series_columns)
         or not required_claim_columns.issubset(claims_columns)
         or not required_consent_columns.issubset(consent_columns)
@@ -679,15 +784,19 @@ def drop_legacy_tables() -> None:
 
 
 def get_or_create_pulseras(db: Session) -> None:
-    desired_ids = [f"{10000001 + index}" for index in range(DEMO_PULSERA_COUNT)]
+    desired_ids = ["CTRL1234", "NORM0000", "NORM0001"]
     existing_ids = set(
         db.exec(select(Pulsera.id).where(Pulsera.id.in_(desired_ids))).all()
     )
-    missing = [Pulsera(id=bracelet_id) for bracelet_id in desired_ids if bracelet_id not in existing_ids]
+    missing = [
+        Pulsera(id=bracelet_id)
+        for bracelet_id in desired_ids
+        if bracelet_id not in existing_ids
+    ]
     if not missing:
         return
     db.add_all(missing)
-    db.commit()
+    db.flush()
 
 
 def create_audit(
@@ -809,9 +918,12 @@ def get_or_create_experiment_state(db: Session, *, for_update: bool = False) -> 
         )
     ).first()
     if state:
-        expected_treatment_version = treatment_version_for_phase(state.current_phase)
-        expected_allocation_version = allocation_version_for_phase(state.current_phase)
         changed = False
+        if state.current_phase != PHASE_1_MAIN:
+            state.current_phase = PHASE_1_MAIN
+            changed = True
+        expected_treatment_version = treatment_version_for_phase(PHASE_1_MAIN)
+        expected_allocation_version = allocation_version_for_phase(PHASE_1_MAIN)
         if state.phase_transition_threshold != PHASE_TRANSITION_VALID_COMPLETED_THRESHOLD:
             state.phase_transition_threshold = PHASE_TRANSITION_VALID_COMPLETED_THRESHOLD
             changed = True
@@ -824,8 +936,6 @@ def get_or_create_experiment_state(db: Session, *, for_update: bool = False) -> 
         if changed:
             state.updated_at = utcnow()
             db.add(state)
-            db.commit()
-            db.refresh(state)
         return state
 
     state = ExperimentState(
@@ -838,8 +948,6 @@ def get_or_create_experiment_state(db: Session, *, for_update: bool = False) -> 
         allocation_version=allocation_version_for_phase(PHASE_1_MAIN),
     )
     db.add(state)
-    db.commit()
-    db.refresh(state)
     return state
 
 
@@ -884,6 +992,52 @@ def prize_summary(db: Session) -> dict[str, Any]:
         "total_prize_amount_cents": total_amount_cents,
         "total_prize_amount_eur": round(total_amount_cents / 100, 2),
         "winner_count_by_status": by_status,
+    }
+
+
+def deck_status_payload(
+    db: Session,
+    *,
+    deck_model: Any,
+    card_model: Any,
+) -> dict[str, Any]:
+    active_deck = db.exec(
+        select(deck_model)
+        .where(deck_model.status == "active")
+        .order_by(deck_model.deck_index)
+    ).first()
+    if not active_deck:
+        return {
+            "active_deck_index": None,
+            "assigned_cards": 0,
+            "remaining_cards": 0,
+            "card_count": 0,
+            "closed_decks": db.exec(
+                select(func.count()).select_from(deck_model).where(deck_model.status == "closed")
+            ).one(),
+        }
+    assigned_cards = db.exec(
+        select(func.count())
+        .select_from(card_model)
+        .where(
+            card_model.deck_id == active_deck.id,
+            card_model.assigned_session_id != None,  # noqa: E711
+        )
+    ).one()
+    assigned_count = int(assigned_cards or 0)
+    return {
+        "active_deck_index": active_deck.deck_index,
+        "assigned_cards": assigned_count,
+        "remaining_cards": max(int(active_deck.card_count) - assigned_count, 0),
+        "card_count": int(active_deck.card_count),
+        "closed_decks": int(
+            db.exec(
+                select(func.count())
+                .select_from(deck_model)
+                .where(deck_model.status == "closed")
+            ).one()
+            or 0
+        ),
     }
 
 
@@ -1034,37 +1188,63 @@ def resume_experiment(
 
 
 def current_phase_activation_status(phase_key: str) -> str:
-    return (
-        "phase_1_active_at_assignment"
-        if phase_key == PHASE_1_MAIN
-        else "phase_2_active_at_assignment"
-    )
+    if phase_key == PHASE_1_MAIN:
+        return "balanced_decks_active_at_assignment"
+    return "legacy_disabled"
 
 
 def series_target_value(series: Series) -> Optional[int]:
     return series.norm_target_value
 
 
-def create_root_with_series(db: Session, phase_key: str) -> SeriesRoot:
-    current_max = db.exec(select(func.max(SeriesRoot.root_sequence))).one()
-    root_sequence = (int(current_max) if current_max is not None else 0) + 1
-    root_seed = deterministic_seed(root_sequence)
+def legacy_root_status(deck_status: str) -> str:
+    if deck_status == "active":
+        return "active"
+    if deck_status == "demo":
+        return "demo"
+    return "closed"
+
+
+def legacy_root_for_sequence(
+    db: Session, *, root_sequence: int, for_update: bool = False
+) -> Optional[SeriesRoot]:
+    return db.exec(
+        with_optional_for_update(
+            select(SeriesRoot).where(SeriesRoot.root_sequence == root_sequence),
+            for_update,
+        )
+    ).first()
+
+
+def create_root_with_series(
+    db: Session,
+    phase_key: str,
+    *,
+    root_sequence: int,
+    treatment_keys: list[str],
+    deck_status: str = "active",
+) -> SeriesRoot:
     root = SeriesRoot(
         root_sequence=root_sequence,
         experiment_phase=phase_key,
         treatment_version=treatment_version_for_phase(phase_key),
         allocation_version=allocation_version_for_phase(phase_key),
-        status="active",
-        close_reason=None,
-        deck_seed_commitment=deck_commitment(root_seed),
+        status=legacy_root_status(deck_status),
+        close_reason="demo_override" if deck_status == "demo" else None,
+        deck_seed_commitment=deck_commitment(
+            treatment_deck_seed(root_sequence)
+            if root_sequence > 0
+            else deterministic_seed("demo_root", root_sequence)
+        ),
         experiment_version=EXPERIMENT_VERSION,
+        closed_at=utcnow() if deck_status == "closed" else None,
     )
     db.add(root)
-    db.commit()
-    db.refresh(root)
+    db.flush()
 
-    for treatment_key, weight in assignment_weights_for_phase(phase_key).items():
+    for treatment_key in treatment_keys:
         treatment = treatment_config(phase_key, treatment_key)
+        displayed_count_target = treatment["displayed_count_target"]
         series = Series(
             root_id=root.id,
             experiment_phase=phase_key,
@@ -1072,149 +1252,492 @@ def create_root_with_series(db: Session, phase_key: str) -> SeriesRoot:
             treatment_family=treatment["treatment_family"],
             norm_target_value=treatment["norm_target_value"],
             label=series_labels_for_phase(phase_key)[treatment_key],
-            assignment_weight=weight,
-            participant_limit=PARTICIPANT_LIMIT,
-            sample_size=WINDOW_SIZE,
+            assignment_weight=float(treatment["assignment_weight"]),
+            participant_limit=1,
+            sample_size=DISPLAYED_DENOMINATOR,
+            position_counter=0,
+            completed_count=0,
+            visible_count_target=int(displayed_count_target or 0),
+            actual_count_target=0,
+            full_target_streak=0,
+            visible_window_version=1 if displayed_count_target is not None else 0,
+            actual_window_version=0,
+            is_closed=deck_status == "closed",
+            close_reason="demo_override" if deck_status == "demo" else None,
         )
         db.add(series)
-        db.commit()
-        db.refresh(series)
-
-        values = seed_window_values(phase_key, treatment_key)
-        for slot_index, value in enumerate(values, start=1):
-            db.add(
-                SeriesWindowEntry(
-                    series_id=series.id,
-                    window_type="visible",
-                    slot_index=slot_index,
-                    value=value,
-                    source="seed",
-                )
-            )
-        if values:
-            target_value = series_target_value(series)
-            series.visible_count_target = sum(
-                1 for value in values if value == target_value
-            )
-            series.visible_window_version = 1
-            db.add(series)
-            db.commit()
-
-    for attempt_index in range(1, MAX_ATTEMPTS + 1):
-        sequence = balanced_sequence(root_seed, attempt_index, PARTICIPANT_LIMIT)
-        for position_index, result_value in enumerate(sequence, start=1):
-            db.add(
-                DeckPosition(
-                    root_id=root.id,
-                    position_index=position_index,
-                    attempt_index=attempt_index,
-                    result_value=result_value,
-                    payout_eligible=payout_eligible(root_seed, position_index),
-                    commitment_hash=commitment_hash(
-                        root_seed, position_index, attempt_index, result_value
-                    ),
-                )
-            )
-    db.commit()
+    db.flush()
     return root
 
 
-def root_matches_phase_configuration(db: Session, root: SeriesRoot) -> bool:
-    expected_treatments = phase_treatments(root.experiment_phase)
-    series_items = db.exec(select(Series).where(Series.root_id == root.id)).all()
-    if len(series_items) != len(expected_treatments):
-        return False
-    if root.treatment_version != treatment_version_for_phase(root.experiment_phase):
-        return False
-    if root.allocation_version != allocation_version_for_phase(root.experiment_phase):
-        return False
-
-    for item in series_items:
-        expected = expected_treatments.get(item.treatment_key)
-        if expected is None:
-            return False
-        if item.participant_limit != PARTICIPANT_LIMIT:
-            return False
-        if item.sample_size != WINDOW_SIZE:
-            return False
-        if item.treatment_family != expected["treatment_family"]:
-            return False
-        if item.norm_target_value != expected["norm_target_value"]:
-            return False
-        if abs(item.assignment_weight - float(expected["assignment_weight"])) > 1e-9:
-            return False
-    return True
+def max_positive_deck_index(db: Session, model: Any) -> int:
+    current_max = db.exec(
+        select(func.max(model.deck_index)).where(model.deck_index > 0)
+    ).one()
+    return int(current_max) if current_max is not None else 0
 
 
-def close_root_for_configuration_change(db: Session, root: SeriesRoot) -> None:
+def close_legacy_root(db: Session, root_id: Optional[str], reason: str) -> None:
+    if not root_id:
+        return
+    root = db.get(SeriesRoot, root_id)
+    if not root or root.status == "closed":
+        return
     root.status = "closed"
-    root.close_reason = "config_changed"
+    root.close_reason = reason
     root.closed_at = utcnow()
     db.add(root)
-    series_items = db.exec(select(Series).where(Series.root_id == root.id)).all()
-    for item in series_items:
-        item.is_closed = True
-        item.close_reason = "config_changed"
-        db.add(item)
-    db.commit()
+    for series in db.exec(select(Series).where(Series.root_id == root.id)).all():
+        series.is_closed = True
+        series.close_reason = reason
+        db.add(series)
 
 
-def get_active_root(db: Session, phase_key: str, *, for_update: bool = False) -> SeriesRoot:
-    root = db.exec(
-        with_optional_for_update(
-            select(SeriesRoot)
-            .where(
-                SeriesRoot.status == "active",
-                SeriesRoot.experiment_phase == phase_key,
-            )
-            .order_by(SeriesRoot.root_sequence.desc()),
-            for_update,
+def get_series_for_treatment_root(
+    db: Session, *, root_id: str, treatment_key: str
+) -> Series:
+    series = db.exec(
+        select(Series).where(
+            Series.root_id == root_id,
+            Series.treatment_key == treatment_key,
         )
     ).first()
-    if root:
-        if not root_matches_phase_configuration(db, root):
-            close_root_for_configuration_change(db, root)
-            return create_root_with_series(db, phase_key)
-        return root
-    return create_root_with_series(db, phase_key)
+    if not series:
+        raise HTTPException(
+            status_code=500,
+            detail="No existe la serie legacy para el tratamiento asignado",
+        )
+    return series
+
+
+def create_treatment_deck(db: Session, deck_index: int) -> TreatmentDeck:
+    deck_seed = treatment_deck_seed(deck_index)
+    deck_values = treatment_deck_values(deck_seed)
+    legacy_root = create_root_with_series(
+        db,
+        PHASE_1_MAIN,
+        root_sequence=deck_index,
+        treatment_keys=TREATMENT_KEYS,
+        deck_status="active",
+    )
+    deck = TreatmentDeck(
+        deck_index=deck_index,
+        deck_seed=deck_seed,
+        legacy_root_id=legacy_root.id,
+        card_count=len(deck_values),
+        status="active",
+    )
+    db.add(deck)
+    db.flush()
+
+    for card_position, treatment_key in enumerate(deck_values, start=1):
+        legacy_series = get_series_for_treatment_root(
+            db, root_id=legacy_root.id, treatment_key=treatment_key
+        )
+        db.add(
+            TreatmentDeckCard(
+                deck_id=deck.id,
+                legacy_series_id=legacy_series.id,
+                card_position=card_position,
+                treatment_key=treatment_key,
+            )
+        )
+    db.flush()
+    return deck
+
+
+def create_result_deck(db: Session, deck_index: int) -> ResultDeck:
+    deck_seed = result_deck_seed(deck_index)
+    deck_values = result_deck_values(deck_seed)
+    deck = ResultDeck(
+        deck_index=deck_index,
+        deck_seed=deck_seed,
+        card_count=len(deck_values),
+        status="active",
+    )
+    db.add(deck)
+    db.flush()
+    for card_position, result_value in enumerate(deck_values, start=1):
+        db.add(
+            ResultDeckCard(
+                deck_id=deck.id,
+                card_position=card_position,
+                result_value=result_value,
+            )
+        )
+    db.flush()
+    return deck
+
+
+def create_payment_deck(db: Session, deck_index: int) -> PaymentDeck:
+    deck_seed = payment_deck_seed(deck_index)
+    deck_values = payment_deck_values(deck_seed)
+    deck = PaymentDeck(
+        deck_index=deck_index,
+        deck_seed=deck_seed,
+        card_count=len(deck_values),
+        status="active",
+    )
+    db.add(deck)
+    db.flush()
+    for card_position, eligible in enumerate(deck_values, start=1):
+        db.add(
+            PaymentDeckCard(
+                deck_id=deck.id,
+                card_position=card_position,
+                payout_eligible=eligible,
+            )
+        )
+    db.flush()
+    return deck
+
+
+def demo_deck_index(bracelet_id: str) -> int:
+    return {
+        "CTRL1234": -1,
+        "NORM0000": -2,
+        "NORM0001": -3,
+    }[bracelet_id]
+
+
+def ensure_demo_treatment_deck(
+    db: Session, *, bracelet_id: str, treatment_key: str
+) -> TreatmentDeck:
+    deck_index = demo_deck_index(bracelet_id)
+    existing = db.exec(
+        select(TreatmentDeck).where(TreatmentDeck.deck_index == deck_index)
+    ).first()
+    if existing:
+        return existing
+
+    legacy_root = create_root_with_series(
+        db,
+        PHASE_1_MAIN,
+        root_sequence=deck_index,
+        treatment_keys=[treatment_key],
+        deck_status="demo",
+    )
+    legacy_series = get_series_for_treatment_root(
+        db, root_id=legacy_root.id, treatment_key=treatment_key
+    )
+    deck = TreatmentDeck(
+        deck_index=deck_index,
+        deck_seed=deterministic_seed("demo_treatment", bracelet_id, treatment_key),
+        legacy_root_id=legacy_root.id,
+        card_count=1,
+        status="demo",
+    )
+    db.add(deck)
+    db.flush()
+    db.add(
+        TreatmentDeckCard(
+            deck_id=deck.id,
+            legacy_series_id=legacy_series.id,
+            card_position=1,
+            treatment_key=treatment_key,
+        )
+    )
+    db.flush()
+    return deck
+
+
+def ensure_demo_result_deck(
+    db: Session, *, bracelet_id: str, result_value: int
+) -> ResultDeck:
+    deck_index = demo_deck_index(bracelet_id)
+    existing = db.exec(
+        select(ResultDeck).where(ResultDeck.deck_index == deck_index)
+    ).first()
+    if existing:
+        return existing
+    deck = ResultDeck(
+        deck_index=deck_index,
+        deck_seed=deterministic_seed("demo_result", bracelet_id, result_value),
+        card_count=1,
+        status="demo",
+    )
+    db.add(deck)
+    db.flush()
+    db.add(
+        ResultDeckCard(
+            deck_id=deck.id,
+            card_position=1,
+            result_value=result_value,
+        )
+    )
+    db.flush()
+    return deck
+
+
+def ensure_demo_payment_deck(
+    db: Session, *, bracelet_id: str, payout_allowed: bool
+) -> PaymentDeck:
+    deck_index = demo_deck_index(bracelet_id)
+    existing = db.exec(
+        select(PaymentDeck).where(PaymentDeck.deck_index == deck_index)
+    ).first()
+    if existing:
+        return existing
+    deck = PaymentDeck(
+        deck_index=deck_index,
+        deck_seed=deterministic_seed("demo_payment", bracelet_id, payout_allowed),
+        card_count=1,
+        status="demo",
+    )
+    db.add(deck)
+    db.flush()
+    db.add(
+        PaymentDeckCard(
+            deck_id=deck.id,
+            card_position=1,
+            payout_eligible=payout_allowed,
+        )
+    )
+    db.flush()
+    return deck
+
+
+def get_active_treatment_deck(db: Session) -> TreatmentDeck:
+    deck = db.exec(
+        with_optional_for_update(
+            select(TreatmentDeck)
+            .where(TreatmentDeck.status == "active")
+            .order_by(TreatmentDeck.deck_index),
+            True,
+        )
+    ).first()
+    if deck:
+        return deck
+    return create_treatment_deck(db, max_positive_deck_index(db, TreatmentDeck) + 1)
+
+
+def get_active_result_deck(db: Session) -> ResultDeck:
+    deck = db.exec(
+        with_optional_for_update(
+            select(ResultDeck)
+            .where(ResultDeck.status == "active")
+            .order_by(ResultDeck.deck_index),
+            True,
+        )
+    ).first()
+    if deck:
+        return deck
+    return create_result_deck(db, max_positive_deck_index(db, ResultDeck) + 1)
+
+
+def get_active_payment_deck(db: Session) -> PaymentDeck:
+    deck = db.exec(
+        with_optional_for_update(
+            select(PaymentDeck)
+            .where(PaymentDeck.status == "active")
+            .order_by(PaymentDeck.deck_index),
+            True,
+        )
+    ).first()
+    if deck:
+        return deck
+    return create_payment_deck(db, max_positive_deck_index(db, PaymentDeck) + 1)
+
+
+def close_treatment_deck(db: Session, deck: TreatmentDeck) -> None:
+    if deck.status != "active":
+        return
+    deck.status = "closed"
+    deck.closed_at = utcnow()
+    db.add(deck)
+    close_legacy_root(db, deck.legacy_root_id, "treatment_deck_exhausted")
+
+
+def close_result_deck(db: Session, deck: ResultDeck) -> None:
+    if deck.status != "active":
+        return
+    deck.status = "closed"
+    deck.closed_at = utcnow()
+    db.add(deck)
+
+
+def close_payment_deck(db: Session, deck: PaymentDeck) -> None:
+    if deck.status != "active":
+        return
+    deck.status = "closed"
+    deck.closed_at = utcnow()
+    db.add(deck)
+
+
+def assign_next_treatment_card(
+    db: Session, *, session_id: str
+) -> tuple[TreatmentDeck, TreatmentDeckCard, Series]:
+    while True:
+        deck = get_active_treatment_deck(db)
+        card = db.exec(
+            with_optional_for_update(
+                select(TreatmentDeckCard)
+                .where(
+                    TreatmentDeckCard.deck_id == deck.id,
+                    TreatmentDeckCard.assigned_session_id == None,  # noqa: E711
+                )
+                .order_by(TreatmentDeckCard.card_position),
+                True,
+            )
+        ).first()
+        if not card:
+            close_treatment_deck(db, deck)
+            db.flush()
+            continue
+        card.assigned_session_id = session_id
+        card.assigned_at = utcnow()
+        db.add(card)
+        legacy_series = db.get(Series, card.legacy_series_id) if card.legacy_series_id else None
+        if not legacy_series:
+            raise HTTPException(status_code=500, detail="Carta de tratamiento sin serie legacy")
+        legacy_series.position_counter = 1
+        db.add(legacy_series)
+        return deck, card, legacy_series
+
+
+def assign_next_result_card(
+    db: Session, *, session_id: str
+) -> tuple[ResultDeck, ResultDeckCard]:
+    while True:
+        deck = get_active_result_deck(db)
+        card = db.exec(
+            with_optional_for_update(
+                select(ResultDeckCard)
+                .where(
+                    ResultDeckCard.deck_id == deck.id,
+                    ResultDeckCard.assigned_session_id == None,  # noqa: E711
+                )
+                .order_by(ResultDeckCard.card_position),
+                True,
+            )
+        ).first()
+        if not card:
+            close_result_deck(db, deck)
+            db.flush()
+            continue
+        card.assigned_session_id = session_id
+        card.assigned_at = utcnow()
+        db.add(card)
+        return deck, card
+
+
+def assign_next_payment_card(
+    db: Session, *, session_id: str
+) -> tuple[PaymentDeck, PaymentDeckCard]:
+    while True:
+        deck = get_active_payment_deck(db)
+        card = db.exec(
+            with_optional_for_update(
+                select(PaymentDeckCard)
+                .where(
+                    PaymentDeckCard.deck_id == deck.id,
+                    PaymentDeckCard.assigned_session_id == None,  # noqa: E711
+                )
+                .order_by(PaymentDeckCard.card_position),
+                True,
+            )
+        ).first()
+        if not card:
+            close_payment_deck(db, deck)
+            db.flush()
+            continue
+        card.assigned_session_id = session_id
+        card.assigned_at = utcnow()
+        db.add(card)
+        return deck, card
+
+
+def assign_demo_cards(
+    db: Session, *, bracelet_id: str, session_id: str
+) -> tuple[TreatmentDeck, TreatmentDeckCard, Series, ResultDeck, ResultDeckCard, PaymentDeck, PaymentDeckCard]:
+    override = demo_override(bracelet_id)
+    if not override:
+        raise HTTPException(status_code=500, detail="Demo override no configurado")
+
+    treatment_deck = ensure_demo_treatment_deck(
+        db,
+        bracelet_id=bracelet_id,
+        treatment_key=str(override["treatment_key"]),
+    )
+    treatment_card = db.exec(
+        select(TreatmentDeckCard).where(TreatmentDeckCard.deck_id == treatment_deck.id)
+    ).first()
+    if not treatment_card:
+        raise HTTPException(status_code=500, detail="Carta demo de tratamiento inexistente")
+    treatment_card.assigned_session_id = session_id
+    treatment_card.assigned_at = utcnow()
+    db.add(treatment_card)
+    legacy_series = db.get(Series, treatment_card.legacy_series_id)
+    if not legacy_series:
+        raise HTTPException(status_code=500, detail="Serie demo inexistente")
+    legacy_series.position_counter = 1
+    db.add(legacy_series)
+
+    result_deck = ensure_demo_result_deck(
+        db,
+        bracelet_id=bracelet_id,
+        result_value=int(override["result_value"]),
+    )
+    result_card = db.exec(
+        select(ResultDeckCard).where(ResultDeckCard.deck_id == result_deck.id)
+    ).first()
+    if not result_card:
+        raise HTTPException(status_code=500, detail="Carta demo de resultado inexistente")
+    result_card.assigned_session_id = session_id
+    result_card.assigned_at = utcnow()
+    db.add(result_card)
+
+    payment_deck = ensure_demo_payment_deck(
+        db,
+        bracelet_id=bracelet_id,
+        payout_allowed=bool(override["payout_eligible"]),
+    )
+    payment_card = db.exec(
+        select(PaymentDeckCard).where(PaymentDeckCard.deck_id == payment_deck.id)
+    ).first()
+    if not payment_card:
+        raise HTTPException(status_code=500, detail="Carta demo de pago inexistente")
+    payment_card.assigned_session_id = session_id
+    payment_card.assigned_at = utcnow()
+    db.add(payment_card)
+
+    return (
+        treatment_deck,
+        treatment_card,
+        legacy_series,
+        result_deck,
+        result_card,
+        payment_deck,
+        payment_card,
+    )
 
 
 def bootstrap_demo_data(db: Session) -> None:
     get_or_create_pulseras(db)
-    state = get_or_create_experiment_state(db)
-    get_active_root(db, state.current_phase)
-
-
-def choose_series_for_assignment(db: Session, root: SeriesRoot, *, for_update: bool = False) -> Series:
-    candidates = db.exec(
-        with_optional_for_update(
-            select(Series)
-            .where(Series.root_id == root.id)
-            .order_by(Series.treatment_key),
-            for_update,
+    get_or_create_experiment_state(db)
+    get_active_treatment_deck(db)
+    get_active_result_deck(db)
+    get_active_payment_deck(db)
+    for bracelet_id in ["CTRL1234", "NORM0000", "NORM0001"]:
+        override = demo_override(bracelet_id)
+        if not override:
+            continue
+        ensure_demo_treatment_deck(
+            db,
+            bracelet_id=bracelet_id,
+            treatment_key=str(override["treatment_key"]),
         )
-    ).all()
-    available = [
-        item
-        for item in candidates
-        if not item.is_closed and item.position_counter < item.participant_limit
-    ]
-    if not available:
-        root.status = "closed"
-        root.close_reason = "full"
-        root.closed_at = utcnow()
-        db.add(root)
-        db.commit()
-        new_root = create_root_with_series(db, root.experiment_phase)
-        return choose_series_for_assignment(db, new_root)
-
-    def score(series: Series) -> tuple[float, str]:
-        return (
-            series.position_counter / max(series.assignment_weight, 0.0001),
-            series.treatment_key,
+        ensure_demo_result_deck(
+            db,
+            bracelet_id=bracelet_id,
+            result_value=int(override["result_value"]),
         )
-
-    return min(available, key=score)
+        ensure_demo_payment_deck(
+            db,
+            bracelet_id=bracelet_id,
+            payout_allowed=bool(override["payout_eligible"]),
+        )
+    db.commit()
 
 
 def get_deck_value(
@@ -1248,61 +1771,6 @@ def get_window_entries(
     ).all()
 
 
-def rewrite_window(
-    db: Session,
-    *,
-    series: Series,
-    window_type: str,
-    entries_data: list[tuple[int, str, Optional[str]]],
-) -> None:
-    existing = get_window_entries(db, series_id=series.id, window_type=window_type)
-    for entry in existing:
-        db.delete(entry)
-    db.flush()
-    for slot_index, (value, source, claim_id) in enumerate(entries_data, start=1):
-        db.add(
-            SeriesWindowEntry(
-                series_id=series.id,
-                window_type=window_type,
-                slot_index=slot_index,
-                value=value,
-                source=source,
-                claim_id=claim_id,
-            )
-        )
-
-    target_value = series_target_value(series)
-    count_target = sum(1 for value, _, _ in entries_data if value == target_value)
-    if window_type == "visible":
-        series.visible_count_target = count_target
-        series.visible_window_version += 1
-    else:
-        series.actual_count_target = count_target
-        series.actual_window_version += 1
-    db.add(series)
-
-
-def append_window_value(
-    db: Session,
-    *,
-    series: Series,
-    window_type: str,
-    new_value: int,
-    claim_id: str,
-) -> None:
-    existing = get_window_entries(db, series_id=series.id, window_type=window_type)
-    entries_data = [(entry.value, entry.source, entry.claim_id) for entry in existing]
-    if window_type == "visible":
-        if not entries_data:
-            return
-        entries_data = entries_data[1:] + [(new_value, "live", claim_id)]
-    else:
-        if len(entries_data) >= WINDOW_SIZE:
-            entries_data = entries_data[1:]
-        entries_data.append((new_value, "live", claim_id))
-    rewrite_window(db, series=series, window_type=window_type, entries_data=entries_data)
-
-
 def session_has_critical_fraud(db: Session, record: SessionRecord) -> bool:
     critical_flag = db.exec(
         select(FraudFlag).where(
@@ -1333,30 +1801,7 @@ def maybe_activate_phase_2(
     state: ExperimentState,
     triggering_session_id: str,
 ) -> bool:
-    if state.current_phase != PHASE_1_MAIN:
-        return False
-    if state.valid_completed_count < state.phase_transition_threshold:
-        return False
-
-    state.current_phase = PHASE_2_ROBUSTNESS
-    state.phase_2_activated_at = utcnow()
-    state.treatment_version = treatment_version_for_phase(PHASE_2_ROBUSTNESS)
-    state.allocation_version = allocation_version_for_phase(PHASE_2_ROBUSTNESS)
-    state.updated_at = utcnow()
-    db.add(state)
-    create_audit(
-        db,
-        entity_type="experiment_state",
-        entity_id=state.id,
-        action="phase_2_activated",
-        session_id=triggering_session_id,
-        payload={
-            "activated_at_valid_completed_count": state.valid_completed_count,
-            "phase_transition_threshold": state.phase_transition_threshold,
-            "current_phase": state.current_phase,
-        },
-    )
-    return True
+    return False
 
 
 def maybe_close_root(db: Session, *, root: SeriesRoot, reason: str) -> None:
@@ -1640,13 +2085,16 @@ def build_report_snapshot(record: SessionRecord) -> Optional[dict[str, Any]]:
         "window_version": record.report_snapshot_version,
         "message": record.report_snapshot_message,
         "message_version": record.report_snapshot_message_version,
-        "is_control": record.report_snapshot_treatment == "control",
+        "is_control": record.report_snapshot_treatment == CONTROL_TREATMENT_KEY,
     }
 
 
 def build_session_payload(db: Session, record: SessionRecord) -> dict[str, Any]:
     series = get_series_or_404(db, record.series_id)
     root = db.get(SeriesRoot, record.root_id)
+    treatment_deck = db.get(TreatmentDeck, record.treatment_deck_id)
+    result_deck = db.get(ResultDeck, record.result_deck_id)
+    payment_deck = db.get(PaymentDeck, record.payment_deck_id)
     throws = db.exec(
         select(Throw).where(Throw.session_id == record.id).order_by(Throw.attempt_index)
     ).all()
@@ -1681,8 +2129,12 @@ def build_session_payload(db: Session, record: SessionRecord) -> dict[str, Any]:
         "telemetry_version": record.telemetry_version,
         "lexicon_version": record.lexicon_version,
         "treatment_key": record.treatment_key,
+        "treatment_type": record.treatment_type,
         "treatment_family": record.treatment_family,
         "norm_target_value": record.norm_target_value,
+        "displayed_count_target": record.displayed_count_target,
+        "displayed_denominator": record.displayed_denominator,
+        "is_control": record.treatment_key == CONTROL_TREATMENT_KEY,
         "language_at_access": record.language_at_access,
         "language_at_claim": record.language_at_claim,
         "language_changed_during_session": record.language_changed_during_session,
@@ -1721,6 +2173,12 @@ def build_session_payload(db: Session, record: SessionRecord) -> dict[str, Any]:
         "position_index": record.position_index,
         "root_sequence": root.root_sequence if root else None,
         "phase_root_sequence": root.root_sequence if root else None,
+        "treatment_deck_index": treatment_deck.deck_index if treatment_deck else None,
+        "treatment_card_position": record.treatment_card_position,
+        "result_deck_index": result_deck.deck_index if result_deck else None,
+        "result_card_position": record.result_card_position,
+        "payment_deck_index": payment_deck.deck_index if payment_deck else None,
+        "payment_card_position": record.payment_card_position,
         "selected_for_payment": record.selected_for_payment,
         "max_attempts": record.max_attempts,
         "first_result_value": record.first_result_value,
@@ -1859,8 +2317,11 @@ def build_session_payload(db: Session, record: SessionRecord) -> dict[str, Any]:
         "series": {
             "experiment_phase": series.experiment_phase,
             "treatment_key": series.treatment_key,
+            "treatment_type": record.treatment_type,
             "treatment_family": series.treatment_family,
             "norm_target_value": series.norm_target_value,
+            "displayed_count_target": record.displayed_count_target,
+            "displayed_denominator": record.displayed_denominator,
             "completed_count": series.completed_count,
             "visible_count_target": series.visible_count_target,
             "actual_count_target": series.actual_count_target,
@@ -1916,8 +2377,7 @@ def ensure_user_and_session(
             last_seen_at=now,
         )
         db.add(user)
-        db.commit()
-        db.refresh(user)
+        db.flush()
 
     if user.is_blocked:
         raise HTTPException(status_code=423, detail="Pulsera bloqueada")
@@ -1994,21 +2454,41 @@ def ensure_user_and_session(
 
     experiment_state = get_or_create_experiment_state(db, for_update=True)
     phase_key = experiment_state.current_phase
-    root = get_active_root(db, phase_key, for_update=True)
-    series = choose_series_for_assignment(db, root, for_update=True)
-    series.position_counter += 1
-    position_index = series.position_counter
-    deck_row = get_deck_value(
-        db,
-        root_id=root.id,
-        position_index=position_index,
-        attempt_index=1,
-    )
+    session_id = make_uuid()
+    override = demo_override(bracelet_id)
+    if override:
+        (
+            treatment_deck,
+            treatment_card,
+            legacy_series,
+            result_deck,
+            result_card,
+            payment_deck,
+            payment_card,
+        ) = assign_demo_cards(db, bracelet_id=bracelet_id, session_id=session_id)
+        phase_activation_status = "demo_override"
+    else:
+        (
+            treatment_deck,
+            treatment_card,
+            legacy_series,
+        ) = assign_next_treatment_card(db, session_id=session_id)
+        result_deck, result_card = assign_next_result_card(db, session_id=session_id)
+        payment_deck, payment_card = assign_next_payment_card(
+            db, session_id=session_id
+        )
+        phase_activation_status = current_phase_activation_status(phase_key)
+
+    root = db.get(SeriesRoot, treatment_deck.legacy_root_id) if treatment_deck.legacy_root_id else None
+    treatment = treatment_config(phase_key, treatment_card.treatment_key)
+    position_index = treatment_card.card_position
+    root_id = root.id if root else legacy_series.root_id
     session_record = SessionRecord(
+        id=session_id,
         user_id=user.id,
-        root_id=root.id,
-        series_id=series.id,
-        referral_code=referral_code(f"{user.id}:{root.id}:{position_index}"),
+        root_id=legacy_series.root_id,
+        series_id=legacy_series.id,
+        referral_code=referral_code(f"{user.id}:{root_id}:{position_index}"),
         invited_by_referral_code=incoming_referral_code,
         referral_source=referral_source,
         referral_medium=referral_medium,
@@ -2022,7 +2502,7 @@ def ensure_user_and_session(
         experiment_version=EXPERIMENT_VERSION,
         experiment_phase=phase_key,
         phase_version=phase_version_for_phase(phase_key),
-        phase_activation_status=current_phase_activation_status(phase_key),
+        phase_activation_status=phase_activation_status,
         ui_version=UI_VERSION,
         consent_version=CONSENT_VERSION,
         treatment_version=treatment_version_for_phase(phase_key),
@@ -2032,9 +2512,18 @@ def ensure_user_and_session(
         payment_version=PAYMENT_VERSION,
         telemetry_version=TELEMETRY_VERSION,
         lexicon_version=LEXICON_VERSION,
-        treatment_key=series.treatment_key,
-        treatment_family=series.treatment_family,
-        norm_target_value=series.norm_target_value,
+        treatment_key=treatment_card.treatment_key,
+        treatment_type=str(treatment["treatment_type"]),
+        treatment_family=str(treatment["treatment_family"]),
+        norm_target_value=treatment["norm_target_value"],
+        displayed_count_target=treatment["displayed_count_target"],
+        displayed_denominator=treatment["displayed_denominator"],
+        treatment_deck_id=treatment_deck.id,
+        treatment_card_position=treatment_card.card_position,
+        result_deck_id=result_deck.id,
+        result_card_position=result_card.card_position,
+        payment_deck_id=payment_deck.id,
+        payment_card_position=payment_card.card_position,
         language_at_access=language,
         language_at_claim=language,
         language_changed_during_session=False,
@@ -2051,7 +2540,7 @@ def ensure_user_and_session(
         consent_data_accepted=consent_data_accepted,
         consent_accepted_at=now,
         max_attempts=MAX_ATTEMPTS,
-        selected_for_payment=deck_row.payout_eligible,
+        selected_for_payment=payment_card.payout_eligible,
         client_installation_id=client_installation_id,
         device_hash=device_hash,
         ip_hash=ip_hash,
@@ -2071,7 +2560,7 @@ def ensure_user_and_session(
 
     user.last_seen_at = now
     db.add(user)
-    db.add(series)
+    db.add(legacy_series)
     db.add(session_record)
     db.flush()
     db.add(
@@ -2107,14 +2596,24 @@ def ensure_user_and_session(
         action="session_assigned",
         session_id=session_record.id,
         new_state="assigned",
-            payload={
-                "root_id": root.id,
-                "series_id": series.id,
+        payload={
+                "root_id": legacy_series.root_id,
+                "series_id": legacy_series.id,
                 "experiment_phase": phase_key,
-                "treatment_key": series.treatment_key,
-                "treatment_family": series.treatment_family,
-                "norm_target_value": series.norm_target_value,
+                "treatment_key": treatment_card.treatment_key,
+                "treatment_type": treatment["treatment_type"],
+                "treatment_family": treatment["treatment_family"],
+                "norm_target_value": treatment["norm_target_value"],
+                "displayed_count_target": treatment["displayed_count_target"],
+                "displayed_denominator": treatment["displayed_denominator"],
                 "position_index": position_index,
+                "treatment_deck_index": treatment_deck.deck_index,
+                "treatment_card_position": treatment_card.card_position,
+                "result_deck_index": result_deck.deck_index,
+                "result_card_position": result_card.card_position,
+                "payment_deck_index": payment_deck.deck_index,
+                "payment_card_position": payment_card.card_position,
+                "selected_for_payment": payment_card.payout_eligible,
                 "referral_code": session_record.referral_code,
                 "invited_by_referral_code": session_record.invited_by_referral_code,
                 "invited_by_session_id": session_record.invited_by_session_id,
@@ -2123,6 +2622,7 @@ def ensure_user_and_session(
                 "referral_campaign": session_record.referral_campaign,
                 "referral_link_id": session_record.referral_link_id,
                 "language_at_access": language,
+                "demo_override": bool(override),
             },
         )
 
@@ -2205,13 +2705,20 @@ def healthcheck() -> dict[str, Any]:
     with Session(engine) as db:
         experiment_state = get_or_create_experiment_state(db)
         prizes = prize_summary(db)
-        active_root = db.exec(
-            select(SeriesRoot)
-            .where(
-                SeriesRoot.status == "active",
-                SeriesRoot.experiment_phase == experiment_state.current_phase,
-            )
-            .order_by(SeriesRoot.root_sequence.desc())
+        active_treatment_deck = db.exec(
+            select(TreatmentDeck)
+            .where(TreatmentDeck.status == "active")
+            .order_by(TreatmentDeck.deck_index)
+        ).first()
+        active_result_deck = db.exec(
+            select(ResultDeck)
+            .where(ResultDeck.status == "active")
+            .order_by(ResultDeck.deck_index)
+        ).first()
+        active_payment_deck = db.exec(
+            select(PaymentDeck)
+            .where(PaymentDeck.status == "active")
+            .order_by(PaymentDeck.deck_index)
         ).first()
         return {
             "ok": True,
@@ -2229,7 +2736,9 @@ def healthcheck() -> dict[str, Any]:
             "site_code": SITE_CODE,
             "campaign_code": CAMPAIGN_CODE,
             "environment_label": ENVIRONMENT_LABEL,
-            "active_root_sequence": active_root.root_sequence if active_root else None,
+            "active_treatment_deck_index": active_treatment_deck.deck_index if active_treatment_deck else None,
+            "active_result_deck_index": active_result_deck.deck_index if active_result_deck else None,
+            "active_payment_deck_index": active_payment_deck.deck_index if active_payment_deck else None,
         }
 
 
@@ -2238,6 +2747,7 @@ def config() -> dict[str, Any]:
     with Session(engine) as db:
         experiment_state = get_or_create_experiment_state(db)
         current_phase = experiment_state.current_phase
+    treatment_definitions = phase_treatments(current_phase)
     return {
         "schema_version": SCHEMA_VERSION,
         "experiment_version": EXPERIMENT_VERSION,
@@ -2252,20 +2762,38 @@ def config() -> dict[str, Any]:
         "max_attempts": MAX_ATTEMPTS,
         "participant_limit": PARTICIPANT_LIMIT,
         "window_size": WINDOW_SIZE,
+        "displayed_denominator": DISPLAYED_DENOMINATOR,
+        "treatment_deck_size": TREATMENT_DECK_SIZE,
+        "result_deck_size": RESULT_DECK_SIZE,
+        "payment_deck_size": PAYMENT_DECK_SIZE,
+        "payment_winners_per_deck": 1,
         "prize_eur": PRIZE_EUR,
-        "treatments": list(assignment_weights_for_phase(current_phase).keys()),
-        "seed_initial_counts": seed_initial_counts_for_phase(current_phase),
+        "treatments": list(TREATMENT_KEYS),
+        "seed_initial_counts": {
+            treatment_key: int(config["displayed_count_target"])
+            for treatment_key, config in treatment_definitions.items()
+            if config["displayed_count_target"] is not None
+        },
+        "treatment_display_counts": {
+            treatment_key: config["displayed_count_target"]
+            for treatment_key, config in treatment_definitions.items()
+        },
         "treatment_targets": {
             treatment_key: treatment["norm_target_value"]
-            for treatment_key, treatment in phase_treatments(current_phase).items()
+            for treatment_key, treatment in treatment_definitions.items()
         },
-        "collapse_consecutive_claims": COLLAPSE_CONSECUTIVE_CLAIMS,
+        "collapse_consecutive_claims": 0,
         "treatment_version": treatment_version_for_phase(current_phase),
         "allocation_version": allocation_version_for_phase(current_phase),
         "deployment_context": DEPLOYMENT_CONTEXT,
         "site_code": SITE_CODE,
         "campaign_code": CAMPAIGN_CODE,
         "environment_label": ENVIRONMENT_LABEL,
+        "demo_ids": {
+            "winner_control": "CTRL1234",
+            "loser_norm_0": "NORM0000",
+            "loser_norm_1": "NORM0001",
+        },
         "experiment_control": {
             "status": experiment_state.experiment_status,
             "paused": experiment_state.experiment_status == "paused",
@@ -2458,16 +2986,26 @@ def roll(
                 status_code=409, detail="No quedan mas tiradas permitidas"
             )
 
-        deck_row = get_deck_value(
-            db,
-            root_id=record.root_id,
-            position_index=record.position_index,
-            attempt_index=payload.attempt_index,
-        )
+        if payload.attempt_index == 1:
+            result_card = db.exec(
+                select(ResultDeckCard).where(
+                    ResultDeckCard.deck_id == record.result_deck_id,
+                    ResultDeckCard.card_position == record.result_card_position,
+                )
+            ).first()
+            if not result_card:
+                raise HTTPException(
+                    status_code=500,
+                    detail="No existe primera tirada preasignada para la sesion",
+                )
+            result_value = result_card.result_value
+        else:
+            result_value = reroll_value_for_session(record.id, payload.attempt_index)
+
         throw = Throw(
             session_id=record.id,
             attempt_index=payload.attempt_index,
-            result_value=deck_row.result_value,
+            result_value=result_value,
             reaction_ms=payload.reaction_ms,
             idempotency_key=payload.idempotency_key,
         )
@@ -2477,13 +3015,13 @@ def roll(
         record.state = "in_game"
         record.screen_cursor = "game"
         record.last_seen_at = utcnow()
-        record.last_seen_value = deck_row.result_value
+        record.last_seen_value = result_value
         record.max_seen_value = max(
-            record.max_seen_value or deck_row.result_value,
-            deck_row.result_value,
+            record.max_seen_value or result_value,
+            result_value,
         )
         if payload.attempt_index == 1:
-            record.first_result_value = deck_row.result_value
+            record.first_result_value = result_value
             record.first_roll_at = record.first_roll_at or utcnow()
         else:
             record.reroll_count = payload.attempt_index - 1
@@ -2500,14 +3038,17 @@ def roll(
             idempotency_key=payload.idempotency_key,
             payload={
                 "attempt_index": payload.attempt_index,
-                "result_value": deck_row.result_value,
+                "result_value": result_value,
+                "result_source": "result_deck"
+                if payload.attempt_index == 1
+                else "session_reroll_rng",
             },
         )
 
         response_payload = {
             "attempt": {
                 "attempt_index": payload.attempt_index,
-                "result_value": deck_row.result_value,
+                "result_value": result_value,
                 "is_first_roll": payload.attempt_index == 1,
                 "remaining_attempts": record.max_attempts - payload.attempt_index,
             },
@@ -2551,20 +3092,19 @@ def prepare_report(
                 status_code=409, detail="Todavia no existe primera tirada"
             )
 
-        series = get_series_or_404(db, record.series_id, for_update=True)
         old_state = record.state
         record.state = "report_ready"
         record.screen_cursor = "report"
         record.report_prepared_at = utcnow()
         record.last_seen_at = utcnow()
-        if series.treatment_key == "control":
-            record.report_snapshot_treatment = "control"
+        if record.treatment_key == CONTROL_TREATMENT_KEY:
+            record.report_snapshot_treatment = CONTROL_TREATMENT_KEY
             record.report_snapshot_count_target = None
             record.report_snapshot_denominator = None
             record.report_snapshot_target_value = None
             record.report_snapshot_version = None
             record.report_snapshot_message = treatment_message(
-                "control",
+                CONTROL_TREATMENT_KEY,
                 None,
                 None,
                 None,
@@ -2573,16 +3113,16 @@ def prepare_report(
                 record.experiment_phase
             )
         else:
-            record.report_snapshot_treatment = series.treatment_key
-            record.report_snapshot_count_target = series.visible_count_target
-            record.report_snapshot_denominator = series.sample_size
-            record.report_snapshot_target_value = series.norm_target_value
-            record.report_snapshot_version = series.visible_window_version
+            record.report_snapshot_treatment = record.treatment_key
+            record.report_snapshot_count_target = record.displayed_count_target
+            record.report_snapshot_denominator = record.displayed_denominator
+            record.report_snapshot_target_value = record.norm_target_value
+            record.report_snapshot_version = 1
             record.report_snapshot_message = treatment_message(
-                series.treatment_key,
-                series.visible_count_target,
-                series.sample_size,
-                series.norm_target_value,
+                record.treatment_key,
+                record.displayed_count_target,
+                record.displayed_denominator,
+                record.norm_target_value,
             )
             record.report_snapshot_message_version = displayed_message_version_for_phase(
                 record.experiment_phase
@@ -2690,81 +3230,55 @@ def submit_report(
         if record.first_result_value is None:
             raise HTTPException(status_code=409, detail="No existe primera tirada")
 
-        with distributed_lock(f"series:{record.series_id}"):
-            existing_claim = db.exec(
-                select(Claim).where(Claim.session_id == record.id)
-            ).first()
-            if existing_claim:
-                raise HTTPException(status_code=409, detail="La sesion ya tiene claim")
+        existing_claim = db.exec(
+            select(Claim).where(Claim.session_id == record.id)
+        ).first()
+        if existing_claim:
+            raise HTTPException(status_code=409, detail="La sesion ya tiene claim")
 
-            series = get_series_or_404(db, record.series_id, for_update=True)
-            active_operational_note = get_active_operational_note(db)
-            root = db.exec(
-                with_optional_for_update(
-                    select(SeriesRoot).where(SeriesRoot.id == record.root_id),
-                    True,
-                )
-            ).first()
-            throws = db.exec(
-                select(Throw).where(Throw.session_id == record.id).order_by(Throw.attempt_index)
-            ).all()
-            seen_values = [item.result_value for item in throws]
-            claim = Claim(
-                session_id=record.id,
-                root_id=record.root_id,
-                series_id=record.series_id,
-                experiment_phase=record.experiment_phase,
-                phase_activation_status=record.phase_activation_status,
-                treatment_version=record.treatment_version,
-                allocation_version=record.allocation_version,
-                treatment_family=record.treatment_family,
-                norm_target_value=record.norm_target_value,
-                position_index=record.position_index,
-                true_first_result=record.first_result_value,
-                reported_value=payload.reported_value,
-                is_honest=payload.reported_value == record.first_result_value,
-                reroll_count=record.reroll_count,
-                displayed_treatment_key=record.report_snapshot_treatment or series.treatment_key,
-                displayed_count_target=record.report_snapshot_count_target,
-                displayed_denominator=record.report_snapshot_denominator,
-                displayed_target_value=record.report_snapshot_target_value,
-                displayed_window_version=record.report_snapshot_version,
-                displayed_message=record.report_snapshot_message,
-                displayed_message_version=record.report_snapshot_message_version,
-                operational_note_id=active_operational_note.id if active_operational_note else None,
-                operational_note_text=active_operational_note.note_text if active_operational_note else None,
-                max_seen_value=record.max_seen_value,
-                last_seen_value=record.last_seen_value,
-                matches_last_seen=record.last_seen_value == payload.reported_value,
-                matches_any_seen=payload.reported_value in seen_values,
-                reaction_ms=payload.reaction_ms,
-            )
-            db.add(claim)
-            db.flush()
+        series = get_series_or_404(db, record.series_id, for_update=True)
+        active_operational_note = get_active_operational_note(db)
+        throws = db.exec(
+            select(Throw).where(Throw.session_id == record.id).order_by(Throw.attempt_index)
+        ).all()
+        seen_values = [item.result_value for item in throws]
+        claim = Claim(
+            session_id=record.id,
+            root_id=record.root_id,
+            series_id=record.series_id,
+            experiment_phase=record.experiment_phase,
+            phase_activation_status=record.phase_activation_status,
+            treatment_version=record.treatment_version,
+            allocation_version=record.allocation_version,
+            treatment_family=record.treatment_family,
+            norm_target_value=record.norm_target_value,
+            position_index=record.position_index,
+            true_first_result=record.first_result_value,
+            reported_value=payload.reported_value,
+            is_honest=payload.reported_value == record.first_result_value,
+            reroll_count=record.reroll_count,
+            displayed_treatment_key=record.report_snapshot_treatment or record.treatment_key,
+            displayed_count_target=record.report_snapshot_count_target,
+            displayed_denominator=record.report_snapshot_denominator,
+            displayed_target_value=record.report_snapshot_target_value,
+            displayed_window_version=record.report_snapshot_version,
+            displayed_message=record.report_snapshot_message,
+            displayed_message_version=record.report_snapshot_message_version,
+            operational_note_id=active_operational_note.id if active_operational_note else None,
+            operational_note_text=active_operational_note.note_text if active_operational_note else None,
+            max_seen_value=record.max_seen_value,
+            last_seen_value=record.last_seen_value,
+            matches_last_seen=record.last_seen_value == payload.reported_value,
+            matches_any_seen=payload.reported_value in seen_values,
+            reaction_ms=payload.reaction_ms,
+        )
+        db.add(claim)
+        db.flush()
 
-            if series.treatment_family != "control":
-                append_window_value(
-                    db,
-                    series=series,
-                    window_type="visible",
-                    new_value=payload.reported_value,
-                    claim_id=claim.id,
-                )
-            append_window_value(
-                db,
-                series=series,
-                window_type="actual",
-                new_value=payload.reported_value,
-                claim_id=claim.id,
-            )
-
-            series.completed_count += 1
-            target_value = series_target_value(series)
-            if target_value is not None and payload.reported_value == target_value:
-                series.full_target_streak += 1
-            else:
-                series.full_target_streak = 0
-            db.add(series)
+        series.completed_count += 1
+        series.is_closed = True
+        series.close_reason = series.close_reason or "session_completed"
+        db.add(series)
 
         old_state = record.state
         record.reported_value = payload.reported_value
@@ -2805,11 +3319,6 @@ def submit_report(
             experiment_state.valid_completed_count += 1
             experiment_state.updated_at = utcnow()
             db.add(experiment_state)
-            maybe_activate_phase_2(
-                db,
-                state=experiment_state,
-                triggering_session_id=record.id,
-            )
 
         snapshot = get_or_create_snapshot_record(db, record.id)
         snapshot.language_used = (
@@ -2820,6 +3329,10 @@ def submit_report(
         snapshot.treatment_key = record.report_snapshot_treatment or record.treatment_key
         snapshot.treatment_family = record.treatment_family
         snapshot.norm_target_value = record.report_snapshot_target_value
+        snapshot.is_control = (
+            (record.report_snapshot_treatment or record.treatment_key)
+            == CONTROL_TREATMENT_KEY
+        )
         snapshot.displayed_count_target = record.report_snapshot_count_target
         snapshot.displayed_denominator = record.report_snapshot_denominator
         snapshot.displayed_message_text = (
@@ -2871,24 +3384,6 @@ def submit_report(
                 payload={"reason": "winner_with_device_duplication"},
             )
 
-        close_reason: Optional[str] = None
-        actual_entries = get_window_entries(
-            db, series_id=series.id, window_type="actual"
-        )
-        if series.completed_count >= PARTICIPANT_LIMIT:
-            close_reason = "participant_limit"
-        elif (
-            series.treatment_family != "control"
-            and target_value is not None
-            and
-            len(actual_entries) == WINDOW_SIZE
-            and series.actual_count_target == WINDOW_SIZE
-            and series.full_target_streak >= COLLAPSE_CONSECUTIVE_CLAIMS
-        ):
-            close_reason = "norm_collapse"
-        if close_reason and root:
-            maybe_close_root(db, root=root, reason=close_reason)
-
         create_audit(
             db,
             entity_type="session",
@@ -2902,7 +3397,13 @@ def submit_report(
                 "reported_value": payload.reported_value,
                 "is_honest": record.is_honest,
                 "is_valid_completed": record.is_valid_completed,
-                "close_reason": close_reason,
+                "treatment_key": record.treatment_key,
+                "treatment_deck_id": record.treatment_deck_id,
+                "treatment_card_position": record.treatment_card_position,
+                "result_deck_id": record.result_deck_id,
+                "result_card_position": record.result_card_position,
+                "payment_deck_id": record.payment_deck_id,
+                "payment_card_position": record.payment_card_position,
             },
         )
 
@@ -3028,7 +3529,15 @@ def capture_display_snapshot(
         snapshot.language_used = payload.language or snapshot.language_used or record.language_at_claim or record.language_at_access
         snapshot.treatment_key = record.report_snapshot_treatment or record.treatment_key
         snapshot.treatment_family = record.treatment_family
-        snapshot.norm_target_value = record.report_snapshot_target_value or record.norm_target_value
+        snapshot.norm_target_value = (
+            record.report_snapshot_target_value
+            if record.report_snapshot_target_value is not None
+            else record.norm_target_value
+        )
+        snapshot.is_control = (
+            (record.report_snapshot_treatment or record.treatment_key)
+            == CONTROL_TREATMENT_KEY
+        )
         snapshot.displayed_count_target = record.report_snapshot_count_target
         snapshot.displayed_denominator = record.report_snapshot_denominator
         if payload.treatment_message_text:
@@ -3263,6 +3772,16 @@ def admin_experiment(db: Session = Depends(get_session)) -> dict[str, Any]:
     state = get_or_create_experiment_state(db)
     prizes = prize_summary(db)
     active_operational_note = get_active_operational_note(db)
+    treatment_counts: dict[str, int] = {}
+    for treatment_key in TREATMENT_KEYS:
+        treatment_counts[treatment_key] = int(
+            db.exec(
+                select(func.count())
+                .select_from(SessionRecord)
+                .where(SessionRecord.treatment_key == treatment_key)
+            ).one()
+            or 0
+        )
     return {
         "schema_version": SCHEMA_VERSION,
         "experiment_version": EXPERIMENT_VERSION,
@@ -3291,6 +3810,27 @@ def admin_experiment(db: Session = Depends(get_session)) -> dict[str, Any]:
         "campaign_code": CAMPAIGN_CODE,
         "environment_label": ENVIRONMENT_LABEL,
         "prizes": prizes,
+        "treatment_observations": treatment_counts,
+        "treatment_decks": deck_status_payload(
+            db,
+            deck_model=TreatmentDeck,
+            card_model=TreatmentDeckCard,
+        ),
+        "result_decks": deck_status_payload(
+            db,
+            deck_model=ResultDeck,
+            card_model=ResultDeckCard,
+        ),
+        "payment_decks": deck_status_payload(
+            db,
+            deck_model=PaymentDeck,
+            card_model=PaymentDeckCard,
+        ),
+        "demo_ids": {
+            "winner_control": "CTRL1234",
+            "loser_norm_0": "NORM0000",
+            "loser_norm_1": "NORM0001",
+        },
         "active_operational_note": operational_note_payload(active_operational_note),
     }
 
@@ -3352,19 +3892,28 @@ def admin_roots(db: Session = Depends(get_session)) -> list[dict[str, Any]]:
     roots = db.exec(select(SeriesRoot).order_by(SeriesRoot.root_sequence)).all()
     response: list[dict[str, Any]] = []
     for root in roots:
+        treatment_deck = db.exec(
+            select(TreatmentDeck).where(TreatmentDeck.legacy_root_id == root.id)
+        ).first()
         series_items = db.exec(
             select(Series).where(Series.root_id == root.id).order_by(Series.treatment_key)
         ).all()
-        payout_positions = [
-            deck.position_index
-            for deck in db.exec(
-                select(DeckPosition).where(
-                    DeckPosition.root_id == root.id,
-                    DeckPosition.attempt_index == 1,
-                    DeckPosition.payout_eligible == True,  # noqa: E712
-                )
-            ).all()
-        ]
+        payment_deck = None
+        if treatment_deck and treatment_deck.deck_index > 0:
+            payment_deck = db.exec(
+                select(PaymentDeck).where(PaymentDeck.deck_index == treatment_deck.deck_index)
+            ).first()
+        payment_winner_positions = []
+        if payment_deck:
+            payment_winner_positions = [
+                card.card_position
+                for card in db.exec(
+                    select(PaymentDeckCard).where(
+                        PaymentDeckCard.deck_id == payment_deck.id,
+                        PaymentDeckCard.payout_eligible == True,  # noqa: E712
+                    )
+                ).all()
+            ]
         response.append(
             {
                 "root_id": root.id,
@@ -3374,7 +3923,12 @@ def admin_roots(db: Session = Depends(get_session)) -> list[dict[str, Any]]:
                 "allocation_version": root.allocation_version,
                 "status": root.status,
                 "close_reason": root.close_reason,
-                "payout_positions": payout_positions,
+                "treatment_deck_id": treatment_deck.id if treatment_deck else None,
+                "treatment_deck_index": treatment_deck.deck_index if treatment_deck else None,
+                "treatment_deck_status": treatment_deck.status if treatment_deck else None,
+                "payment_deck_id": payment_deck.id if payment_deck else None,
+                "payment_deck_index": payment_deck.deck_index if payment_deck else None,
+                "payment_winner_positions": payment_winner_positions,
                 "series": [
                     {
                         "series_id": item.id,

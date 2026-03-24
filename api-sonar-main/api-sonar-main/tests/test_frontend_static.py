@@ -57,10 +57,22 @@ class FrontendStaticTests(unittest.TestCase):
 
     def test_ui_lexicon_contains_payment_page_in_all_languages(self) -> None:
         lexicon = self.read("utils", "uiLexicon.ts")
-        self.assertGreaterEqual(lexicon.count("paymentPage:"), 5)
+        self.assertGreaterEqual(lexicon.count("paymentPage:"), 6)
         self.assertIn("languageNames: Record<AppLanguage, string>", lexicon)
-        self.assertIn('export type AppLanguage = "es" | "ca" | "en" | "fr" | "pt";', lexicon)
+        self.assertIn('export type AppLanguage = "es" | "ca" | "en" | "fr" | "pt" | "it";', lexicon)
         self.assertIn("validateLexiconCoverage", lexicon)
+
+    def test_demo_ids_and_new_social_message_are_wired(self) -> None:
+        api_text = self.read("utils", "api.ts")
+        session_context = self.read("utils", "SessionContext.tsx")
+        self.assertIn("CTRL1234", api_text)
+        self.assertIn("NORM0000", api_text)
+        self.assertIn("NORM0001", api_text)
+        self.assertIn("design_62_treatments_v1", api_text)
+        self.assertIn("In a group of {denominator} results before you", self.read("utils", "uiLexicon.ts"))
+        self.assertIn("CTRL1234", session_context)
+        self.assertIn("NORM0000", session_context)
+        self.assertIn("NORM0001", session_context)
 
     def test_frontend_has_client_context_and_spell_telemetry_utils(self) -> None:
         use_page_telemetry = self.read("utils", "usePageTelemetry.ts")

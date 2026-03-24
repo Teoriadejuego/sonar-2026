@@ -1,18 +1,22 @@
 # Telemetry Spec
 
 ## Principio
-SONAR registra telemetría de interacción, atención, contexto técnico y red con el objetivo de reconstruir qué hizo cada participante, cuándo, en qué idioma, bajo qué condiciones técnicas y con qué calidad de atención.
+SONAR registra telemetria de interaccion, contexto tecnico, red y atencion para poder distinguir:
+- comportamiento experimental
+- friccion tecnica
+- errores de interfaz o conectividad
+- calidad de la exposicion a cada pantalla
 
-No se capturan permisos especiales ni datos claramente intrusivos:
-- no geolocalización precisa
-- no cámara
-- no micrófono
+No se capturan permisos intrusivos:
+- no geolocalizacion precisa
+- no camara
+- no microfono
 - no contactos
 - no portapapeles
-- no historial de navegación
+- no historial de navegacion
 
-## Estructura de evento crudo
-Cada evento en `telemetry` incluye, cuando aplica:
+## Evento crudo
+Cada fila de `telemetry.csv` puede incluir:
 - `server_ts`
 - `client_ts`
 - `event_sequence_number`
@@ -38,8 +42,11 @@ Cada evento en `telemetry` incluye, cuando aplica:
 - `visibility_state`
 - `payload_json`
 
+Los timestamps cliente se guardan como `BIGINT`, por lo que soportan milisegundos Unix completos sin overflow.
+
 ## Tipos principales de evento
-### Lifecycle
+
+### lifecycle
 - `resume_session`
 - `page_reload`
 - `focus`
@@ -48,19 +55,19 @@ Cada evento en `telemetry` incluye, cuando aplica:
 - `visibility_visible`
 - `language_change`
 
-### Screen
+### screen
 - `screen_enter`
 - `screen_exit`
 
-### Click
-- CTA principal
-- CTA secundaria
+### click
+- clicks de CTA primario
+- CTA secundario
 - checkbox
-- selección de idioma
-- compartir
-- pago
+- selector de idioma
+- invitacion por WhatsApp
+- acciones de payout
 
-### Network
+### network
 - `api_success`
 - `api_error`
 - `api_exception`
@@ -68,75 +75,80 @@ Cada evento en `telemetry` incluye, cuando aplica:
 - `browser_offline`
 - `connection_change`
 
-### Error
+### error
 - `js_error`
 - `unhandled_rejection`
-- errores de acceso, roll, prepare-report, submit-report y display snapshot
+- errores de acceso
+- errores de roll
+- errores de prepare-report
+- errores de submit-report
+- errores de display snapshot
+- errores de payout
 
 ## Screen spells
-`screen_events` exporta una fila por spell de pantalla.
+`screen_events.csv` resume cada estancia en una pantalla.
 
-Cada spell resume:
-- entrada y salida
-- duración total
-- tiempo visible
-- tiempo oculta
-- tiempo fuera de foco
-- número de cambios de foco
-- número de cambios de visibilidad
-- número de clics
-- tiempo hasta primer clic
-- tiempo hasta CTA principal
-- tiempo hasta CTA secundaria
-- idioma de entrada y de salida
-- si hubo cambio de idioma durante esa estancia
+Campos principales:
+- `session_id`, `spell_id`, `screen_name`, `entry_origin`
+- `entered_client_ts`, `entered_server_ts`, `exited_client_ts`, `exited_server_ts`
+- `duration_total_ms`, `visible_ms`, `hidden_ms`, `blur_ms`
+- `focus_change_count`, `visibility_change_count`
+- `click_count`, `primary_click_count`, `secondary_click_count`
+- `first_click_ms`, `primary_cta_ms`, `secondary_cta_ms`
+- `first_click_target`, `click_targets_json`
+- `language_at_entry`, `language_at_exit`, `language_changed_during_spell`
 
-## Contexto de cliente
-`client_contexts` recoge por sesión:
-- navegador y versión
-- sistema operativo y versión
+## Contexto tecnico
+`client_contexts.csv` consolida por sesion:
+- navegador y version
+- sistema operativo y version
 - tipo de dispositivo
-- idioma del navegador
-- idioma de la app
-- tamaño de pantalla y viewport
-- DPR
-- orientación
-- capacidad táctil
+- idioma del navegador y de la app
+- pantalla y viewport
+- device pixel ratio
+- orientacion
+- touch capability
 - hardware concurrency
 - max touch points
-- preferencia de esquema de color
-- estado de red
-- effective connection type
-- downlink estimado
-- RTT estimado
+- color scheme
+- online status
+- connection type
+- estimated downlink
+- estimated rtt
 - timezone offset
 
-## Consentimiento y lectura
-`consent_records` guarda:
-- idioma del consentimiento
-- timestamp de aceptación
-- tiempo visible en landing
-- paneles abiertos
-- duración abierta por panel
-- orden de marcado de checkboxes
-- timestamp relativo de cada checkbox
-- número de intentos bloqueados de continuar
+## Consentimiento
+`consent_records.csv` conserva:
+- idioma de acceso
+- timestamp de aceptacion
+- `landing_visible_ms`
+- paneles eticos abiertos
+- duracion por panel
+- orden de checkboxes
+- tiempos relativos de marcado
+- numero de bloqueos al intentar continuar sin completar requisitos
 
-## Snapshots
-`snapshot_records` permite reconstruir lo visible:
-- idioma
-- mensaje del tratamiento
-- mensaje neutro de control
-- primer valor real
-- último valor visible
-- todos los valores vistos
-- rerolls visibles
-- estado final mostrado
-- mensaje final mostrado
-- código de cobro mostrado
+## Snapshot visible
+`snapshot_records.csv` conserva la reconstruccion de lo mostrado:
+- `treatment_key`
+- `norm_target_value`
+- `is_control`
+- `displayed_count_target`
+- `displayed_denominator`
+- `displayed_message_text`
+- `displayed_message_version`
+- `first_result_value`
+- `last_seen_value`
+- `seen_values_json`
+- `reroll_values_json`
+- `final_outcome`
+- `winner_message_text`
+- `loser_message_text`
+- `payment_code_displayed`
 
-## Derivados operativos principales
-Se calculan o exportan de forma directa:
+## Derivados presentes en sessions.csv
+Los derivados de telemetria mas utiles para analisis y QA se agregan en `sessions.csv`:
+- `landing_visible_ms`
 - `landing_to_start_ms`
 - `consent_total_ms`
 - `instructions_visible_ms`
@@ -159,11 +171,28 @@ Se calculan o exportan de forma directa:
 - `screen_changes_count`
 - `language_change_count`
 
-## Descarga para investigador
-La salida recomendada está en:
-- [http://127.0.0.1:8000/admin/exports](http://127.0.0.1:8000/admin/exports)
+Interpretacion de algunos derivados:
+- `landing_to_start_ms`: tiempo hasta primer CTA principal o primer click en la pantalla de acceso
+- `consent_total_ms`: `landing_visible_ms` mas la suma de los paneles informativos abiertos
+- `game_decision_rt_ms`: tiempo entre la primera tirada servida y la preparacion del reporte
+- `report_rt_ms`: tiempo entre la preparacion del reporte y el envio del claim, o `reaction_ms` del claim si existe
 
-Datasets relevantes para telemetría:
+## Relacion con el nuevo diseno 62/24/100
+La telemetria no asigna tratamiento ni pago. Solo observa:
+- que mensaje se mostro
+- cuando se mostro
+- que pantallas se recorrieron
+- cuanto tardo el participante
+- que eventos de red o error ocurrieron
+
+La asignacion experimental autoritativa vive en:
+- `sessions.csv`
+- `treatment_deck_cards.csv`
+- `result_deck_cards.csv`
+- `payment_deck_cards.csv`
+
+## Descarga recomendada
+Desde `admin/exports`:
 - `sessions.csv`
 - `telemetry.csv`
 - `technical_events.csv`
@@ -171,3 +200,6 @@ Datasets relevantes para telemetría:
 - `client_contexts.csv`
 - `consent_records.csv`
 - `snapshot_records.csv`
+
+Si se quiere conservar trazabilidad completa de jornada:
+- descargar `operational.zip`
