@@ -33,32 +33,34 @@ Secciones:
 - `Participacion voluntaria`
 - `Contacto`
 
+Texto clave:
+- `Introduciras el codigo de tu pulsera, veras una tirada privada, podras hacer lanzamientos extra y despues indicar el numero que salio en el dado. El proceso dura alrededor de un minuto.`
+
 ## Pantalla 3. Instrucciones
 - `Como funciona`
-- `Lanza un dado en la siguiente pantalla. Despues te preguntaremos que numero salio en tu primera tirada.`
-- `La primera tirada es la que cuenta. Segun el numero que nos indiques que salio en esa primera tirada, puedes ganar el premio que aparece en la tabla.`
+- `Lanzaremos un dado en las siguientes pantallas y despues te preguntaremos que numero salio.`
+- `Segun lo que indiques, podras ganar el premio que aparece en la tabla.`
 - `1 de cada 100 recibe el pago.`
 - `Tabla de premios`
 - `Continuar`
 
 ## Pantalla 4. Comprension
 - `Antes de seguir`
-- `Que numero te pediremos que nos digas despues?`
-- `Primera tirada`
-- `Ultima tirada`
-- `La mas alta`
-- `Seguir`
+- `Despues de ver la tirada, que te pediremos?`
+- `Indicar el numero que salio`
+- `Elegir el premio que prefieres`
+- `Volver a tirar`
 
 Errores:
 - `Selecciona una opcion`
-- `Recuerda: te pediremos el numero de la primera tirada`
+- `Recuerda: despues de la tirada te pediremos indicar el numero que salio.`
 
 ## Pantalla 5. Juego
 - `Tirada`
-- `Pulsa el dado o el boton Lanzar para hacer tu primera tirada.`
-- `Pulsa el dado para ver otra tirada.`
-- `Tu primera tirada: {value}`
+- `Mira el numero que sale al lanzar el dado.`
+- `Numero obtenido: {value}`
 - `Lanzar`
+- `Lanzar otra vez`
 - `Continuar`
 
 Errores:
@@ -67,8 +69,8 @@ Errores:
 - `Accion no disponible`
 
 ## Pantalla 6. Reporte
-- `Tu primera tirada`
-- `Indica el numero que te salio al tirar el dado la primera vez tocando ese numero.`
+- `Indica tu numero`
+- `Selecciona el numero que salio al lanzar el dado.`
 
 Errores:
 - `No se pudo guardar la respuesta`
@@ -77,7 +79,7 @@ Errores:
 
 ### Control
 - `Tu respuesta es anonima`
-- `Selecciona tu numero`
+- `Indica el numero que salio`
 
 ### Social
 - `En un grupo de {denominator} resultados antes de ti, el numero de personas que reportaron un {target} fue {count}.`
@@ -100,7 +102,7 @@ Errores:
 ## Bloque de sorteo extra
 - `Consigue opciones extra para el sorteo de SONAR 2027`
 - `Ya tienes 1 papeleta para el sorteo de 2 entradas para SONAR 2027 por haber participado.`
-- `Si quieres una extra, adivina que numero crees que mas veces nos dira la gente que le salio en su primera tirada.`
+- `Si quieres una extra, adivina que numero crees que mas veces nos dira la gente que le salio en el dado.`
 - `1 papeleta por participar`
 - `1 extra si aciertas la prediccion`
 - `1 extra por cada persona del festival que invites y participe`

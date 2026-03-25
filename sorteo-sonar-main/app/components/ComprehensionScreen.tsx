@@ -19,6 +19,7 @@ export function ComprehensionScreen({ onPass }: ComprehensionScreenProps) {
   const correctOption = comprehensionCopy.options[0];
   const startedAtRef = useRef(Date.now());
   const attemptRef = useRef(0);
+  const firstAnswerRef = useRef<string | null>(null);
 
   const handleSelect = async (option: string) => {
     if (isPassing) {
@@ -30,9 +31,14 @@ export function ComprehensionScreen({ onPass }: ComprehensionScreenProps) {
     const responseMs = now - startedAtRef.current;
     const isCorrect = option === correctOption;
     const attemptNumber = attemptRef.current;
+    const completedAt = new Date(now).toISOString();
+
+    if (firstAnswerRef.current === null) {
+      firstAnswerRef.current = option;
+    }
 
     setSelected(option);
-    trackClick("comprehension_select_option", {
+    trackClick("attention_check_select_option", {
       target: option,
       role: "option",
       ctaKind: "primary",
@@ -45,16 +51,19 @@ export function ComprehensionScreen({ onPass }: ComprehensionScreenProps) {
     });
     pushTelemetry({
       event_type: "custom",
-      event_name: "comprehension_attempt",
+      event_name: "attention_check_attempt",
       screen_name: "comprehension",
       client_ts: now,
       duration_ms: responseMs,
       payload: {
         selected_option: option,
-        is_correct: isCorrect,
-        attempt_number: attemptNumber,
-        immediate_pass: isCorrect && attemptNumber === 1,
-        response_time_ms: responseMs,
+        attention_check_passed: isCorrect,
+        attention_check_attempts: attemptNumber,
+        attention_check_first_answer: firstAnswerRef.current,
+        attention_check_rt_ms: responseMs,
+        attention_check_completed_at: isCorrect ? completedAt : null,
+        attention_check_passed_first_try:
+          isCorrect && firstAnswerRef.current === correctOption,
       },
     });
 
@@ -67,15 +76,19 @@ export function ComprehensionScreen({ onPass }: ComprehensionScreenProps) {
     setIsPassing(true);
     pushTelemetry({
       event_type: "custom",
-      event_name: "comprehension_completed",
+      event_name: "attention_check_completed",
       screen_name: "comprehension",
       client_ts: now,
       duration_ms: responseMs,
       payload: {
-        correct_option: option,
-        correct_on_attempt: attemptNumber,
-        immediate_pass: attemptNumber === 1,
-        time_to_correct_ms: responseMs,
+        selected_option: option,
+        attention_check_passed: true,
+        attention_check_attempts: attemptNumber,
+        attention_check_first_answer: firstAnswerRef.current,
+        attention_check_rt_ms: responseMs,
+        attention_check_completed_at: completedAt,
+        attention_check_passed_first_try:
+          firstAnswerRef.current === correctOption,
       },
     });
     await onPass();

@@ -421,7 +421,7 @@ const es = withServerErrors({
       {
         title: "Qué tendrás que hacer",
         body:
-          "Introducirás el código de tu pulsera, verás una tirada privada, podrás hacer lanzamientos extra de comprobación y después indicar el número de tu primera tirada. El proceso dura alrededor de un minuto.",
+          "Introducirás el código de tu pulsera, verás una tirada privada, podrás hacer lanzamientos extra y después indicar el número que salió en el dado. El proceso dura alrededor de un minuto.",
       },
       {
         title: "Pago e incentivos",
@@ -448,30 +448,35 @@ const es = withServerErrors({
   instructions: {
     title: "Cómo funciona",
     intro:
-      "Lanza un dado en la siguiente pantalla. Después te preguntaremos qué número salió en tu primera tirada.",
+      "Lanzaremos un dado en las siguientes pantallas y después te preguntaremos qué número salió.",
     body:
-      "La primera tirada es la que cuenta. Según el número que nos indiques que salió en esa primera tirada, puedes ganar el premio que aparece en la tabla.",
+      "Según lo que indiques, podrás ganar el premio que aparece en la tabla.",
     odds: "1 de cada 100 recibe el pago.",
     prizeTableLabel: "Tabla de premios",
     cta: "Continuar",
   },
   comprehension: {
     eyebrow: "Antes de seguir",
-    title: "¿Qué número te pediremos que nos digas después?",
-    options: ["Primera tirada", "Última tirada", "La más alta"],
+    title: "Después de ver la tirada, ¿qué te pediremos?",
+    options: [
+      "Indicar el número que salió",
+      "Elegir el premio que prefieres",
+      "Volver a tirar",
+    ],
     errorEmpty: "Selecciona una opción",
-    errorWrong: "Recuerda: te pediremos el número de la primera tirada",
+    errorWrong:
+      "Recuerda: después de la tirada te pediremos indicar el número que salió.",
     cta: "Seguir",
   },
   game: {
     title: "Tirada",
-    initialIntro: "Pulsa el dado o el botón Lanzar para hacer tu primera tirada.",
-    intro: "Pulsa el dado para ver otra tirada.",
+    initialIntro: "Mira el número que sale al lanzar el dado.",
+    intro: "Mira el número que sale al lanzar el dado.",
     visibleResultLabel: "",
-    firstResultTemplate: "Tu primera tirada: {value}",
+    firstResultTemplate: "Número obtenido: {value}",
     continueCta: "Continuar",
     firstRollCta: "Lanzar",
-    rerollCta: "",
+    rerollCta: "Lanzar otra vez",
     loading: "Cargando...",
     attemptsTemplate: "Tiradas registradas: {count}/{max}",
     errors: {
@@ -481,8 +486,8 @@ const es = withServerErrors({
     },
   },
   report: {
-    title: "Tu primera tirada",
-    body: "Indica el número que te salió al tirar el dado la primera vez tocando ese número.",
+    title: "Indica tu número",
+    body: "Selecciona el número que salió al lanzar el dado.",
     errorSave: "No se pudo guardar la respuesta",
   },
   prizeReveal: {
@@ -496,7 +501,7 @@ const es = withServerErrors({
   },
   treatment: {
     controlTitle: "Tu respuesta es anónima",
-    controlBody: "Selecciona tu número",
+    controlBody: "Indica el número que salió",
     socialMessageTemplate:
       "En un grupo de {denominator} resultados antes de ti, el numero de personas que reportaron un {target} fue {count}.",
   },
@@ -504,7 +509,7 @@ const es = withServerErrors({
     title: "Consigue opciones extra para el sorteo de SONAR 2027",
     intro: "Ya tienes 1 papeleta para el sorteo de 2 entradas para SONAR 2027 por haber participado.",
     prompt:
-      "Si quieres una extra, adivina qué número crees que más veces nos dirá la gente que le salió en su primera tirada.",
+      "Si quieres una extra, adivina qué número crees que más veces nos dirá la gente que le salió en el dado.",
     baseTicket: "1 papeleta por participar",
     predictionTicket: "1 extra si aciertas la predicción",
     inviteTicket: "1 extra por cada persona del festival que invites y participe",
@@ -639,7 +644,7 @@ const ca = withServerErrors({
       {
         title: "Què hauràs de fer",
         body:
-          "Introduiràs el codi de la polsera, veuràs una tirada privada, podràs fer llançaments extra de comprovació i després indicar el número de la teva primera tirada. El procés dura al voltant d'un minut.",
+          "Introduiràs el codi de la polsera, veuràs una tirada privada, podràs fer llançaments extra i després indicar el número que va sortir al dau. El procés dura al voltant d'un minut.",
       },
       {
         title: "Pagament i incentius",
@@ -666,30 +671,35 @@ const ca = withServerErrors({
   instructions: {
     title: "Com funciona",
     intro:
-      "Llança un dau a la pantalla següent. Després et preguntarem quin número va sortir a la teva primera tirada.",
+      "Llançarem un dau a les pantalles següents i després et preguntarem quin número va sortir.",
     body:
-      "La primera tirada és la que compta. Segons el número que ens indiquis que va sortir en aquesta primera tirada, pots guanyar el premi que apareix a la taula.",
+      "Segons el que indiquis, podràs guanyar el premi que apareix a la taula.",
     odds: "1 de cada 100 rep el pagament.",
     prizeTableLabel: "Taula de premis",
     cta: "Continuar",
   },
   comprehension: {
     eyebrow: "Abans de seguir",
-    title: "Quin número et preguntarem després?",
-    options: ["Primera tirada", "Última tirada", "La més alta"],
+    title: "Després de veure la tirada, què et demanarem?",
+    options: [
+      "Indicar el número que va sortir",
+      "Triar el premi que prefereixes",
+      "Tornar a tirar",
+    ],
     errorEmpty: "Selecciona una opció",
-    errorWrong: "Recorda: et demanarem el número de la primera tirada",
+    errorWrong:
+      "Recorda: després de la tirada et demanarem indicar el número que va sortir.",
     cta: "Seguir",
   },
   game: {
     title: "Tirada",
-    initialIntro: "Prem el dau o el botó Llançar per fer la teva primera tirada.",
-    intro: "Prem el dau per veure una altra tirada.",
+    initialIntro: "Mira el número que surt en llançar el dau.",
+    intro: "Mira el número que surt en llançar el dau.",
     visibleResultLabel: "",
-    firstResultTemplate: "La teva primera tirada: {value}",
+    firstResultTemplate: "Número obtingut: {value}",
     continueCta: "Continuar",
     firstRollCta: "Llançar",
-    rerollCta: "",
+    rerollCta: "Tornar a tirar",
     loading: "Carregant...",
     attemptsTemplate: "Tirades registrades: {count}/{max}",
     errors: {
@@ -699,8 +709,8 @@ const ca = withServerErrors({
     },
   },
   report: {
-    title: "La teva primera tirada",
-    body: "Indica el número que et va sortir en tirar el dau la primera vegada fent-hi clic.",
+    title: "Indica el teu número",
+    body: "Selecciona el número que va sortir en llançar el dau.",
     errorSave: "No s'ha pogut guardar la resposta",
   },
   prizeReveal: {
@@ -714,7 +724,7 @@ const ca = withServerErrors({
   },
   treatment: {
     controlTitle: "La teva resposta és anònima",
-    controlBody: "Selecciona el teu número",
+    controlBody: "Indica el número que va sortir",
     socialMessageTemplate:
       "En un grup de {denominator} resultats abans de tu, el nombre de persones que van informar d'un {target} va ser {count}.",
   },
@@ -722,7 +732,7 @@ const ca = withServerErrors({
     title: "Aconsegueix opcions extra per al sorteig de SONAR 2027",
     intro: "Ja tens 1 papereta per al sorteig de 2 entrades per a SONAR 2027 per haver participat.",
     prompt:
-      "Si en vols una extra, endevina quin número creus que la gent ens dirà més vegades que li va sortir en la primera tirada.",
+      "Si en vols una extra, endevina quin número creus que la gent ens dirà més vegades que li va sortir al dau.",
     baseTicket: "1 papereta per participar",
     predictionTicket: "1 extra si encertes la predicció",
     inviteTicket: "1 extra per cada persona del festival que convidis i participi",
@@ -857,7 +867,7 @@ const en = withServerErrors({
       {
         title: "What you will do",
         body:
-          "You will enter your bracelet code, see a private roll, you may request extra checking rolls, and then report the number from your first roll. The process takes about one minute.",
+          "You will enter your bracelet code, see a private roll, you may request extra rolls, and then report the number that came up on the die. The process takes about one minute.",
       },
       {
         title: "Payment and incentives",
@@ -883,30 +893,36 @@ const en = withServerErrors({
   },
   instructions: {
     title: "How it works",
-    intro: "Roll a die on the next screen. Then we will ask which number came up on your first roll.",
+    intro:
+      "We will roll a die on the next screens and then ask which number came up.",
     body:
-      "The first roll is the one that counts. Based on the number you tell us came up on that first roll, you may win the prize shown in the table.",
+      "Depending on what you report, you may win the prize shown in the table.",
     odds: "1 in 100 receives payment.",
     prizeTableLabel: "Prize table",
     cta: "Continue",
   },
   comprehension: {
     eyebrow: "Before you continue",
-    title: "Which number will we ask you about next?",
-    options: ["First roll", "Last roll", "The highest one"],
+    title: "After seeing the roll, what will we ask you to do?",
+    options: [
+      "Report the number that came up",
+      "Choose the prize you prefer",
+      "Roll again",
+    ],
     errorEmpty: "Select one option",
-    errorWrong: "Remember: we will ask for the number from the first roll",
+    errorWrong:
+      "Remember: after the roll we will ask you to report the number that came up.",
     cta: "Continue",
   },
   game: {
     title: "Roll",
-    initialIntro: "Tap the die or the Roll button to make your first roll.",
-    intro: "Tap the die to see another roll.",
+    initialIntro: "Look at the number that appears when the die is rolled.",
+    intro: "Look at the number that appears when the die is rolled.",
     visibleResultLabel: "",
-    firstResultTemplate: "Your first roll: {value}",
+    firstResultTemplate: "Number obtained: {value}",
     continueCta: "Continue",
     firstRollCta: "Roll",
-    rerollCta: "",
+    rerollCta: "Roll again",
     loading: "Loading...",
     attemptsTemplate: "Rolls recorded: {count}/{max}",
     errors: {
@@ -916,8 +932,8 @@ const en = withServerErrors({
     },
   },
   report: {
-    title: "Your first roll",
-    body: "Enter the number that came up when you rolled the die the first time by tapping it.",
+    title: "Report your number",
+    body: "Select the number that came up when the die was rolled.",
     errorSave: "Could not save your response",
   },
   prizeReveal: {
@@ -931,7 +947,7 @@ const en = withServerErrors({
   },
   treatment: {
     controlTitle: "Your response is anonymous",
-    controlBody: "Select your number",
+    controlBody: "Report the number that came up",
     socialMessageTemplate:
       "In a group of {denominator} results before you, the number of people who reported a {target} was {count}.",
   },
@@ -939,7 +955,7 @@ const en = withServerErrors({
     title: "Get extra entries for the SONAR 2027 draw",
     intro: "You already have 1 entry for the draw for 2 tickets to SONAR 2027 for taking part.",
     prompt:
-      "If you want one extra, guess which number you think people will tell us most often came up on their first roll.",
+      "If you want one extra, guess which number you think people will tell us most often came up on the die.",
     baseTicket: "1 entry for taking part",
     predictionTicket: "1 extra if your prediction is correct",
     inviteTicket: "1 extra for each person at the festival you invite who takes part",
@@ -1074,7 +1090,7 @@ const fr = withServerErrors({
       {
         title: "Ce que vous ferez",
         body:
-          "Vous saisirez le code de votre bracelet, verrez un lancer privé, pourrez demander des lancers supplémentaires de vérification, puis indiquerez le nombre de votre premier lancer. Le processus dure environ une minute.",
+          "Vous saisirez le code de votre bracelet, verrez un lancer prive, pourrez demander des lancers supplementaires, puis indiquerez le nombre qui est sorti sur le de. Le processus dure environ une minute.",
       },
       {
         title: "Paiement et incitations",
@@ -1101,30 +1117,35 @@ const fr = withServerErrors({
   instructions: {
     title: "Comment ça marche",
     intro:
-      "Lancez un dé sur l'écran suivant. Ensuite, nous vous demanderons quel nombre est sorti lors de votre premier lancer.",
+      "Nous lancerons un dé sur les écrans suivants, puis nous vous demanderons quel nombre est sorti.",
     body:
-      "Le premier lancer est celui qui compte. Selon le nombre que vous nous indiquerez comme étant sorti lors de ce premier lancer, vous pourrez gagner le prix affiché dans le tableau.",
+      "Selon ce que vous indiquerez, vous pourrez gagner le prix affiché dans le tableau.",
     odds: "1 personne sur 100 reçoit le paiement.",
     prizeTableLabel: "Table des prix",
     cta: "Continuer",
   },
   comprehension: {
     eyebrow: "Avant de continuer",
-    title: "Quel nombre vous demanderons-nous ensuite ?",
-    options: ["Premier lancer", "Dernier lancer", "Le plus élevé"],
+    title: "Après avoir vu le lancer, que vous demanderons-nous ?",
+    options: [
+      "Indiquer le nombre obtenu",
+      "Choisir le prix que vous préférez",
+      "Relancer",
+    ],
     errorEmpty: "Sélectionnez une option",
-    errorWrong: "Rappelez-vous : nous vous demanderons le nombre du premier lancer",
+    errorWrong:
+      "Rappelez-vous : après le lancer, nous vous demanderons d'indiquer le nombre obtenu.",
     cta: "Continuer",
   },
   game: {
     title: "Lancer",
-    initialIntro: "Touchez le dé ou le bouton Lancer pour faire votre premier lancer.",
-    intro: "Touchez le dé pour voir un autre lancer.",
+    initialIntro: "Regardez le nombre qui sort lorsque le dé est lancé.",
+    intro: "Regardez le nombre qui sort lorsque le dé est lancé.",
     visibleResultLabel: "",
-    firstResultTemplate: "Votre premier lancer : {value}",
+    firstResultTemplate: "Nombre obtenu : {value}",
     continueCta: "Continuer",
     firstRollCta: "Lancer",
-    rerollCta: "",
+    rerollCta: "Lancer encore",
     loading: "Chargement...",
     attemptsTemplate: "Lancers enregistrés : {count}/{max}",
     errors: {
@@ -1134,8 +1155,8 @@ const fr = withServerErrors({
     },
   },
   report: {
-    title: "Votre premier lancer",
-    body: "Indiquez le nombre obtenu lorsque vous avez lancé le dé la première fois en cliquant dessus.",
+    title: "Indiquez votre nombre",
+    body: "Sélectionnez le nombre qui est sorti lorsque le dé a été lancé.",
     errorSave: "Impossible d'enregistrer la réponse",
   },
   prizeReveal: {
@@ -1149,7 +1170,7 @@ const fr = withServerErrors({
   },
   treatment: {
     controlTitle: "Votre réponse est anonyme",
-    controlBody: "Sélectionnez votre nombre",
+    controlBody: "Indiquez le nombre obtenu",
     socialMessageTemplate:
       "Dans un groupe de {denominator} resultats avant vous, le nombre de personnes ayant declare un {target} etait de {count}.",
   },
@@ -1157,7 +1178,7 @@ const fr = withServerErrors({
     title: "Obtenez des chances supplémentaires pour le tirage SONAR 2027",
     intro: "Vous avez déjà 1 participation au tirage de 2 billets pour SONAR 2027 pour avoir pris part à l'activité.",
     prompt:
-      "Si vous en voulez une de plus, devinez quel nombre, selon vous, les personnes nous diront le plus souvent avoir obtenu à leur premier lancer.",
+      "Si vous en voulez une de plus, devinez quel nombre, selon vous, les personnes nous diront le plus souvent avoir obtenu sur le dé.",
     baseTicket: "1 participation pour avoir pris part",
     predictionTicket: "1 supplémentaire si votre prédiction est correcte",
     inviteTicket: "1 supplémentaire par personne du festival que vous invitez et qui participe",
@@ -1292,7 +1313,7 @@ const pt = withServerErrors({
       {
         title: "O que vais fazer",
         body:
-          "Vais introduzir o código da pulseira, ver uma tirada privada, poder pedir lançamentos extra de verificação e depois indicar o número da tua primeira tirada. O processo dura cerca de um minuto.",
+          "Vais introduzir o código da pulseira, ver uma tirada privada, poder pedir lançamentos extra e depois indicar o número que saiu no dado. O processo dura cerca de um minuto.",
       },
       {
         title: "Pagamento e incentivos",
@@ -1319,30 +1340,35 @@ const pt = withServerErrors({
   instructions: {
     title: "Como funciona",
     intro:
-      "Lança um dado no ecrã seguinte. Depois vamos perguntar que número saiu na tua primeira tirada.",
+      "Vamos lançar um dado nos ecrãs seguintes e depois perguntar que número saiu.",
     body:
-      "A primeira tirada é a que conta. Consoante o número que nos disseres que saiu nessa primeira tirada, poderás ganhar o prémio que aparece na tabela.",
+      "Consoante o que indicares, poderás ganhar o prémio que aparece na tabela.",
     odds: "1 em cada 100 recebe o pagamento.",
     prizeTableLabel: "Tabela de prémios",
     cta: "Continuar",
   },
   comprehension: {
     eyebrow: "Antes de continuar",
-    title: "Que número te vamos perguntar depois?",
-    options: ["Primeira tirada", "Última tirada", "A mais alta"],
+    title: "Depois de veres a tirada, o que te vamos pedir?",
+    options: [
+      "Indicar o número que saiu",
+      "Escolher o prémio que preferes",
+      "Voltar a lançar",
+    ],
     errorEmpty: "Seleciona uma opção",
-    errorWrong: "Lembra-te: vamos pedir o número da primeira tirada",
+    errorWrong:
+      "Lembra-te: depois da tirada vamos pedir para indicares o número que saiu.",
     cta: "Seguir",
   },
   game: {
     title: "Tirada",
-    initialIntro: "Toca no dado ou no botão Lançar para fazer a tua primeira tirada.",
-    intro: "Toca no dado para ver outra tirada.",
+    initialIntro: "Olha para o número que sai ao lançar o dado.",
+    intro: "Olha para o número que sai ao lançar o dado.",
     visibleResultLabel: "",
-    firstResultTemplate: "A tua primeira tirada: {value}",
+    firstResultTemplate: "Número obtido: {value}",
     continueCta: "Continuar",
     firstRollCta: "Lançar",
-    rerollCta: "",
+    rerollCta: "Lançar outra vez",
     loading: "A carregar...",
     attemptsTemplate: "Tiradas registadas: {count}/{max}",
     errors: {
@@ -1352,8 +1378,8 @@ const pt = withServerErrors({
     },
   },
   report: {
-    title: "A tua primeira tirada",
-    body: "Indica o número que te saiu ao lançar o dado na primeira vez clicando nele.",
+    title: "Indica o teu número",
+    body: "Seleciona o número que saiu ao lançar o dado.",
     errorSave: "Não foi possível guardar a resposta",
   },
   prizeReveal: {
@@ -1367,7 +1393,7 @@ const pt = withServerErrors({
   },
   treatment: {
     controlTitle: "A tua resposta é anónima",
-    controlBody: "Seleciona o teu número",
+    controlBody: "Indica o número que saiu",
     socialMessageTemplate:
       "Num grupo de {denominator} resultados antes de ti, o numero de pessoas que disseram ter saído {target} foi {count}.",
   },
@@ -1375,7 +1401,7 @@ const pt = withServerErrors({
     title: "Consegue entradas extra para o sorteio de SONAR 2027",
     intro: "Já tens 1 participação no sorteio de 2 entradas para o SONAR 2027 por teres participado.",
     prompt:
-      "Se quiseres mais uma, adivinha qual é o número que achas que as pessoas nos vão dizer mais vezes que lhes saiu na primeira tirada.",
+      "Se quiseres mais uma, adivinha qual é o número que achas que as pessoas nos vão dizer mais vezes que lhes saiu no dado.",
     baseTicket: "1 participação por participar",
     predictionTicket: "1 extra se acertares na previsão",
     inviteTicket: "1 extra por cada pessoa do festival que convidares e que participe",
@@ -1497,9 +1523,9 @@ const it = withServerErrors({
     ...en.instructions,
     title: "Come funziona",
     intro:
-      "Lancia un dado nella schermata successiva. Poi ti chiederemo quale numero e uscito al primo lancio.",
+      "Lanceremo un dado nelle schermate successive e poi ti chiederemo quale numero e uscito.",
     body:
-      "Il primo lancio e quello che conta. In base al numero che ci dirai essere uscito in quel primo lancio, puoi vincere il premio che appare nella tabella.",
+      "In base a cio che indicherai, potrai vincere il premio che appare nella tabella.",
     odds: "1 persona su 100 riceve il pagamento.",
     prizeTableLabel: "Tabella dei premi",
     cta: "Continua",
@@ -1507,21 +1533,26 @@ const it = withServerErrors({
   comprehension: {
     ...en.comprehension,
     eyebrow: "Prima di continuare",
-    title: "Quale numero ti chiederemo dopo?",
-    options: ["Primo lancio", "Ultimo lancio", "Il piu alto"],
+    title: "Dopo aver visto il lancio, che cosa ti chiederemo?",
+    options: [
+      "Indicare il numero uscito",
+      "Scegliere il premio che preferisci",
+      "Lanciare di nuovo",
+    ],
     errorEmpty: "Seleziona un'opzione",
-    errorWrong: "Ricorda: ti chiederemo il numero del primo lancio",
+    errorWrong:
+      "Ricorda: dopo il lancio ti chiederemo di indicare il numero uscito.",
     cta: "Continua",
   },
   game: {
     ...en.game,
     title: "Lancio",
-    initialIntro: "Tocca il dado o il pulsante Lancia per fare il primo lancio.",
-    intro: "Tocca il dado per vedere un altro lancio.",
-    firstResultTemplate: "Il tuo primo lancio: {value}",
+    initialIntro: "Guarda il numero che esce quando lanci il dado.",
+    intro: "Guarda il numero che esce quando lanci il dado.",
+    firstResultTemplate: "Numero ottenuto: {value}",
     continueCta: "Continua",
     firstRollCta: "Lancia",
-    rerollCta: "",
+    rerollCta: "Lancia ancora",
     loading: "Caricamento...",
     errors: {
       ...en.game.errors,
@@ -1532,8 +1563,8 @@ const it = withServerErrors({
   },
   report: {
     ...en.report,
-    title: "Il tuo primo lancio",
-    body: "Indica il numero uscito quando hai lanciato il dado la prima volta facendo clic su di esso.",
+    title: "Indica il tuo numero",
+    body: "Seleziona il numero che e uscito quando il dado e stato lanciato.",
     errorSave: "Impossibile salvare la risposta",
   },
   prizeReveal: {

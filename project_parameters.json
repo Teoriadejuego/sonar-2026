@@ -97,7 +97,7 @@
           },
           {
             "title": "Que haras",
-            "body": "Introduciras el codigo de tu pulsera, haras una primera tirada privada y, despues, indicarás que numero salio en esa primera tirada."
+            "body": "Introduciras el codigo de tu pulsera, veras una tirada privada, podras hacer lanzamientos extra y despues indicar el numero que salio en el dado."
           },
           {
             "title": "Duracion e incentivo",
@@ -159,7 +159,7 @@
         },
         {
           "title": "Que tendras que hacer",
-          "body": "Introduciras el codigo de tu pulsera, haras una tirada privada y despues indicarás el numero de tu primera tirada. El proceso dura alrededor de un minuto."
+          "body": "Introduciras el codigo de tu pulsera, veras una tirada privada, podras hacer lanzamientos extra y despues indicar el numero que salio en el dado. El proceso dura alrededor de un minuto."
         },
         {
           "title": "Pago e incentivos",
@@ -181,25 +181,25 @@
     },
     "instructions": {
       "eyebrow": "Como funciona",
-      "title": "Solo cuenta la primera tirada",
-      "intro": "Veras una tirada privada y podras optar a un pago real. La seleccion para pago es exacta, balanceada por backend e independiente de tu numero.",
-      "body": "Puedes volver a lanzar para comprobar que el sistema funciona, pero para el pago solo cuenta honestamente tu primera tirada.",
-      "cta": "Entendido"
+      "title": "Como funciona",
+      "intro": "Lanzaremos un dado en las siguientes pantallas y despues te preguntaremos que numero salio.",
+      "body": "Segun lo que indiques, podras ganar el premio que aparece en la tabla.",
+      "cta": "Continuar"
     },
     "comprehension": {
       "eyebrow": "Antes de seguir",
-      "title": "Que numero cuenta para el pago",
+      "title": "Despues de ver la tirada, que te pediremos?",
       "options": [
-        "La primera tirada",
-        "La ultima tirada",
-        "La mas alta que vea"
+        "Indicar el numero que salio",
+        "Elegir el premio que prefieres",
+        "Volver a tirar"
       ],
       "error_empty": "Elige una opcion para seguir.",
-      "error_wrong": "Recuerda: para el pago cuenta honestamente la primera tirada.",
+      "error_wrong": "Recuerda: despues de la tirada te pediremos indicar el numero que salio.",
       "cta": "Seguir"
     },
     "messages": {
-      "control": "Tu respuesta se registrara de forma anonima. Indica el numero de tu primera tirada.",
+      "control": "Tu respuesta se registrara de forma anonima. Indica el numero que salio.",
       "social_template": "En un grupo de {denominator} resultados antes de ti, el numero de personas que reportaron un {target} fue {count}."
     }
   }

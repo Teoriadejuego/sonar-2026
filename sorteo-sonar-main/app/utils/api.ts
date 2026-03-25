@@ -299,22 +299,27 @@ export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
       eyebrow: "Como funciona",
       title: "Como funciona",
       intro:
-        "Lanza un dado. Despues te preguntaremos cual fue el primer numero que te salio.",
+        "Lanzaremos un dado en las siguientes pantallas y despues te preguntaremos que numero salio.",
       body:
-        "Segun el numero que nos indiques, podras ganar el premio que aparece en la tabla.",
+        "Segun lo que indiques, podras ganar el premio que aparece en la tabla.",
       cta: "Continuar",
     },
     comprehension: {
       eyebrow: "Antes de seguir",
-      title: "Que numero es el que nos tienes que decir",
-      options: ["La primera tirada", "La ultima tirada", "La mas alta que vea"],
+      title: "Despues de ver la tirada, que te pediremos?",
+      options: [
+        "Indicar el numero que salio",
+        "Elegir el premio que prefieres",
+        "Volver a tirar",
+      ],
       error_empty: "Elige una opcion para seguir.",
-      error_wrong: "Recuerda: cuenta la primera tirada.",
+      error_wrong:
+        "Recuerda: despues de la tirada te pediremos indicar el numero que salio.",
       cta: "Seguir",
     },
     messages: {
       control:
-        "Tu respuesta se registrara de forma anonima. Indica el numero de tu primera tirada.",
+        "Tu respuesta se registrara de forma anonima. Indica el numero que salio.",
       social_template:
         "En un grupo de {denominator} resultados antes de ti, el numero de personas que reportaron un {target} fue {count}.",
     },

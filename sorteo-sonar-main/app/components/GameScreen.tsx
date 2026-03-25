@@ -89,7 +89,7 @@ export function GameScreen({ onContinueToReport }: GameScreenProps) {
   }, [session.session_id]);
 
   const triggerRollFromButton = () => {
-    if (isRolling || isPreparing || hasFirstRoll) {
+    if (isRolling || isPreparing || !canRollFromDice) {
       return;
     }
     setButtonRollKey(`${session.session_id}:${Date.now()}`);
@@ -172,7 +172,15 @@ export function GameScreen({ onContinueToReport }: GameScreenProps) {
               >
                 {copy.game.continueCta}
               </button>
-
+              {canReroll ? (
+                <button
+                  onClick={triggerRollFromButton}
+                  disabled={isRolling || isPreparing}
+                  className="sonar-secondary-button w-full"
+                >
+                  {isRolling ? copy.game.loading : copy.game.rerollCta}
+                </button>
+              ) : null}
             </>
           )}
 

@@ -65,21 +65,34 @@ Incluye:
 
 ### `instructions`
 Describe:
-- que la primera tirada es la que cuenta
+- que se lanzara un dado y despues se pedira indicar el numero que salio
 - que el premio depende del numero reportado
 - que 1 de cada 100 recibe el pago
 
 ### `game`
 Incluye:
-- copy de primera tirada
+- copy neutro sobre la tirada visible
 - CTA `Lanzar`
+- CTA `Lanzar otra vez`
 - CTA `Continuar`
-- copy de rerolls
+- contador de tiradas registradas
 
 ### `report`
 Incluye:
-- titulo sobre la primera tirada
-- instruccion para marcar el numero que salio en el primer lanzamiento
+- titulo `Indica tu numero`
+- instruccion para marcar el numero que salio al lanzar el dado
+
+### `comprehension`
+Incluye:
+- check breve de atencion
+- avance automatico al acertar
+- error corto sin boton extra
+- telemetria con `attention_check_passed`
+- telemetria con `attention_check_attempts`
+- telemetria con `attention_check_first_answer`
+- telemetria con `attention_check_rt_ms`
+- telemetria con `attention_check_completed_at`
+- telemetria con `attention_check_passed_first_try`
 
 ### `prizeReveal`
 Incluye:
