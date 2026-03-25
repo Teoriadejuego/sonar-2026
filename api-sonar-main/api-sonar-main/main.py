@@ -2652,13 +2652,40 @@ def ensure_user_and_session(
     return user, session_record, created_now
 
 
+def startup_dependency_status() -> dict[str, bool]:
+    database_ok = database_ready()
+    redis_ok = redis_ping() if settings.require_redis else True
+    schema_ok = not schema_needs_reset() if database_ok else False
+    return {
+        "database_ready": database_ok,
+        "redis_ready": redis_ok,
+        "schema_ready": schema_ok,
+    }
+
+
+def wait_for_startup_dependencies() -> dict[str, bool]:
+    deadline = time.monotonic() + settings.startup_dependency_timeout_seconds
+    last_status = startup_dependency_status()
+    while time.monotonic() < deadline:
+        last_status = startup_dependency_status()
+        if all(last_status.values()):
+            return last_status
+        logger.warning(
+            "startup_dependencies_not_ready",
+            extra={"structured_payload": last_status},
+        )
+        time.sleep(settings.startup_dependency_retry_interval_seconds)
+    return last_status
+
+
 @app.on_event("startup")
 def on_startup() -> None:
-    if not database_ready():
+    readiness = wait_for_startup_dependencies()
+    if not readiness["database_ready"]:
         raise RuntimeError("Database is not reachable. Run PostgreSQL and apply migrations before startup.")
-    if settings.require_redis and not redis_ping():
+    if settings.require_redis and not readiness["redis_ready"]:
         raise RuntimeError("Redis is not reachable. Run Redis before startup.")
-    if schema_needs_reset():
+    if not readiness["schema_ready"]:
         raise RuntimeError("Database schema is not ready. Run `alembic upgrade head` before startup.")
     with Session(engine) as db:
         if settings.auto_bootstrap_demo_data:
@@ -2689,14 +2716,9 @@ def health_live() -> dict[str, Any]:
 
 @app.get("/health/ready")
 def health_ready() -> Response:
-    ready = database_ready() and (redis_ping() if settings.require_redis else True)
-    payload = {
-        "ok": ready,
-        "database_ready": database_ready(),
-        "redis_ready": redis_ping() if settings.require_redis else True,
-        "schema_ready": not schema_needs_reset(),
-    }
-    status_code = 200 if ready and payload["schema_ready"] else 503
+    payload = startup_dependency_status()
+    payload["ok"] = all(payload.values())
+    status_code = 200 if payload["ok"] else 503
     return Response(content=json.dumps(payload), media_type="application/json", status_code=status_code)
 
 

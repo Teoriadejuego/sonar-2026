@@ -50,7 +50,12 @@ _redis_client: Redis | None = None
 def get_redis() -> Redis:
     global _redis_client
     if _redis_client is None:
-        _redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
+        _redis_client = Redis.from_url(
+            settings.redis_url,
+            decode_responses=True,
+            socket_connect_timeout=settings.redis_socket_connect_timeout_seconds,
+            socket_timeout=settings.redis_socket_timeout_seconds,
+        )
     return _redis_client
 
 

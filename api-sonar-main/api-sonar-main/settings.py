@@ -48,8 +48,20 @@ class Settings:
     db_max_overflow: int = env_int("DB_MAX_OVERFLOW", 20)
     db_pool_timeout_seconds: int = env_int("DB_POOL_TIMEOUT_SECONDS", 30)
     db_pool_recycle_seconds: int = env_int("DB_POOL_RECYCLE_SECONDS", 1800)
+    startup_dependency_timeout_seconds: int = env_int(
+        "STARTUP_DEPENDENCY_TIMEOUT_SECONDS", 90
+    )
+    startup_dependency_retry_interval_seconds: float = env_float(
+        "STARTUP_DEPENDENCY_RETRY_INTERVAL_SECONDS", 2.0
+    )
     redis_lock_timeout_seconds: int = env_int("REDIS_LOCK_TIMEOUT_SECONDS", 15)
     redis_blocking_timeout_seconds: int = env_int("REDIS_BLOCKING_TIMEOUT_SECONDS", 5)
+    redis_socket_connect_timeout_seconds: float = env_float(
+        "REDIS_SOCKET_CONNECT_TIMEOUT_SECONDS", 2.0
+    )
+    redis_socket_timeout_seconds: float = env_float(
+        "REDIS_SOCKET_TIMEOUT_SECONDS", 2.0
+    )
     idempotency_cache_ttl_seconds: int = env_int("IDEMPOTENCY_CACHE_TTL_SECONDS", 7200)
     access_rate_limit_per_minute: int = env_int("ACCESS_RATE_LIMIT_PER_MINUTE", 120)
     action_rate_limit_per_minute: int = env_int("ACTION_RATE_LIMIT_PER_MINUTE", 240)
