@@ -100,6 +100,8 @@ const TELEMETRY_KEY = "sonar_telemetry_v2";
 const INSTALLATION_KEY = "sonar_installation_v1";
 const EVENT_SEQUENCE_KEY = "sonar_event_sequence_v1";
 const DEMO_SESSION_PREFIX = "demo-session-";
+const CONFIG_REFRESH_INTERVAL_MS = 60000;
+const CONFIG_REFRESH_MIN_GAP_MS = 20000;
 
 type DemoScenario = {
   braceletId: string;
@@ -513,6 +515,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const flushInFlightRef = useRef(false);
   const publicConfigRef = useRef<PublicConfig>(DEFAULT_PUBLIC_CONFIG);
+  const configRefreshInFlightRef = useRef<Promise<PublicConfig> | null>(null);
+  const lastConfigRefreshAtRef = useRef(0);
   const sessionRef = useRef<SessionPayload | null>(null);
   const telemetryQueueRef = useRef<TelemetryEventRequest[]>(
     readJson<TelemetryEventRequest[]>(TELEMETRY_KEY, []),
@@ -525,14 +529,32 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setSession(nextSession);
   }, []);
 
-  const refreshPublicConfig = useCallback(async () => {
-    try {
-      const nextConfig = await fetchPublicConfig();
-      setPublicConfig(nextConfig);
-      return nextConfig;
-    } catch {
-      return publicConfigRef.current;
+  const refreshPublicConfig = useCallback(async (force = false) => {
+    const now = Date.now();
+    if (!force) {
+      if (configRefreshInFlightRef.current) {
+        return configRefreshInFlightRef.current;
+      }
+      if (now - lastConfigRefreshAtRef.current < CONFIG_REFRESH_MIN_GAP_MS) {
+        return publicConfigRef.current;
+      }
     }
+
+    const refreshPromise = (async () => {
+      try {
+        const nextConfig = await fetchPublicConfig();
+        lastConfigRefreshAtRef.current = Date.now();
+        setPublicConfig(nextConfig);
+        return nextConfig;
+      } catch {
+        return publicConfigRef.current;
+      } finally {
+        configRefreshInFlightRef.current = null;
+      }
+    })();
+
+    configRefreshInFlightRef.current = refreshPromise;
+    return refreshPromise;
   }, []);
 
   useEffect(() => {
@@ -661,12 +683,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [pushTelemetry]);
 
   useEffect(() => {
-    let cancelled = false;
-    void refreshPublicConfig().then((config) => {
-      if (!cancelled) {
-        setPublicConfig(config);
-      }
-    });
+    void refreshPublicConfig(true);
     const onFocus = () => {
       void refreshPublicConfig();
     };
@@ -676,12 +693,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       }
     };
     const interval = window.setInterval(() => {
-      void refreshPublicConfig();
-    }, 15000);
+      if (document.visibilityState === "visible") {
+        void refreshPublicConfig();
+      }
+    }, CONFIG_REFRESH_INTERVAL_MS);
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
-      cancelled = true;
       window.clearInterval(interval);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibilityChange);
@@ -952,7 +970,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         return { success: true, session: response.session };
       } catch (error) {
         if (error instanceof Error && isExperimentPausedError(error.message)) {
-          await refreshPublicConfig();
+          await refreshPublicConfig(true);
         }
         pushTelemetry({
           event_type: "error",
@@ -1008,7 +1026,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         },
       });
       if (error instanceof Error && isExperimentPausedError(error.message)) {
-        await refreshPublicConfig();
+        await refreshPublicConfig(true);
       }
       throw error;
     }
@@ -1081,7 +1099,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         },
       });
       if (error instanceof Error && isExperimentPausedError(error.message)) {
-        await refreshPublicConfig();
+        await refreshPublicConfig(true);
       }
       throw error;
     }
@@ -1139,7 +1157,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         },
       });
       if (error instanceof Error && isExperimentPausedError(error.message)) {
-        await refreshPublicConfig();
+        await refreshPublicConfig(true);
       }
       throw error;
     }
@@ -1214,7 +1232,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           },
         });
         if (error instanceof Error && isExperimentPausedError(error.message)) {
-          await refreshPublicConfig();
+          await refreshPublicConfig(true);
         }
         throw error;
       }
