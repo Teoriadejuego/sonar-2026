@@ -48,10 +48,10 @@ No se mantienen 61 mensajes hardcodeados. El banner social usa un template param
 `socialMessageTemplate(count, denominator, target)`
 
 Ejemplo en espanol:
-- `En un grupo de {denominator} resultados antes de ti, el numero de personas que reportaron un {target} fue {count}.`
+- `En un grupo de {denominator} resultados anteriores al tuyo, {count} personas dijeron que les salio un {target}.`
 
 Ejemplo en ingles:
-- `In a group of {denominator} results before you, the number of people who reported a {target} was {count}.`
+- `In a group of {denominator} results recorded before yours, {count} people said they got a {target}.`
 
 Para `control` no se usa ese template. Se muestra la caja neutra del bloque `treatment`.
 
@@ -65,9 +65,9 @@ Incluye:
 
 ### `instructions`
 Describe:
-- que se lanzara un dado y despues se pedira indicar el numero que salio
-- que el premio depende del numero reportado
-- que 1 de cada 100 recibe el pago
+- que se vera una tirada de dado y despues se pedira indicar que numero salio
+- que el premio depende del numero indicado
+- que 1 de cada 100 personas recibe el pago
 
 ### `game`
 Incluye:
@@ -79,7 +79,7 @@ Incluye:
 
 ### `report`
 Incluye:
-- titulo `Indica tu numero`
+- titulo `Indica el numero`
 - instruccion para marcar el numero que salio al lanzar el dado
 
 ### `comprehension`

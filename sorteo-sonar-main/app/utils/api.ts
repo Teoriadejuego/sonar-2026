@@ -240,8 +240,7 @@ export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
         contact: "Contacto",
       },
       age_checkbox: "Confirmo que tengo 18 años o mas",
-      participation_checkbox:
-        "He leido la informacion basica y acepto participar",
+      participation_checkbox: "He leido la informacion y acepto participar",
       data_checkbox: "He leido y acepto el tratamiento de datos",
       cta: "Comenzar",
       footer: "1 de cada 100 participantes recibe el pago.",
@@ -299,29 +298,29 @@ export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
       eyebrow: "Como funciona",
       title: "Como funciona",
       intro:
-        "Lanzaremos un dado en las siguientes pantallas y despues te preguntaremos que numero salio.",
+        "En las siguientes pantallas veras una tirada de dado y despues te preguntaremos que numero salio.",
       body:
-        "Segun lo que indiques, podras ganar el premio que aparece en la tabla.",
+        "Segun el numero que indiques, podras ganar el premio que aparece en la tabla.",
       cta: "Continuar",
     },
     comprehension: {
       eyebrow: "Antes de seguir",
       title: "Despues de ver la tirada, que te pediremos?",
       options: [
-        "Indicar el numero que salio",
+        "Indicar que numero salio",
         "Elegir el premio que prefieres",
         "Volver a tirar",
       ],
-      error_empty: "Elige una opcion para seguir.",
+      error_empty: "Elige una opcion.",
       error_wrong:
-        "Recuerda: despues de la tirada te pediremos indicar el numero que salio.",
+        "Recuerda: despues de la tirada te pediremos indicar que numero salio.",
       cta: "Seguir",
     },
     messages: {
       control:
-        "Tu respuesta se registrara de forma anonima. Indica el numero que salio.",
+        "Tu respuesta se registrara de forma anonima. Indica que numero salio.",
       social_template:
-        "En un grupo de {denominator} resultados antes de ti, el numero de personas que reportaron un {target} fue {count}.",
+        "En un grupo de {denominator} resultados anteriores al tuyo, {count} personas dijeron que les salio un {target}.",
     },
     winner: {
       eyebrow: "Has sido seleccionado",
@@ -339,14 +338,14 @@ export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
       eyebrow: "Gracias por participar",
       title: "Aun puedes ganar",
       body:
-        "No has sido seleccionado para el pago en esta ocasion, pero aun queda un sorteo de 2 entradas VIP para el año que viene.",
+        "No has sido seleccionado para el premio economico en esta ocasion, pero sigues en el sorteo de 2 entradas VIP para el año que viene.",
       body_secondary:
-        "Aumenta tus posibilidades invitando a otras personas a participar desde tu enlace.",
+        "Puedes compartir tu enlace para invitar a otras personas a participar.",
       body_footer:
-        "El ganador se publicara en nuestra web al finalizar el festival. Guarda tu pulsera y, si te toca, nos vemos el año que viene.",
+        "Podras consultar mas informacion sobre el estudio, sus resultados agregados y el codigo ganador al final del festival.",
       share_label: "Invitar por WhatsApp",
       share_message_template:
-        "Prueba este reto de Sonar 2026 y participa en el sorteo final: {link}",
+        "Si estas en Sonar ahora mismo, prueba esta actividad: dura 60 segundos y puedes entrar en el sorteo final. Participa aqui: {link}",
     },
   },
 };

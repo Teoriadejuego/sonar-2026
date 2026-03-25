@@ -14,14 +14,14 @@ Fuente tecnica:
 - `ID de la pulsera`
 - `Ej: AB12CD34`
 - `Mas informacion`
-- `Tengo 18 anos o mas`
-- `Acepto participar`
-- `Acepto el tratamiento de datos`
+- `Confirmo que tengo 18 anos o mas`
+- `He leido la informacion y acepto participar`
+- `He leido y acepto el tratamiento de datos`
 - `Comenzar`
 
 Errores:
-- `Introduce el ID de tu pulsera`
-- `Marca las tres casillas para continuar`
+- `Introduce el ID de tu pulsera.`
+- `Marca las tres casillas para continuar.`
 - `Entrando...`
 
 ## Modal de informacion
@@ -34,55 +34,55 @@ Secciones:
 - `Contacto`
 
 Texto clave:
-- `Introduciras el codigo de tu pulsera, veras una tirada privada, podras hacer lanzamientos extra y despues indicar el numero que salio en el dado. El proceso dura alrededor de un minuto.`
+- `Introduciras el codigo de tu pulsera, veras una tirada de dado y despues indicaras que numero salio. Si quieres, podras volver a lanzar antes de responder. El proceso dura alrededor de un minuto.`
 
 ## Pantalla 3. Instrucciones
 - `Como funciona`
-- `Lanzaremos un dado en las siguientes pantallas y despues te preguntaremos que numero salio.`
-- `Segun lo que indiques, podras ganar el premio que aparece en la tabla.`
-- `1 de cada 100 recibe el pago.`
+- `En las siguientes pantallas veras una tirada de dado y despues te preguntaremos que numero salio.`
+- `Segun el numero que indiques, podras ganar el premio que aparece en la tabla.`
+- `1 de cada 100 personas recibe el pago.`
 - `Tabla de premios`
 - `Continuar`
 
 ## Pantalla 4. Comprension
 - `Antes de seguir`
 - `Despues de ver la tirada, que te pediremos?`
-- `Indicar el numero que salio`
+- `Indicar que numero salio`
 - `Elegir el premio que prefieres`
 - `Volver a tirar`
 
 Errores:
-- `Selecciona una opcion`
-- `Recuerda: despues de la tirada te pediremos indicar el numero que salio.`
+- `Elige una opcion.`
+- `Recuerda: despues de la tirada te pediremos indicar que numero salio.`
 
 ## Pantalla 5. Juego
 - `Tirada`
-- `Mira el numero que sale al lanzar el dado.`
+- `Fijate en el numero que aparece al lanzar el dado.`
 - `Numero obtenido: {value}`
 - `Lanzar`
 - `Lanzar otra vez`
 - `Continuar`
 
 Errores:
-- `No hay sesion activa`
-- `No se pudo cargar la tirada`
-- `Accion no disponible`
+- `No hay una sesion activa.`
+- `No se pudo cargar la tirada.`
+- `No se pudo continuar.`
 
 ## Pantalla 6. Reporte
-- `Indica tu numero`
+- `Indica el numero`
 - `Selecciona el numero que salio al lanzar el dado.`
 
 Errores:
-- `No se pudo guardar la respuesta`
+- `No se pudo guardar tu respuesta.`
 
 ## Caja de tratamiento
 
 ### Control
 - `Tu respuesta es anonima`
-- `Indica el numero que salio`
+- `Indica que numero salio.`
 
 ### Social
-- `En un grupo de {denominator} resultados antes de ti, el numero de personas que reportaron un {target} fue {count}.`
+- `En un grupo de {denominator} resultados anteriores al tuyo, {count} personas dijeron que les salio un {target}.`
 
 ## Pantalla 7. Figuras
 - `Seleccion final`
@@ -94,10 +94,10 @@ Errores:
 ## Pantalla final de no ganador
 - `Gracias por participar.`
 - `Aun puedes ganar`
-- `No has sido seleccionado para el premio en metalico.`
+- `No has sido seleccionado para el premio economico.`
 - `Sigues participando en el sorteo de 2 entradas VIP.`
 - `Invitar por WhatsApp`
-- `Sabras mas sobre el estudio y sus resultados agregados en cotec.es, y el codigo ganador al finalizar el festival.`
+- `Podras consultar mas informacion sobre el estudio y sus resultados agregados en cotec.es, y el codigo ganador al final del festival.`
 
 ## Bloque de sorteo extra
 - `Consigue opciones extra para el sorteo de SONAR 2027`
