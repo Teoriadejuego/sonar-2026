@@ -383,6 +383,21 @@ function isSocialRecallCorrect(
   return submittedValue === displayedCountTarget;
 }
 
+function shouldUseLocalClaimFollowupFallback(error: unknown) {
+  if (error instanceof UserNotFoundError) {
+    return true;
+  }
+  const message =
+    error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  return (
+    message.includes("no hay claim disponible") ||
+    message.includes("todavia no tiene claim") ||
+    message.includes("todavía no tiene claim") ||
+    message.includes("no encontrado") ||
+    message.includes("not found")
+  );
+}
+
 function buildDemoReportSnapshot(
   publicConfig: PublicConfig,
   language: AppLanguage,
@@ -1333,39 +1348,114 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const submitClaimFollowup = useCallback(
     async (payload: { crowd_prediction_value?: number; social_recall_count?: number }) => {
       const current = sessionRef.current;
-      if (!current || !current.claim) {
-        throw new Error("No hay claim disponible");
+      if (!current) {
+        throw new Error("No hay sesión disponible");
       }
+      const saveClaimFollowupLocally = (reason: string) => {
+        const now = new Date().toISOString();
+        const baseClaim = current.claim ?? {
+          reported_value:
+            current.first_result_value ?? current.last_seen_value ?? current.max_seen_value ?? 1,
+          true_first_result:
+            current.first_result_value ?? current.last_seen_value ?? current.max_seen_value ?? 1,
+          is_honest: true,
+          matches_last_seen: true,
+          matches_any_seen: true,
+          submitted_at: current.valid_completed_at ?? now,
+          crowd_prediction_value: null,
+          crowd_prediction_submitted_at: null,
+          social_recall_count: null,
+          social_recall_correct: null,
+          social_recall_submitted_at: null,
+        };
+        const nextClaim = {
+          ...baseClaim,
+          crowd_prediction_value:
+            payload.crowd_prediction_value ?? baseClaim.crowd_prediction_value ?? null,
+          crowd_prediction_submitted_at:
+            payload.crowd_prediction_value !== undefined &&
+            baseClaim.crowd_prediction_value == null
+              ? now
+              : baseClaim.crowd_prediction_submitted_at ?? null,
+          social_recall_count:
+            payload.social_recall_count ?? baseClaim.social_recall_count ?? null,
+          social_recall_correct:
+            payload.social_recall_count !== undefined
+              ? isSocialRecallCorrect(
+                  payload.social_recall_count,
+                  current.displayed_count_target,
+                )
+              : baseClaim.social_recall_correct ?? null,
+          social_recall_submitted_at:
+            payload.social_recall_count !== undefined &&
+            baseClaim.social_recall_count == null
+              ? now
+              : baseClaim.social_recall_submitted_at ?? null,
+        };
+        commitSession({
+          ...current,
+          language_at_claim: language,
+          claim: nextClaim,
+        });
+        pushTelemetry({
+          event_type: "custom",
+          event_name: "claim_followup_saved_local_fallback",
+          screen_name: "exit",
+          payload: {
+            reason,
+            ...payload,
+          },
+        });
+      };
       if (isDemoSession(current)) {
         const now = new Date().toISOString();
+        const baseClaim = current.claim ?? {
+          reported_value:
+            current.first_result_value ?? current.last_seen_value ?? current.max_seen_value ?? 1,
+          true_first_result:
+            current.first_result_value ?? current.last_seen_value ?? current.max_seen_value ?? 1,
+          is_honest: true,
+          matches_last_seen: true,
+          matches_any_seen: true,
+          submitted_at: current.valid_completed_at ?? now,
+          crowd_prediction_value: null,
+          crowd_prediction_submitted_at: null,
+          social_recall_count: null,
+          social_recall_correct: null,
+          social_recall_submitted_at: null,
+        };
         commitSession({
           ...current,
           claim: {
-            ...current.claim,
+            ...baseClaim,
             crowd_prediction_value:
-              payload.crowd_prediction_value ?? current.claim.crowd_prediction_value ?? null,
+              payload.crowd_prediction_value ?? baseClaim.crowd_prediction_value ?? null,
             crowd_prediction_submitted_at:
               payload.crowd_prediction_value !== undefined &&
-              current.claim.crowd_prediction_value == null
+              baseClaim.crowd_prediction_value == null
                 ? now
-                : current.claim.crowd_prediction_submitted_at ?? null,
+                : baseClaim.crowd_prediction_submitted_at ?? null,
             social_recall_count:
-              payload.social_recall_count ?? current.claim.social_recall_count ?? null,
+              payload.social_recall_count ?? baseClaim.social_recall_count ?? null,
             social_recall_correct:
               payload.social_recall_count !== undefined
                 ? isSocialRecallCorrect(
                     payload.social_recall_count,
                     current.displayed_count_target,
                   )
-                : current.claim.social_recall_correct ?? null,
+                : baseClaim.social_recall_correct ?? null,
             social_recall_submitted_at:
               payload.social_recall_count !== undefined &&
-              current.claim.social_recall_count == null
+              baseClaim.social_recall_count == null
                 ? now
-                : current.claim.social_recall_submitted_at ?? null,
+                : baseClaim.social_recall_submitted_at ?? null,
           },
         });
         return;
+      }
+      if (!current.claim) {
+          saveClaimFollowupLocally("claim_missing_in_session_payload");
+          return;
       }
       try {
         const response = await submitClaimFollowupRequest(current.session_id, {
@@ -1374,6 +1464,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         });
         commitSession(response.session);
       } catch (error) {
+        if (shouldUseLocalClaimFollowupFallback(error)) {
+          saveClaimFollowupLocally("backend_followup_unsupported");
+          return;
+        }
         pushTelemetry({
           event_type: "error",
           event_name: "claim_followup_error",
