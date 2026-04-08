@@ -18,17 +18,15 @@ export function InstructionsScreen({ onContinue }: InstructionsScreenProps) {
           <h2 className="editorial-title editorial-title--compact instructions-title">
             {instructionsCopy.title}
           </h2>
-          <div className="instructions-copy-block">
-            <p className="editorial-body instructions-subtitle">
-              {instructionsCopy.subtitle}
-            </p>
-            <p className="editorial-body editorial-body--muted instructions-label">
-              {instructionsCopy.listLabel}
-            </p>
-          </div>
+          <p className="editorial-body instructions-subtitle">
+            {instructionsCopy.subtitle}
+          </p>
         </div>
 
         <div className="sonar-panel sonar-panel-subtle instructions-panel">
+          <p className="editorial-body editorial-body--muted instructions-label">
+            {instructionsCopy.listLabel}
+          </p>
           <ol className="sonar-instructions-list">
             {instructionsCopy.steps.map((step) => (
               <li key={step} className="sonar-instructions-item">
