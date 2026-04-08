@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ComprehensionScreen } from "../components/ComprehensionScreen";
 import { ExperimentPausedScreen } from "../components/ExperimentPausedScreen";
 import { ExitScreen } from "../components/ExitScreen";
+import { FinalScreen } from "../components/FinalScreen";
 import { GameScreen } from "../components/GameScreen";
 import { InstructionsScreen } from "../components/InstructionsScreen";
 import { LanguageEntryScreen } from "../components/LanguageEntryScreen";
@@ -30,6 +31,7 @@ export function Welcome() {
   const { copy } = useLanguage();
   const [showConsentScreen, setShowConsentScreen] = useState(false);
   const [prizeRevealCompleted, setPrizeRevealCompleted] = useState(false);
+  const [showFinalScreen, setShowFinalScreen] = useState(false);
   const historyGuardRef = useRef<string | null>(null);
   const {
     publicConfig,
@@ -79,6 +81,7 @@ export function Welcome() {
   useEffect(() => {
     if (!session || session.screen !== "exit") {
       setPrizeRevealCompleted(false);
+      setShowFinalScreen(false);
       return;
     }
     setPrizeRevealCompleted(hasCompletedPrizeReveal(session.session_id));
@@ -135,12 +138,18 @@ export function Welcome() {
     case "report":
       return <ReportScreen onSubmitReport={() => undefined} />;
     case "exit":
-      return prizeRevealCompleted ? (
-        <ExitScreen />
-      ) : (
+      return !prizeRevealCompleted ? (
         <PrizeRevealScreen
           onComplete={() => setPrizeRevealCompleted(true)}
         />
+      ) : showFinalScreen ? (
+        <FinalScreen
+          eyebrow={copy.loser.eyebrow}
+          footerText={copy.loser.bodyFooter}
+          screenName="exit_final"
+        />
+      ) : (
+        <ExitScreen onContinueToFinal={() => setShowFinalScreen(true)} />
       );
     default:
       return <LoadingScreen label={copy.common.loadingPrepare} />;

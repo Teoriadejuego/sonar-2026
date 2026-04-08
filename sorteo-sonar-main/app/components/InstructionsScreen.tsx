@@ -1,50 +1,41 @@
 import { ScreenFrame } from "./ScreenFrame";
 import { useLanguage } from "../utils/LanguageContext";
 import { usePageTelemetry } from "../utils/usePageTelemetry";
-import { useSession } from "../utils/SessionContext";
 
 interface InstructionsScreenProps {
   onContinue: () => Promise<void> | void;
 }
 
 export function InstructionsScreen({ onContinue }: InstructionsScreenProps) {
-  const { publicConfig } = useSession();
   const { copy } = useLanguage();
   const { trackClick } = usePageTelemetry("instructions");
   const instructionsCopy = copy.instructions;
-  const prizes = Object.entries(publicConfig.prize_eur)
-    .map(([number, prize]) => ({ number: Number(number), prize }))
-    .sort((left, right) => left.number - right.number);
 
   return (
     <ScreenFrame>
-      <div className="flex min-h-full flex-col gap-8">
-        <div className="space-y-4">
-          <h2 className="editorial-title editorial-title--compact">
+      <div className="sonar-screen-stack sonar-screen-stack--instructions">
+        <div className="instructions-hero">
+          <h2 className="editorial-title editorial-title--compact instructions-title">
             {instructionsCopy.title}
           </h2>
-          <p className="editorial-body max-w-[28rem]">
-            {instructionsCopy.intro}
-          </p>
-          <p className="editorial-body editorial-body--muted max-w-[28rem]">
-            {instructionsCopy.body}
-          </p>
+          <div className="instructions-copy-block">
+            <p className="editorial-body instructions-subtitle">
+              {instructionsCopy.subtitle}
+            </p>
+            <p className="editorial-body editorial-body--muted instructions-label">
+              {instructionsCopy.listLabel}
+            </p>
+          </div>
         </div>
 
-        <div className="sonar-panel p-5 sm:p-6">
-          <p className="editorial-eyebrow mb-4">
-            {instructionsCopy.prizeTableLabel}
-          </p>
-          <div className="sonar-prize-grid">
-            {prizes.map(({ number, prize }) => (
-              <div key={number} className="sonar-prize-cell">
-                <span className="sonar-prize-value">{number}</span>
-                <span className="sonar-prize-amount text-slate-950">
-                  {prize} {"\u20ac"}
-                </span>
-              </div>
+        <div className="sonar-panel sonar-panel-subtle instructions-panel">
+          <ol className="sonar-instructions-list">
+            {instructionsCopy.steps.map((step) => (
+              <li key={step} className="sonar-instructions-item">
+                {step}
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
 
         <button
@@ -61,7 +52,9 @@ export function InstructionsScreen({ onContinue }: InstructionsScreenProps) {
           {instructionsCopy.cta}
         </button>
 
-        <p className="editorial-micro text-center">{instructionsCopy.odds}</p>
+        {instructionsCopy.odds ? (
+          <p className="editorial-micro text-center">{instructionsCopy.odds}</p>
+        ) : null}
       </div>
     </ScreenFrame>
   );

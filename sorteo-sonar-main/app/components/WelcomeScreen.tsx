@@ -156,7 +156,7 @@ export function WelcomeScreen({ onStart, isLoading }: WelcomeScreenProps) {
 
   return (
     <ScreenFrame>
-      <div className="flex min-h-full flex-col justify-between gap-10">
+      <div className="sonar-screen-stack sonar-screen-stack--landing justify-between">
         <div className="space-y-8">
           <div className="space-y-4">
             <p className="editorial-eyebrow">

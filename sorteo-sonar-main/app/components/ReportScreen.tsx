@@ -74,7 +74,7 @@ function ReportDecisionContent({
   onReport,
 }: ReportDecisionContentProps) {
   return (
-    <div className="flex min-h-full flex-col gap-6">
+    <div className="sonar-screen-stack sonar-screen-stack--report">
       <div className="space-y-3">
         <h2 className="editorial-title editorial-title--compact">
           {copy.report.title}
@@ -122,7 +122,7 @@ function ReportDecisionFallback({
   onReport,
 }: ReportDecisionContentProps) {
   return (
-    <div className="flex min-h-full flex-col gap-6">
+    <div className="sonar-screen-stack sonar-screen-stack--report">
       <div className="space-y-3">
         <h2 className="editorial-title editorial-title--compact">
           {copy.report.title}

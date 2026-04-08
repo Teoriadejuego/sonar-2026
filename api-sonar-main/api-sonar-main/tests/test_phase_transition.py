@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, select
 
 from database import engine
-from experiment import TREATMENT_KEYS
+from experiment import TREATMENT_KEYS, result_deck_seed, result_deck_values
 from main import app, bootstrap_demo_data
 from models import PaymentDeckCard, ResultDeckCard, SessionRecord, TreatmentDeckCard
 
@@ -81,22 +81,36 @@ class DeckAssignmentTests(unittest.TestCase):
         next_session = self.access_session(bracelet_code("TRTA", 63))
         self.assertEqual(next_session["treatment_deck_index"], 2)
 
-    def test_result_deck_contains_four_of_each_value(self) -> None:
-        counts = {value: 0 for value in range(1, 7)}
-        seen_positions: set[int] = set()
+    def test_result_deck_contains_four_of_each_value_in_four_six_card_rounds(self) -> None:
+        values = result_deck_values(result_deck_seed("norm_0", 1))
+        counts = {value: values.count(value) for value in range(1, 7)}
 
-        for seed in range(1, 25):
+        self.assertEqual(len(values), 24)
+        self.assertEqual(counts, {1: 4, 2: 4, 3: 4, 4: 4, 5: 4, 6: 4})
+        for start in range(0, 24, 6):
+            self.assertEqual(set(values[start : start + 6]), {1, 2, 3, 4, 5, 6})
+
+    def test_each_treatment_gets_all_six_values_after_six_treatment_rounds(self) -> None:
+        values_by_treatment: dict[str, list[int]] = {
+            treatment_key: [] for treatment_key in TREATMENT_KEYS
+        }
+
+        for seed in range(1, 62 * 6 + 1):
             session = self.access_session(bracelet_code("RSLT", seed))
             value = self.roll_first_result(session["session_id"])
-            self.assertEqual(session["result_deck_index"], 1)
-            self.assertNotIn(session["result_card_position"], seen_positions)
-            seen_positions.add(session["result_card_position"])
-            counts[value] += 1
+            values_by_treatment[session["treatment_key"]].append(value)
 
-        self.assertEqual(counts, {1: 4, 2: 4, 3: 4, 4: 4, 5: 4, 6: 4})
-
-        next_session = self.access_session(bracelet_code("RSLT", 25))
-        self.assertEqual(next_session["result_deck_index"], 2)
+        for treatment_key, values in values_by_treatment.items():
+            self.assertEqual(
+                len(values),
+                6,
+                f"{treatment_key} no recibio seis sesiones en seis rondas completas",
+            )
+            self.assertEqual(
+                set(values),
+                {1, 2, 3, 4, 5, 6},
+                f"{treatment_key} no quedo equilibrado en la primera ronda de seis resultados",
+            )
 
     def test_payment_deck_has_exactly_one_winner_per_hundred(self) -> None:
         winners = 0

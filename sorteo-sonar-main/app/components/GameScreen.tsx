@@ -74,22 +74,18 @@ export function GameScreen({ onContinueToReport }: GameScreenProps) {
     return null;
   }
 
-  const canReroll =
-    session.throws.length > 0 && session.throws.length < session.max_attempts;
   const hasFirstRoll = session.first_result_value !== null;
   const lastThrow = session.throws[session.throws.length - 1];
   const currentVisibleValue = lastThrow?.result_value ?? session.last_seen_value ?? null;
-  const canRollFromDice = !isPreparing && (!hasFirstRoll || canReroll);
-  const nextRollKind: "first_roll" | "reroll" = hasFirstRoll
-    ? "reroll"
-    : "first_roll";
+  const canLaunch = !isPreparing && !hasFirstRoll;
+  const showDice = hasFirstRoll || isRolling || buttonRollKey !== null;
 
   useEffect(() => {
     enteredAtRef.current = Date.now();
   }, [session.session_id]);
 
   const triggerRollFromButton = () => {
-    if (isRolling || isPreparing || !canRollFromDice) {
+    if (isRolling || isPreparing || !canLaunch) {
       return;
     }
     setButtonRollKey(`${session.session_id}:${Date.now()}`);
@@ -97,36 +93,88 @@ export function GameScreen({ onContinueToReport }: GameScreenProps) {
 
   return (
     <ScreenFrame>
-      <div className="flex min-h-full flex-col gap-6">
+      <div className="sonar-screen-stack sonar-screen-stack--game">
         <div className="space-y-3 text-center">
           <h2 className="editorial-title editorial-title--compact">
             {copy.game.title}
           </h2>
-          {(hasFirstRoll ? copy.game.intro : copy.game.initialIntro) ? (
+          {!hasFirstRoll && copy.game.initialIntro ? (
             <p className="editorial-small mx-auto max-w-[22rem]">
-              {hasFirstRoll ? copy.game.intro : copy.game.initialIntro}
+              {copy.game.initialIntro}
             </p>
           ) : null}
         </div>
 
-        <div className="sonar-panel relative flex min-h-[18rem] items-center justify-center overflow-hidden p-5">
-          <Dice3D
-            value={currentVisibleValue}
-            interactive={canRollFromDice}
-            disabled={isRolling || isPreparing || !canRollFromDice}
-            autoRollKey={buttonRollKey}
-            autoRollSource="button"
-            onRollRequest={(source) => handleRoll(nextRollKind, source ?? "dice")}
-          />
-        </div>
+        {!showDice ? (
+          <div className="dice-launch-idle">
+            <button
+              onClick={triggerRollFromButton}
+              disabled={isRolling}
+              className="sonar-primary-button sonar-primary-button--hero"
+            >
+              {isRolling ? copy.game.loading : copy.game.firstRollCta}
+            </button>
+          </div>
+        ) : (
+          <div className="dice-launch-panel">
+            <div className="dice-launch-canvas">
+              <Dice3D
+                value={currentVisibleValue}
+                interactive={false}
+                disabled={isRolling || isPreparing}
+                autoRollKey={buttonRollKey}
+                autoRollSource="button"
+                onRollRequest={(source) => handleRoll("first_roll", source ?? "button")}
+              />
+            </div>
 
-        {hasFirstRoll && (
-          <div className="sonar-panel p-5">
-            <p className="mt-1 text-[clamp(1.9rem,6vw,3rem)] font-black leading-[1.02] tracking-tight text-slate-950">
-              {formatCopy(copy.game.firstResultTemplate, {
-                value: session.first_result_value ?? "-",
-              })}
-            </p>
+            {hasFirstRoll && session.first_result_value !== null ? (
+              <div className="dice-result-strip">
+                <p className="editorial-small text-slate-950">
+                  {formatCopy(copy.game.firstResultTemplate, {
+                    value: session.first_result_value,
+                  })}
+                </p>
+              </div>
+            ) : null}
+
+            <div className="dice-action-stack">
+              {!hasFirstRoll ? (
+                <button
+                  onClick={triggerRollFromButton}
+                  disabled={isRolling}
+                  className="sonar-primary-button sonar-primary-button--hero"
+                >
+                  {isRolling ? copy.game.loading : copy.game.firstRollCta}
+                </button>
+              ) : (
+                <button
+                  onClick={async () => {
+                    try {
+                      setIsPreparing(true);
+                      trackClick("go_to_report", {
+                        target: "continue_to_report",
+                        role: "button",
+                        ctaKind: "primary",
+                      });
+                      await onContinueToReport();
+                    } catch (err) {
+                      setError(
+                        err instanceof Error
+                          ? translateServerError(err.message, copy)
+                          : copy.game.errors.loadReport,
+                      );
+                    } finally {
+                      setIsPreparing(false);
+                    }
+                  }}
+                  disabled={isRolling || isPreparing}
+                  className="sonar-primary-button"
+                >
+                  {copy.game.continueCta}
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -135,62 +183,6 @@ export function GameScreen({ onContinueToReport }: GameScreenProps) {
             {error}
           </div>
         )}
-
-        <div className="space-y-3">
-          {!hasFirstRoll ? (
-            <button
-              onClick={triggerRollFromButton}
-              disabled={isRolling}
-              className="sonar-primary-button"
-            >
-              {isRolling ? copy.game.loading : copy.game.firstRollCta}
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={async () => {
-                  try {
-                    setIsPreparing(true);
-                    trackClick("go_to_report", {
-                      target: "continue_to_report",
-                      role: "button",
-                      ctaKind: "primary",
-                    });
-                    await onContinueToReport();
-                  } catch (err) {
-                    setError(
-                      err instanceof Error
-                        ? translateServerError(err.message, copy)
-                        : copy.game.errors.loadReport,
-                    );
-                  } finally {
-                    setIsPreparing(false);
-                  }
-                }}
-                disabled={isRolling || isPreparing}
-                className="sonar-primary-button"
-              >
-                {copy.game.continueCta}
-              </button>
-              {canReroll ? (
-                <button
-                  onClick={triggerRollFromButton}
-                  disabled={isRolling || isPreparing}
-                  className="sonar-secondary-button w-full"
-                >
-                  {isRolling ? copy.game.loading : copy.game.rerollCta}
-                </button>
-              ) : null}
-            </>
-          )}
-
-          <p className="editorial-micro text-center">
-            {formatCopy(copy.game.attemptsTemplate, {
-              count: session.throws.length,
-              max: session.max_attempts,
-            })}
-          </p>
-        </div>
       </div>
     </ScreenFrame>
   );

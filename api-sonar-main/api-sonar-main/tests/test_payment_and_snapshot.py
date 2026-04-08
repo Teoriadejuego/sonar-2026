@@ -16,11 +16,19 @@ from sqlmodel import Session, SQLModel, select
 
 from database import engine
 from main import app, bootstrap_demo_data
-from models import Payment, PayoutRequest, SessionRecord, SnapshotRecord
+from models import Claim, Payment, PayoutRequest, SessionRecord, SnapshotRecord
 
 
 def bracelet_code(seed: int) -> str:
     return f"TEST{seed:04d}"
+
+
+def recall_bucket(count: int) -> int:
+    if count <= 20:
+        return 20
+    if count <= 40:
+        return 40
+    return 60
 
 
 class PaymentAndSnapshotTests(unittest.TestCase):
@@ -65,6 +73,81 @@ class PaymentAndSnapshotTests(unittest.TestCase):
             if session["treatment_key"] != "control":
                 return session
             next_seed += 1
+
+    def test_first_roll_is_preserved_and_claim_followup_is_persisted(self) -> None:
+        session = self.access_session("NORM0000")
+        session_id = session["session_id"]
+
+        first_roll = self.client.post(
+            f"/v1/session/{session_id}/roll",
+            json={"attempt_index": 1, "reaction_ms": 700, "idempotency_key": f"roll-1-{session_id}"},
+        )
+        self.assertEqual(first_roll.status_code, 200, first_roll.text)
+        first_value = first_roll.json()["attempt"]["result_value"]
+
+        last_seen_value = first_value
+        for attempt_index in range(2, 6):
+            reroll_response = self.client.post(
+                f"/v1/session/{session_id}/roll",
+                json={
+                    "attempt_index": attempt_index,
+                    "reaction_ms": 900,
+                    "idempotency_key": f"roll-{attempt_index}-{session_id}",
+                },
+            )
+            self.assertEqual(reroll_response.status_code, 200, reroll_response.text)
+            last_seen_value = reroll_response.json()["attempt"]["result_value"]
+            if last_seen_value != first_value:
+                break
+
+        self.assertNotEqual(first_value, last_seen_value)
+
+        prepare_response = self.client.post(
+            f"/v1/session/{session_id}/prepare-report",
+            json={"idempotency_key": f"prepare-{session_id}"},
+        )
+        self.assertEqual(prepare_response.status_code, 200, prepare_response.text)
+        expected_count = prepare_response.json()["session"]["report_snapshot"]["count_target"]
+        expected_bucket = recall_bucket(expected_count)
+
+        submit_response = self.client.post(
+            f"/v1/session/{session_id}/submit-report",
+            json={
+                "reported_value": first_value,
+                "reaction_ms": 1300,
+                "idempotency_key": f"submit-{session_id}",
+                "language": "es",
+            },
+        )
+        self.assertEqual(submit_response.status_code, 200, submit_response.text)
+
+        followup_response = self.client.post(
+            f"/v1/session/{session_id}/claim-followup",
+            json={
+                "crowd_prediction_value": 3,
+                "social_recall_count": expected_bucket,
+                "language": "es",
+            },
+        )
+        self.assertEqual(followup_response.status_code, 200, followup_response.text)
+        claim_summary = followup_response.json()["session"]["claim"]
+        self.assertEqual(claim_summary["true_first_result"], first_value)
+        self.assertEqual(claim_summary["crowd_prediction_value"], 3)
+        self.assertEqual(claim_summary["social_recall_count"], expected_bucket)
+        self.assertTrue(claim_summary["social_recall_correct"])
+
+        with Session(engine) as db:
+            record = db.get(SessionRecord, session_id)
+            claim = db.exec(select(Claim).where(Claim.session_id == session_id)).first()
+            self.assertEqual(record.first_result_value, first_value)
+            self.assertEqual(record.last_seen_value, last_seen_value)
+            self.assertIsNotNone(claim)
+            self.assertEqual(claim.true_first_result, first_value)
+            self.assertEqual(claim.reported_value, first_value)
+            self.assertFalse(claim.matches_last_seen)
+            self.assertEqual(claim.crowd_prediction_value, 3)
+            self.assertEqual(claim.social_recall_count, expected_bucket)
+            self.assertTrue(claim.social_recall_correct)
 
     def test_display_snapshot_persists_exact_visible_copy(self) -> None:
         session = self.access_non_control_session(10)

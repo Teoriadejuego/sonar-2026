@@ -296,31 +296,29 @@ export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
     },
     instructions: {
       eyebrow: "Como funciona",
-      title: "Como funciona",
+      title: "Gracias por participar!",
       intro:
-        "En las siguientes pantallas veras una tirada de dado y despues te preguntaremos que numero salio.",
-      body:
-        "Segun el numero que indiques, podras ganar el premio que aparece en la tabla.",
+        "En la primera pantalla veras los premios del juego y despues pasaras al dado.",
+      body: "La pregunta posterior siempre se refiere al primer numero.",
       cta: "Continuar",
     },
     comprehension: {
-      eyebrow: "Antes de seguir",
-      title: "Despues de ver la tirada, que te pediremos?",
+      eyebrow: "",
+      title: "Tabla de premios:",
       options: [
         "Indicar que numero salio",
         "Elegir el premio que prefieres",
-        "Volver a tirar",
+        "Pasar a la siguiente pantalla",
       ],
-      error_empty: "Elige una opcion.",
-      error_wrong:
-        "Recuerda: despues de la tirada te pediremos indicar que numero salio.",
-      cta: "Seguir",
+      error_empty: "",
+      error_wrong: "",
+      cta: "Continuar",
     },
     messages: {
       control:
         "Tu respuesta se registrara de forma anonima. Indica que numero salio.",
       social_template:
-        "En un grupo de {denominator} resultados anteriores al tuyo, {count} personas dijeron que les salio un {target}.",
+        "{count} de {denominator} participantes anteriores dijeron que les salio un {target}.",
     },
     winner: {
       eyebrow: "Has sido seleccionado",
@@ -336,9 +334,9 @@ export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
     },
     loser: {
       eyebrow: "Gracias por participar",
-      title: "Aun puedes ganar",
+      title: "Resultados",
       body:
-        "No has sido seleccionado para el premio economico en esta ocasion, pero sigues en el sorteo de 2 entradas VIP para el año que viene.",
+        "No has sido seleccionado para el premio economico en esta ocasion.",
       body_secondary:
         "Puedes compartir tu enlace para invitar a otras personas a participar.",
       body_footer:
@@ -390,6 +388,11 @@ export type ClaimSummary = {
   matches_last_seen: boolean;
   matches_any_seen: boolean;
   submitted_at: string;
+  crowd_prediction_value?: number | null;
+  crowd_prediction_submitted_at?: string | null;
+  social_recall_count?: number | null;
+  social_recall_correct?: boolean | null;
+  social_recall_submitted_at?: string | null;
 };
 
 export type PaymentSummary = {
@@ -876,6 +879,24 @@ export async function submitReport(
         idempotency_key: idempotencyKey,
         language,
       }),
+    },
+  );
+}
+
+export async function submitClaimFollowup(
+  sessionId: string,
+  payload: {
+    crowd_prediction_value?: number;
+    social_recall_count?: number;
+    language?: string;
+  },
+): Promise<{ session: SessionPayload }> {
+  return requestJson<{ session: SessionPayload }>(
+    `/v1/session/${sessionId}/claim-followup`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     },
   );
 }

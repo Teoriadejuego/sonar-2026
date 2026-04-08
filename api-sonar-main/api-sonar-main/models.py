@@ -183,10 +183,19 @@ class TreatmentDeckCard(SQLModel, table=True):
 
 class ResultDeck(SQLModel, table=True):
     __tablename__ = "result_decks"
+    __table_args__ = (
+        UniqueConstraint(
+            "treatment_key",
+            "treatment_cycle_index",
+            name="uq_result_decks_treatment_cycle",
+        ),
+    )
 
     id: str = Field(default_factory=make_uuid, primary_key=True)
     deck_index: int = Field(unique=True, index=True)
     deck_seed: str
+    treatment_key: str = Field(index=True)
+    treatment_cycle_index: int = Field(default=1, index=True)
     card_count: int = Field(default=24)
     status: str = Field(default="active", index=True)
     created_at: datetime = Field(default_factory=utcnow)
@@ -540,6 +549,11 @@ class Claim(SQLModel, table=True):
     last_seen_value: Optional[int] = None
     matches_last_seen: bool = Field(default=False)
     matches_any_seen: bool = Field(default=False)
+    crowd_prediction_value: Optional[int] = Field(default=None, index=True)
+    crowd_prediction_submitted_at: Optional[datetime] = None
+    social_recall_count: Optional[int] = None
+    social_recall_correct: Optional[bool] = Field(default=None, index=True)
+    social_recall_submitted_at: Optional[datetime] = None
     reaction_ms: Optional[int] = Field(
         default=None, sa_column=Column(BigInteger, nullable=True)
     )

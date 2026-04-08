@@ -12,6 +12,8 @@ export type UiCopy = {
     loadingResume: string;
     loadingPrepare: string;
     close: string;
+    continueLabel: string;
+    finalClosingMessage: string;
     languageNames: Record<AppLanguage, string>;
     welcomeWords: Record<AppLanguage, string>;
   };
@@ -44,6 +46,9 @@ export type UiCopy = {
   };
   instructions: {
     title: string;
+    subtitle: string;
+    listLabel: string;
+    steps: string[];
     intro: string;
     body: string;
     odds: string;
@@ -53,6 +58,8 @@ export type UiCopy = {
   comprehension: {
     eyebrow: string;
     title: string;
+    body: string;
+    odds: string;
     options: [string, string, string];
     errorEmpty: string;
     errorWrong: string;
@@ -100,10 +107,18 @@ export type UiCopy = {
     prompt: string;
     baseTicket: string;
     predictionTicket: string;
+    recallTicket: string;
     inviteTicket: string;
     achievedLabel: string;
     predictionAchieved: string;
     selectedTemplate: string;
+    recallPrompt: string;
+    recallOptions: [string, string, string];
+    recallPlaceholder: string;
+    recallCta: string;
+    recallSavedTemplate: string;
+    recallError: string;
+    saveError: string;
   };
   winner: {
     eyebrow: string;
@@ -139,6 +154,8 @@ export type UiCopy = {
     title: string;
     intro: string;
     codeLabel: string;
+    braceletLabel: string;
+    braceletPlaceholder: string;
     phoneLabel: string;
     phonePlaceholder: string;
     messageLabel: string;
@@ -156,6 +173,8 @@ export type UiCopy = {
     alreadyUsed: string;
     lookupHelpTemplate: string;
     phoneRequired: string;
+    braceletRequired: string;
+    braceletMismatch: string;
     consentRequired: string;
     successEyebrow: string;
     successTitle: string;
@@ -385,6 +404,9 @@ const es = withServerErrors({
     loadingResume: "Recuperando sesión",
     loadingPrepare: "Preparando experiencia",
     close: "Cerrar",
+    continueLabel: "Continuar",
+    finalClosingMessage:
+      "Muchas gracias, has terminado. Cierra el navegador y disfruta de la experiencia SONAR 2026.",
   },
   languageEntry: {
     title: "",
@@ -421,7 +443,7 @@ const es = withServerErrors({
       {
         title: "Qué tendrás que hacer",
         body:
-          "Introducirás el código de tu pulsera, verás una tirada de dado y después indicarás qué número salió. Si quieres, podrás volver a lanzar antes de responder. El proceso dura alrededor de un minuto.",
+          "Introducirás el código de tu pulsera, verás una tirada de dado y después indicarás qué número salió. El proceso dura alrededor de un minuto.",
       },
       {
         title: "Pago e incentivos",
@@ -446,39 +468,51 @@ const es = withServerErrors({
     ],
   },
   instructions: {
-    title: "Cómo funciona",
+    title: "¡Gracias por participar!",
+    subtitle:
+      "Solo por participar entras en un sorteo para una entrada del SONAR 2027.",
+    listLabel: "Instrucciones:",
+    steps: [
+      "En la primera pantalla verás los premios del juego.",
+      "En la siguiente, encontrarás un dado.",
+      "Dale a “Lanzar”.",
+      "Memoriza el número.",
+      "Luego vas a indicar el número.",
+      "Y al final verás el dinero que has ganado.",
+    ],
     intro:
-      "En las siguientes pantallas verás una tirada de dado y después te preguntaremos qué número salió.",
-    body:
-      "Según el número que indiques, podrás ganar el premio que aparece en la tabla.",
-    odds: "1 de cada 100 personas recibe el pago.",
-    prizeTableLabel: "Tabla de premios",
+      "En la primera pantalla verás los premios del juego y después pasarás al dado.",
+    body: "La pregunta posterior siempre se refiere al primer número.",
+    odds: "",
+    prizeTableLabel: "Instrucciones",
     cta: "Continuar",
   },
   comprehension: {
-    eyebrow: "Antes de seguir",
-    title: "Después de ver la tirada, ¿qué te pediremos?",
+    eyebrow: "",
+    title: "Tabla de premios:",
+    body: "Cada número se asocia con un premio.",
+    odds: "Uno de cada cien ganará el dinero de verdad (bizum).",
     options: [
       "Indicar qué número salió",
       "Elegir el premio que prefieres",
-      "Volver a tirar",
+      "Pasar a la siguiente pantalla",
     ],
-    errorEmpty: "Elige una opción.",
-    errorWrong:
-      "Recuerda: después de la tirada te pediremos indicar qué número salió.",
-    cta: "Seguir",
+    errorEmpty: "",
+    errorWrong: "",
+    cta: "Continuar",
   },
   game: {
-    title: "Tirada",
-    initialIntro: "Fíjate en el número que aparece al lanzar el dado.",
-    intro: "Fíjate en el número que aparece al lanzar el dado.",
+    title: "Lanza el dado",
+    initialIntro: "Dale a “Lanzar” y memoriza el primer número.",
+    intro:
+      "Cuando tengas claro el número, continúa.",
     visibleResultLabel: "",
     firstResultTemplate: "Número obtenido: {value}",
     continueCta: "Continuar",
     firstRollCta: "Lanzar",
-    rerollCta: "Lanzar otra vez",
+    rerollCta: "Lanzar",
     loading: "Cargando...",
-    attemptsTemplate: "Tiradas registradas: {count}/{max}",
+    attemptsTemplate: "Tirada registrada: {count}",
     errors: {
       noSession: "No hay una sesión activa.",
       loadRoll: "No se pudo cargar la tirada.",
@@ -486,8 +520,8 @@ const es = withServerErrors({
     },
   },
   report: {
-    title: "Indica el número",
-    body: "Selecciona el número que salió al lanzar el dado.",
+    title: "¿Qué te salió en la primera tirada?",
+    body: "Selecciona el número que te salió en la primera tirada.",
     errorSave: "No se pudo guardar tu respuesta.",
   },
   prizeReveal: {
@@ -503,19 +537,28 @@ const es = withServerErrors({
     controlTitle: "Tu respuesta es anónima",
     controlBody: "Indica qué número salió.",
     socialMessageTemplate:
-      "En un grupo de {denominator} resultados anteriores al tuyo, {count} personas dijeron que les salió un {target}.",
+      "{count} de {denominator} participantes anteriores dijeron que les salió un {target}.",
   },
   bonusDraw: {
     title: "Consigue opciones extra para el sorteo de SONAR 2027",
     intro: "Ya tienes 1 papeleta para el sorteo de 2 entradas para SONAR 2027 por haber participado.",
     prompt:
-      "Si quieres una extra, adivina qué número crees que más veces nos dirá la gente que le salió en el dado.",
+      "¿Qué número crees que nos dirá más veces la gente?",
     baseTicket: "1 papeleta por participar",
     predictionTicket: "1 extra si aciertas la predicción",
+    recallTicket: "1 extra si recuerdas el mensaje",
     inviteTicket: "1 extra por cada persona del festival que invites y participe",
     achievedLabel: "Conseguida",
     predictionAchieved: "Papeleta extra conseguida",
     selectedTemplate: "Predicción guardada: {value}",
+    recallPrompt:
+      "¿Cuánta gente te dijimos que había elegido el 6 de 60 participantes anteriores?",
+    recallOptions: ["0-20", "21-40", "41-60"],
+    recallPlaceholder: "Escribe un número de 0 a 60",
+    recallCta: "Guardar",
+    recallSavedTemplate: "Respuesta guardada: {value}",
+    recallError: "Escribe un número entre 0 y 60.",
+    saveError: "No se pudo guardar. Inténtalo de nuevo.",
   },
   winner: {
     eyebrow: "Has sido seleccionado",
@@ -526,13 +569,13 @@ const es = withServerErrors({
   },
   loser: {
     eyebrow: "Gracias por participar.",
-    title: "Aún puedes ganar",
+    title: "Resultados",
     body: "No has sido seleccionado para el premio económico.",
     bodySecondary:
-      "Sigues participando en el sorteo de 2 entradas VIP.",
+      "Sigues participando en el sorteo de 2 entradas para SONAR 2027.",
     bodyFooter: "Podrás consultar más información sobre el estudio y sus resultados agregados en cotec.es, y el código ganador al final del festival.",
     shareLabel: "Invitar por WhatsApp",
-    shareMessageTemplate: "Si estás ahora mismo en Sónar, prueba esta actividad: dura 60 segundos y puedes entrar en el sorteo de 2 entradas VIP para Sónar 2027 y optar a premios en dinero de hasta 60 €. Participa aquí: {link}",
+    shareMessageTemplate: "Si estás ahora mismo en Sónar, prueba esta actividad: dura 60 segundos y puedes entrar en el sorteo de 2 entradas para Sónar 2027 y optar a premios en dinero de hasta 60 €. Participa aquí: {link}",
   },
   paused: {
     eyebrow: "Gracias",
@@ -554,6 +597,8 @@ const es = withServerErrors({
     intro:
       "Tu código ya está preparado. Si quieres recibir un Bizum, introduce tu teléfono y autoriza la gestión del pago. Si prefieres donar el importe a una ONG, puedes hacerlo directamente.",
     codeLabel: "Código",
+    braceletLabel: "ID de la pulsera",
+    braceletPlaceholder: "Ej: AB12CD34",
     phoneLabel: "Teléfono (solo para Bizum)",
     phonePlaceholder: "Escribe tu teléfono",
     messageLabel: "",
@@ -572,6 +617,9 @@ const es = withServerErrors({
     alreadyUsed: "Código ya usado",
     lookupHelpTemplate: "Código válido · {amount} EUR",
     phoneRequired: "Introduce un teléfono válido para continuar",
+    braceletRequired: "Introduce el ID de la pulsera",
+    braceletMismatch:
+      "Pulsera errónea, no coincide con la registrada inicialmente.",
     consentRequired:
       "Marca la autorización de privacidad para continuar",
     successEyebrow: "Solicitud enviada",
@@ -608,6 +656,9 @@ const ca = withServerErrors({
     loadingResume: "Recuperant sessió",
     loadingPrepare: "Preparant experiència",
     close: "Tancar",
+    continueLabel: "Continuar",
+    finalClosingMessage:
+      "Moltes gràcies, ja has acabat. Tanca el navegador i gaudeix de l'experiència SONAR 2026.",
   },
   languageEntry: {
     title: "",
@@ -644,7 +695,7 @@ const ca = withServerErrors({
       {
         title: "Què hauràs de fer",
         body:
-          "Introduiràs el codi de la polsera, veuràs una tirada del dau i després indicaràs quin número ha sortit. Si vols, podràs tornar a llançar abans de respondre. El procés dura aproximadament un minut.",
+      "Introduiràs el codi de la polsera, veuràs una tirada del dau i després indicaràs quin número ha sortit. El procés dura aproximadament un minut.",
       },
       {
         title: "Pagament i incentius",
@@ -669,39 +720,52 @@ const ca = withServerErrors({
     ],
   },
   instructions: {
-    title: "Com funciona",
+    title: "Gràcies per participar!",
+    subtitle:
+      "Només per participar entres en un sorteig per a una entrada del SONAR 2027.",
+    listLabel: "Instruccions:",
+    steps: [
+      "A la primera pantalla veuràs els premis del joc.",
+      "A la següent, hi trobaràs un dau.",
+      "Prem “Llançar”.",
+      "Memoritza el número.",
+      "Després hauràs d’indicar el número.",
+      "I al final veuràs els diners que has guanyat.",
+    ],
     intro:
-      "A les pantalles següents veuràs una tirada del dau i després et preguntarem quin número ha sortit.",
+      "A la primera pantalla veuràs els premis del joc i després passaràs al dau.",
     body:
-      "Segons el número que indiquis, podràs guanyar el premi que apareix a la taula.",
-    odds: "1 de cada 100 persones rep el pagament.",
-    prizeTableLabel: "Taula de premis",
+      "La pregunta posterior sempre fa referència al primer número.",
+    odds: "",
+    prizeTableLabel: "Instruccions",
     cta: "Continuar",
   },
   comprehension: {
-    eyebrow: "Abans de seguir",
-    title: "Després de veure la tirada, què et demanarem?",
+    eyebrow: "",
+    title: "Taula de premis:",
+    body: "Cada número s’associa amb un premi.",
+    odds: "Una de cada cent persones guanyarà els diners de veritat (Bizum).",
     options: [
       "Indicar quin número ha sortit",
       "Triar el premi que prefereixes",
-      "Tornar a tirar",
+      "Passar a la pantalla següent",
     ],
-    errorEmpty: "Tria una opció.",
-    errorWrong:
-      "Recorda: després de la tirada et demanarem indicar quin número ha sortit.",
-    cta: "Seguir",
+    errorEmpty: "",
+    errorWrong: "",
+    cta: "Continuar",
   },
   game: {
-    title: "Tirada",
-    initialIntro: "Fixa't en el número que apareix en llançar el dau.",
-    intro: "Fixa't en el número que apareix en llançar el dau.",
+    title: "Llança el dau",
+    initialIntro: "Prem “Llançar” i memoritza el primer número.",
+    intro:
+      "Quan tinguis clar el número, continua.",
     visibleResultLabel: "",
     firstResultTemplate: "Número obtingut: {value}",
     continueCta: "Continuar",
     firstRollCta: "Llançar",
-    rerollCta: "Tornar a tirar",
+    rerollCta: "Llançar",
     loading: "Carregant...",
-    attemptsTemplate: "Tirades registrades: {count}/{max}",
+    attemptsTemplate: "Tirada registrada: {count}",
     errors: {
       noSession: "No hi ha cap sessió activa.",
       loadRoll: "No s'ha pogut carregar la tirada.",
@@ -709,8 +773,8 @@ const ca = withServerErrors({
     },
   },
   report: {
-    title: "Indica el número",
-    body: "Selecciona el número que ha sortit en llançar el dau.",
+    title: "Què t’ha sortit a la primera tirada?",
+    body: "Selecciona el número que t’ha sortit a la primera tirada.",
     errorSave: "No s'ha pogut desar la teva resposta.",
   },
   prizeReveal: {
@@ -726,19 +790,28 @@ const ca = withServerErrors({
     controlTitle: "La teva resposta és anònima",
     controlBody: "Indica quin número ha sortit.",
     socialMessageTemplate:
-      "En un grup de {denominator} resultats anteriors al teu, {count} persones van dir que els havia sortit un {target}.",
+      "{count} de {denominator} participants anteriors van dir que els havia sortit un {target}.",
   },
   bonusDraw: {
     title: "Aconsegueix opcions extra per al sorteig de SONAR 2027",
     intro: "Ja tens 1 papereta per al sorteig de 2 entrades per a SONAR 2027 per haver participat.",
     prompt:
-      "Si en vols una extra, endevina quin número creus que la gent ens dirà més vegades que li va sortir al dau.",
+      "Quin número creus que la gent ens dirà més vegades?",
     baseTicket: "1 papereta per participar",
     predictionTicket: "1 extra si encertes la predicció",
+    recallTicket: "1 extra si recordes el missatge",
     inviteTicket: "1 extra per cada persona del festival que convidis i participi",
     achievedLabel: "Aconseguida",
     predictionAchieved: "Papereta extra aconseguida",
     selectedTemplate: "Predicció desada: {value}",
+    recallPrompt:
+      "Quanta gent et vam dir que havia triat el 6 entre 60 participants anteriors?",
+    recallOptions: ["0-20", "21-40", "41-60"],
+    recallPlaceholder: "Escriu un número de 0 a 60",
+    recallCta: "Desar",
+    recallSavedTemplate: "Resposta desada: {value}",
+    recallError: "Escriu un número entre 0 i 60.",
+    saveError: "No s'ha pogut desar. Torna-ho a provar.",
   },
   winner: {
     eyebrow: "Has estat seleccionat",
@@ -749,13 +822,13 @@ const ca = withServerErrors({
   },
   loser: {
     eyebrow: "Gràcies per participar.",
-    title: "Encara pots guanyar",
+    title: "Resultats",
     body: "No has estat seleccionat per al premi econòmic.",
     bodySecondary:
-      "Continues participant en el sorteig de 2 entrades VIP.",
+      "Continues participant en el sorteig de 2 entrades per al SONAR 2027.",
     bodyFooter: "Podràs consultar més informació sobre l'estudi i els seus resultats agregats a cotec.es, i el codi guanyador al final del festival.",
     shareLabel: "Convidar per WhatsApp",
-    shareMessageTemplate: "Si ets ara mateix al Sónar, prova aquesta activitat: dura 60 segons i pots entrar al sorteig de 2 entrades VIP per al Sónar 2027 i optar a premis en diners de fins a 60 €. Participa aquí: {link}",
+    shareMessageTemplate: "Si ets ara mateix al Sónar, prova aquesta activitat: dura 60 segons i pots entrar al sorteig de 2 entrades per al Sónar 2027 i optar a premis en diners de fins a 60 €. Participa aquí: {link}",
   },
   paused: {
     eyebrow: "Gràcies",
@@ -777,6 +850,8 @@ const ca = withServerErrors({
     intro:
       "El teu codi ja està preparat. Si vols rebre un Bizum, introdueix el teu telèfon i autoritza la gestió del pagament. Si prefereixes donar l'import a una ONG, ho pots fer directament.",
     codeLabel: "Codi",
+    braceletLabel: "ID de la polsera",
+    braceletPlaceholder: "Ex: AB12CD34",
     phoneLabel: "Telèfon (només per a Bizum)",
     phonePlaceholder: "Escriu el teu telèfon",
     messageLabel: "",
@@ -795,6 +870,9 @@ const ca = withServerErrors({
     alreadyUsed: "Codi ja utilitzat",
     lookupHelpTemplate: "Codi vàlid · {amount} EUR",
     phoneRequired: "Introdueix un telèfon vàlid per continuar",
+    braceletRequired: "Introdueix l'ID de la polsera",
+    braceletMismatch:
+      "Polsera errònia, no coincideix amb la registrada inicialment.",
     consentRequired:
       "Marca l'autorització de privacitat per continuar",
     successEyebrow: "Sol·licitud enviada",
@@ -831,6 +909,9 @@ const en = withServerErrors({
     loadingResume: "Restoring session",
     loadingPrepare: "Preparing experience",
     close: "Close",
+    continueLabel: "Continue",
+    finalClosingMessage:
+      "Thank you very much, you have finished. Close the browser and enjoy the SONAR 2026 experience.",
   },
   languageEntry: {
     title: "",
@@ -867,7 +948,7 @@ const en = withServerErrors({
       {
         title: "What you will do",
         body:
-          "You will enter your bracelet code, see a die roll, and then report which number came up. If you want, you can roll again before responding. The process takes about one minute.",
+          "You will enter your bracelet code, see a die roll, and then report which number came up. The process takes about one minute.",
       },
       {
         title: "Payment and incentives",
@@ -892,39 +973,52 @@ const en = withServerErrors({
     ],
   },
   instructions: {
-    title: "How it works",
+    title: "Thanks for taking part!",
+    subtitle:
+      "Just for taking part, you enter a draw for a SONAR 2027 ticket.",
+    listLabel: "Instructions:",
+    steps: [
+      "On the first screen you will see the prizes in the game.",
+      "On the next one, you will find a die.",
+      "Tap “Roll”.",
+      "Remember the number.",
+      "Then you will report the number.",
+      "And at the end you will see how much money you won.",
+    ],
     intro:
-      "On the next screens you will see a die roll and then we will ask which number came up.",
+      "On the first screen you will see the prizes in the game, and then you will move on to the die.",
     body:
-      "Depending on the number you report, you may win the prize shown in the table.",
-    odds: "1 in 100 participants receives payment.",
-    prizeTableLabel: "Prize table",
+      "The later question always refers to the first number.",
+    odds: "",
+    prizeTableLabel: "Instructions",
     cta: "Continue",
   },
   comprehension: {
-    eyebrow: "Before you continue",
-    title: "After seeing the roll, what will we ask you to do?",
+    eyebrow: "",
+    title: "Prize table:",
+    body: "Each number is linked to a prize.",
+    odds: "One in every hundred people will receive the real payment (Bizum).",
     options: [
       "Report which number came up",
       "Choose the prize you prefer",
-      "Roll again",
+      "Move to the next screen",
     ],
-    errorEmpty: "Choose one option.",
-    errorWrong:
-      "Remember: after the roll we will ask you to report which number came up.",
+    errorEmpty: "",
+    errorWrong: "",
     cta: "Continue",
   },
   game: {
-    title: "Roll",
-    initialIntro: "Look at the number that appears when the die is rolled.",
-    intro: "Look at the number that appears when the die is rolled.",
+    title: "Roll the die",
+    initialIntro: "Tap “Roll” and remember the first number.",
+    intro:
+      "When you have the number clear, continue.",
     visibleResultLabel: "",
     firstResultTemplate: "Number obtained: {value}",
     continueCta: "Continue",
     firstRollCta: "Roll",
-    rerollCta: "Roll again",
+    rerollCta: "Roll",
     loading: "Loading...",
-    attemptsTemplate: "Rolls recorded: {count}/{max}",
+    attemptsTemplate: "Recorded roll: {count}",
     errors: {
       noSession: "There is no active session.",
       loadRoll: "Could not load the roll.",
@@ -932,8 +1026,8 @@ const en = withServerErrors({
     },
   },
   report: {
-    title: "Report the number",
-    body: "Select the number that came up when the die was rolled.",
+    title: "What came up on the first roll?",
+    body: "Select the number that came up on the first roll.",
     errorSave: "Could not save your response.",
   },
   prizeReveal: {
@@ -949,19 +1043,28 @@ const en = withServerErrors({
     controlTitle: "Your response is anonymous",
     controlBody: "Report which number came up.",
     socialMessageTemplate:
-      "In a group of {denominator} results recorded before yours, {count} people said they got a {target}.",
+      "{count} out of {denominator} earlier participants said they got a {target}.",
   },
   bonusDraw: {
     title: "Get extra entries for the SONAR 2027 draw",
     intro: "You already have 1 entry for the draw for 2 tickets to SONAR 2027 for taking part.",
     prompt:
-      "If you want one extra, guess which number you think people will tell us most often came up on the die.",
+      "Which number do you think people will report most often?",
     baseTicket: "1 entry for taking part",
     predictionTicket: "1 extra if your prediction is correct",
+    recallTicket: "1 extra if you remember the message",
     inviteTicket: "1 extra for each person at the festival you invite who takes part",
     achievedLabel: "Earned",
     predictionAchieved: "Extra entry earned",
     selectedTemplate: "Prediction saved: {value}",
+    recallPrompt:
+      "How many people did we say had chosen 6 out of 60 earlier participants?",
+    recallOptions: ["0-20", "21-40", "41-60"],
+    recallPlaceholder: "Enter a number from 0 to 60",
+    recallCta: "Save",
+    recallSavedTemplate: "Answer saved: {value}",
+    recallError: "Enter a number between 0 and 60.",
+    saveError: "Could not save. Please try again.",
   },
   winner: {
     eyebrow: "You were selected",
@@ -972,13 +1075,13 @@ const en = withServerErrors({
   },
   loser: {
     eyebrow: "Thanks for taking part.",
-    title: "You can still win",
+    title: "Results",
     body: "You were not selected for the cash prize.",
     bodySecondary:
-      "You are still entered in the draw for 2 VIP tickets.",
+      "You are still entered in the draw for 2 tickets to SONAR 2027.",
     bodyFooter: "You can learn more about the study and its aggregated results at cotec.es, and about the winning code at the end of the festival.",
     shareLabel: "Invite on WhatsApp",
-    shareMessageTemplate: "If you're at Sónar right now, try this activity: it takes 60 seconds and you can enter the draw for 2 VIP tickets for Sónar 2027 and cash prizes of up to €60. Join here: {link}",
+    shareMessageTemplate: "If you're at Sónar right now, try this activity: it takes 60 seconds and you can enter the draw for 2 tickets to Sónar 2027 and cash prizes of up to €60. Join here: {link}",
   },
   paused: {
     eyebrow: "Thank you",
@@ -1000,6 +1103,8 @@ const en = withServerErrors({
     intro:
       "Your code is already prepared. If you want to receive a Bizum, enter your phone number and authorise payment processing. If you prefer to donate the amount to an NGO, you can do that directly.",
     codeLabel: "Code",
+    braceletLabel: "Bracelet ID",
+    braceletPlaceholder: "E.g. AB12CD34",
     phoneLabel: "Phone (Bizum only)",
     phonePlaceholder: "Enter your phone number",
     messageLabel: "",
@@ -1018,6 +1123,9 @@ const en = withServerErrors({
     alreadyUsed: "Code already used",
     lookupHelpTemplate: "Valid code · {amount} EUR",
     phoneRequired: "Enter a valid phone number to continue",
+    braceletRequired: "Enter the bracelet ID",
+    braceletMismatch:
+      "Wrong bracelet, it does not match the one registered initially.",
     consentRequired:
       "Tick the privacy authorisation to continue",
     successEyebrow: "Request sent",
@@ -1054,6 +1162,9 @@ const fr = withServerErrors({
     loadingResume: "Récupération de la session",
     loadingPrepare: "Préparation de l'expérience",
     close: "Fermer",
+    continueLabel: "Continuer",
+    finalClosingMessage:
+      "Merci beaucoup, vous avez terminé. Fermez le navigateur et profitez de l'expérience SONAR 2026.",
   },
   languageEntry: {
     title: "",
@@ -1090,7 +1201,7 @@ const fr = withServerErrors({
       {
         title: "Ce que vous ferez",
         body:
-          "Vous saisirez le code de votre bracelet, verrez un lancer de dé, puis indiquerez le nombre obtenu. Si vous le souhaitez, vous pourrez relancer avant de répondre. L'ensemble dure environ une minute.",
+          "Vous saisirez le code de votre bracelet, verrez un lancer de dé, puis indiquerez le nombre obtenu. L'ensemble dure environ une minute.",
       },
       {
         title: "Paiement et incitations",
@@ -1115,39 +1226,52 @@ const fr = withServerErrors({
     ],
   },
   instructions: {
-    title: "Comment ça marche",
+    title: "Merci de participer !",
+    subtitle:
+      "Rien qu’en participant, vous entrez dans un tirage au sort pour un billet SONAR 2027.",
+    listLabel: "Instructions :",
+    steps: [
+      "Sur le premier écran, vous verrez les prix du jeu.",
+      "Sur le suivant, vous trouverez un dé.",
+      "Appuyez sur « Lancer ».",
+      "Mémorisez le nombre.",
+      "Ensuite, vous indiquerez le nombre.",
+      "Et à la fin, vous verrez l’argent que vous avez gagné.",
+    ],
     intro:
-      "Sur les écrans suivants, vous verrez un lancer de dé puis nous vous demanderons quel nombre est sorti.",
+      "Sur le premier écran, vous verrez les prix du jeu, puis vous passerez au dé.",
     body:
-      "Selon le nombre que vous indiquerez, vous pourrez gagner le prix affiché dans le tableau.",
-    odds: "1 personne sur 100 reçoit le paiement.",
-    prizeTableLabel: "Table des prix",
+      "La question suivante portera toujours sur le premier nombre.",
+    odds: "",
+    prizeTableLabel: "Instructions",
     cta: "Continuer",
   },
   comprehension: {
-    eyebrow: "Avant de continuer",
-    title: "Après avoir vu le lancer, que vous demanderons-nous ?",
+    eyebrow: "",
+    title: "Table des prix :",
+    body: "Chaque nombre correspond à un prix.",
+    odds: "Une personne sur cent recevra le paiement réel (Bizum).",
     options: [
       "Indiquer quel nombre est sorti",
       "Choisir le prix que vous préférez",
-      "Relancer",
+      "Passer à l'écran suivant",
     ],
-    errorEmpty: "Choisissez une option.",
-    errorWrong:
-      "Rappelez-vous : après le lancer, nous vous demanderons d'indiquer quel nombre est sorti.",
+    errorEmpty: "",
+    errorWrong: "",
     cta: "Continuer",
   },
   game: {
-    title: "Lancer",
-    initialIntro: "Regardez bien le nombre qui apparaît lorsque le dé est lancé.",
-    intro: "Regardez bien le nombre qui apparaît lorsque le dé est lancé.",
+    title: "Lancez le dé",
+    initialIntro: "Appuyez sur « Lancer » et mémorisez le premier nombre.",
+    intro:
+      "Quand vous avez bien le nombre en tête, continuez.",
     visibleResultLabel: "",
     firstResultTemplate: "Nombre obtenu : {value}",
     continueCta: "Continuer",
     firstRollCta: "Lancer",
-    rerollCta: "Lancer encore",
+    rerollCta: "Lancer",
     loading: "Chargement...",
-    attemptsTemplate: "Lancers enregistrés : {count}/{max}",
+    attemptsTemplate: "Lancer enregistré : {count}",
     errors: {
       noSession: "Aucune session active.",
       loadRoll: "Impossible de charger le lancer.",
@@ -1155,8 +1279,8 @@ const fr = withServerErrors({
     },
   },
   report: {
-    title: "Indiquez le nombre",
-    body: "Sélectionnez le nombre qui est sorti lorsque le dé a été lancé.",
+    title: "Quel nombre est sorti au premier lancer ?",
+    body: "Sélectionnez le nombre qui est sorti au premier lancer.",
     errorSave: "Impossible d'enregistrer votre réponse.",
   },
   prizeReveal: {
@@ -1172,19 +1296,28 @@ const fr = withServerErrors({
     controlTitle: "Votre réponse est anonyme",
     controlBody: "Indiquez quel nombre est sorti.",
     socialMessageTemplate:
-      "Dans un groupe de {denominator} résultats enregistrés avant le vôtre, {count} personnes ont déclaré avoir obtenu un {target}.",
+      "{count} participants sur {denominator} ont dit avoir obtenu un {target} avant vous.",
   },
   bonusDraw: {
     title: "Obtenez des chances supplémentaires pour le tirage SONAR 2027",
     intro: "Vous avez déjà 1 participation au tirage de 2 billets pour SONAR 2027 pour avoir pris part à l'activité.",
     prompt:
-      "Si vous en voulez une de plus, devinez quel nombre, selon vous, les personnes nous diront le plus souvent avoir obtenu sur le dé.",
+      "Quel nombre pensez-vous que les participants nous diront le plus souvent ?",
     baseTicket: "1 participation pour avoir pris part",
     predictionTicket: "1 supplémentaire si votre prédiction est correcte",
+    recallTicket: "1 supplémentaire si vous vous souvenez du message",
     inviteTicket: "1 supplémentaire par personne du festival que vous invitez et qui participe",
     achievedLabel: "Obtenue",
     predictionAchieved: "Participation supplémentaire obtenue",
     selectedTemplate: "Prédiction enregistrée : {value}",
+    recallPrompt:
+      "Combien de personnes vous avons-nous dit avoir choisi le 6 parmi les 60 participants précédents ?",
+    recallOptions: ["0-20", "21-40", "41-60"],
+    recallPlaceholder: "Entrez un nombre de 0 à 60",
+    recallCta: "Enregistrer",
+    recallSavedTemplate: "Réponse enregistrée : {value}",
+    recallError: "Entrez un nombre entre 0 et 60.",
+    saveError: "Impossible d'enregistrer. Réessayez.",
   },
   winner: {
     eyebrow: "Vous avez été sélectionné",
@@ -1195,13 +1328,13 @@ const fr = withServerErrors({
   },
   loser: {
     eyebrow: "Merci pour votre participation.",
-    title: "Vous pouvez encore gagner",
+    title: "Résultats",
     body: "Vous n'avez pas été sélectionné pour le prix en espèces.",
     bodySecondary:
-      "Vous participez toujours au tirage de 2 billets VIP.",
+      "Vous participez toujours au tirage de 2 billets pour SONAR 2027.",
     bodyFooter: "Vous pourrez en savoir plus sur l'étude et ses résultats agrégés sur cotec.es, ainsi que sur le code gagnant à la fin du festival.",
     shareLabel: "Inviter sur WhatsApp",
-    shareMessageTemplate: "Si vous êtes au Sónar en ce moment, essayez cette activité : elle dure 60 secondes et vous permet de participer au tirage de 2 billets VIP pour le Sónar 2027 ainsi qu'à des prix en argent jusqu'à 60 €. Participez ici : {link}",
+    shareMessageTemplate: "Si vous êtes au Sónar en ce moment, essayez cette activité : elle dure 60 secondes et vous permet de participer au tirage de 2 billets pour le Sónar 2027 ainsi qu'à des prix en argent jusqu'à 60 €. Participez ici : {link}",
   },
   paused: {
     eyebrow: "Merci",
@@ -1223,6 +1356,8 @@ const fr = withServerErrors({
     intro:
       "Votre code est déjà prêt. Si vous souhaitez recevoir un Bizum, indiquez votre numéro de téléphone et autorisez le traitement du paiement. Si vous préférez faire don du montant à une ONG, vous pouvez le faire directement.",
     codeLabel: "Code",
+    braceletLabel: "ID du bracelet",
+    braceletPlaceholder: "Ex. AB12CD34",
     phoneLabel: "Téléphone (Bizum uniquement)",
     phonePlaceholder: "Saisissez votre téléphone",
     messageLabel: "",
@@ -1241,6 +1376,9 @@ const fr = withServerErrors({
     alreadyUsed: "Code déjà utilisé",
     lookupHelpTemplate: "Code valide · {amount} EUR",
     phoneRequired: "Entrez un numéro de téléphone valide pour continuer",
+    braceletRequired: "Saisissez l'ID du bracelet",
+    braceletMismatch:
+      "Bracelet incorrect, il ne correspond pas à celui enregistré au départ.",
     consentRequired:
       "Cochez l'autorisation de confidentialité pour continuer",
     successEyebrow: "Demande envoyée",
@@ -1277,6 +1415,9 @@ const pt = withServerErrors({
     loadingResume: "A recuperar sessão",
     loadingPrepare: "A preparar experiência",
     close: "Fechar",
+    continueLabel: "Continuar",
+    finalClosingMessage:
+      "Muito obrigado, terminaste. Fecha o navegador e desfruta da experiência SONAR 2026.",
   },
   languageEntry: {
     title: "",
@@ -1313,7 +1454,7 @@ const pt = withServerErrors({
       {
         title: "O que vais fazer",
         body:
-          "Vais introduzir o código da tua pulseira, ver uma tirada do dado e depois indicar que número saiu. Se quiseres, podes voltar a lançar antes de responder. O processo dura cerca de um minuto.",
+          "Vais introduzir o código da tua pulseira, ver uma tirada do dado e depois indicar que número saiu. O processo dura cerca de um minuto.",
       },
       {
         title: "Pagamento e incentivos",
@@ -1338,39 +1479,52 @@ const pt = withServerErrors({
     ],
   },
   instructions: {
-    title: "Como funciona",
+    title: "Obrigado por participares!",
+    subtitle:
+      "Só por participares, entras num sorteio para um bilhete do SONAR 2027.",
+    listLabel: "Instruções:",
+    steps: [
+      "No primeiro ecrã vais ver os prémios do jogo.",
+      "No seguinte, encontras um dado.",
+      "Carrega em “Lançar”.",
+      "Memoriza o número.",
+      "Depois vais indicar o número.",
+      "E no fim vais ver quanto dinheiro ganhaste.",
+    ],
     intro:
-      "Nos ecrãs seguintes vais ver uma tirada do dado e depois vamos perguntar que número saiu.",
+      "No primeiro ecrã vais ver os prémios do jogo e depois passas ao dado.",
     body:
-      "Consoante o número que indicares, poderás ganhar o prémio que aparece na tabela.",
-    odds: "1 em cada 100 participantes recebe o pagamento.",
-    prizeTableLabel: "Tabela de prémios",
+      "A pergunta seguinte refere-se sempre ao primeiro número.",
+    odds: "",
+    prizeTableLabel: "Instruções",
     cta: "Continuar",
   },
   comprehension: {
-    eyebrow: "Antes de continuar",
-    title: "Depois de veres a tirada, o que te vamos pedir?",
+    eyebrow: "",
+    title: "Tabela de prémios:",
+    body: "Cada número está associado a um prémio.",
+    odds: "Uma em cada cem pessoas receberá o dinheiro real (Bizum).",
     options: [
       "Indicar que número saiu",
       "Escolher o prémio que preferes",
-      "Voltar a lançar",
+      "Passar ao ecrã seguinte",
     ],
-    errorEmpty: "Escolhe uma opção.",
-    errorWrong:
-      "Lembra-te: depois da tirada vamos pedir que indiques que número saiu.",
-    cta: "Seguir",
+    errorEmpty: "",
+    errorWrong: "",
+    cta: "Continuar",
   },
   game: {
-    title: "Tirada",
-    initialIntro: "Olha para o número que aparece ao lançar o dado.",
-    intro: "Olha para o número que aparece ao lançar o dado.",
+    title: "Lança o dado",
+    initialIntro: "Carrega em “Lançar” e memoriza o primeiro número.",
+    intro:
+      "Quando tiveres claro o número, continua.",
     visibleResultLabel: "",
     firstResultTemplate: "Número obtido: {value}",
     continueCta: "Continuar",
     firstRollCta: "Lançar",
-    rerollCta: "Lançar outra vez",
+    rerollCta: "Lançar",
     loading: "A carregar...",
-    attemptsTemplate: "Tiradas registadas: {count}/{max}",
+    attemptsTemplate: "Tirada registada: {count}",
     errors: {
       noSession: "Não há nenhuma sessão ativa.",
       loadRoll: "Não foi possível carregar a tirada.",
@@ -1378,8 +1532,8 @@ const pt = withServerErrors({
     },
   },
   report: {
-    title: "Indica o número",
-    body: "Seleciona o número que saiu ao lançar o dado.",
+    title: "Que número te saiu na primeira tirada?",
+    body: "Seleciona o número que te saiu na primeira tirada.",
     errorSave: "Não foi possível guardar a tua resposta.",
   },
   prizeReveal: {
@@ -1395,19 +1549,28 @@ const pt = withServerErrors({
     controlTitle: "A tua resposta é anónima",
     controlBody: "Indica que número saiu.",
     socialMessageTemplate:
-      "Num grupo de {denominator} resultados registados antes do teu, {count} pessoas disseram que lhes saiu um {target}.",
+      "{count} de {denominator} participantes anteriores disseram que lhes saiu um {target}.",
   },
   bonusDraw: {
     title: "Consegue entradas extra para o sorteio de SONAR 2027",
     intro: "Já tens 1 participação no sorteio de 2 entradas para o SONAR 2027 por teres participado.",
     prompt:
-      "Se quiseres mais uma, adivinha qual é o número que achas que as pessoas nos vão dizer mais vezes que lhes saiu no dado.",
+      "Que número achas que as pessoas nos vão dizer mais vezes?",
     baseTicket: "1 participação por participar",
     predictionTicket: "1 extra se acertares na previsão",
+    recallTicket: "1 extra se te lembrares da mensagem",
     inviteTicket: "1 extra por cada pessoa do festival que convidares e que participe",
     achievedLabel: "Conseguida",
     predictionAchieved: "Participação extra conseguida",
     selectedTemplate: "Previsão guardada: {value}",
+    recallPrompt:
+      "Quantas pessoas te dissemos que tinham escolhido o 6 entre 60 participantes anteriores?",
+    recallOptions: ["0-20", "21-40", "41-60"],
+    recallPlaceholder: "Escreve um número de 0 a 60",
+    recallCta: "Guardar",
+    recallSavedTemplate: "Resposta guardada: {value}",
+    recallError: "Escreve um número entre 0 e 60.",
+    saveError: "Não foi possível guardar. Tenta de novo.",
   },
   winner: {
     eyebrow: "Foste selecionado",
@@ -1418,13 +1581,13 @@ const pt = withServerErrors({
   },
   loser: {
     eyebrow: "Obrigado por participar.",
-    title: "Ainda podes ganhar",
+    title: "Resultados",
     body: "Não foste selecionado para o prémio em dinheiro.",
     bodySecondary:
-      "Continuas a participar no sorteio de 2 entradas VIP.",
+      "Continuas a participar no sorteio de 2 entradas para o SONAR 2027.",
     bodyFooter: "Poderás saber mais sobre o estudo e os seus resultados agregados em cotec.es, e sobre o código vencedor no final do festival.",
     shareLabel: "Convidar por WhatsApp",
-    shareMessageTemplate: "Se estás agora no Sónar, experimenta esta atividade: demora 60 segundos e podes entrar no sorteio de 2 entradas VIP para o Sónar 2027 e ganhar prémios em dinheiro até 60 €. Participa aqui: {link}",
+    shareMessageTemplate: "Se estás agora no Sónar, experimenta esta atividade: demora 60 segundos e podes entrar no sorteio de 2 entradas para o Sónar 2027 e ganhar prémios em dinheiro até 60 €. Participa aqui: {link}",
   },
   paused: {
     eyebrow: "Obrigado",
@@ -1446,6 +1609,8 @@ const pt = withServerErrors({
     intro:
       "O teu código já está preparado. Se quiseres receber um Bizum, introduz o teu telefone e autoriza a gestão do pagamento. Se preferires doar o valor a uma ONG, podes fazê-lo diretamente.",
     codeLabel: "Código",
+    braceletLabel: "ID da pulseira",
+    braceletPlaceholder: "Ex.: AB12CD34",
     phoneLabel: "Telefone (apenas para Bizum)",
     phonePlaceholder: "Escreve o teu telefone",
     messageLabel: "",
@@ -1464,6 +1629,9 @@ const pt = withServerErrors({
     alreadyUsed: "Código já usado",
     lookupHelpTemplate: "Código válido · {amount} EUR",
     phoneRequired: "Introduz um telefone válido para continuar",
+    braceletRequired: "Introduz o ID da pulseira",
+    braceletMismatch:
+      "Pulseira errada, não coincide com a registada inicialmente.",
     consentRequired:
       "Marca a autorização de privacidade para continuar",
     successEyebrow: "Pedido enviado",
@@ -1501,6 +1669,9 @@ const it = withServerErrors({
     loadingResume: "Recupero sessione",
     loadingPrepare: "Preparazione esperienza",
     close: "Chiudi",
+    continueLabel: "Continua",
+    finalClosingMessage:
+      "Grazie mille, hai finito. Chiudi il browser e goditi l'esperienza SONAR 2026.",
   },
   languageEntry: {
     ...en.languageEntry,
@@ -1535,7 +1706,7 @@ const it = withServerErrors({
       {
         title: "Che cosa farai",
         body:
-          "Inserirai il codice del braccialetto, vedrai un lancio del dado e poi indicherai quale numero e uscito. Se vuoi, potrai lanciare di nuovo prima di rispondere. Il processo dura circa un minuto.",
+          "Inserirai il codice del braccialetto, vedrai un lancio del dado e poi indicherai quale numero e uscito. Il processo dura circa un minuto.",
       },
       {
         title: "Pagamento e incentivi",
@@ -1561,38 +1732,51 @@ const it = withServerErrors({
   },
   instructions: {
     ...en.instructions,
-    title: "Come funziona",
+    title: "Grazie per aver partecipato!",
+    subtitle:
+      "Solo per aver partecipato entri in un sorteggio per un biglietto SONAR 2027.",
+    listLabel: "Istruzioni:",
+    steps: [
+      "Nella prima schermata vedrai i premi del gioco.",
+      "In quella successiva troverai un dado.",
+      "Premi “Lancia”.",
+      "Memorizza il numero.",
+      "Poi dovrai indicare il numero.",
+      "E alla fine vedrai quanti soldi hai vinto.",
+    ],
     intro:
-      "Nelle schermate successive vedrai un lancio del dado e poi ti chiederemo quale numero è uscito.",
+      "Nella prima schermata vedrai i premi del gioco e poi passerai al dado.",
     body:
-      "In base al numero che indicherai, potrai vincere il premio mostrato nella tabella.",
-    odds: "1 persona su 100 riceve il pagamento.",
-    prizeTableLabel: "Tabella dei premi",
+      "La domanda successiva riguarda sempre il primo numero.",
+    odds: "",
+    prizeTableLabel: "Istruzioni",
     cta: "Continua",
   },
   comprehension: {
     ...en.comprehension,
-    eyebrow: "Prima di continuare",
-    title: "Dopo aver visto il lancio, che cosa ti chiederemo?",
+    eyebrow: "",
+    title: "Tabella dei premi:",
+    body: "Ogni numero corrisponde a un premio.",
+    odds: "Una persona su cento riceverà il pagamento reale (Bizum).",
     options: [
       "Indicare quale numero è uscito",
       "Scegliere il premio che preferisci",
-      "Lanciare di nuovo",
+      "Passare alla schermata successiva",
     ],
-    errorEmpty: "Scegli un'opzione.",
-    errorWrong:
-      "Ricorda: dopo il lancio ti chiederemo di indicare quale numero è uscito.",
+    errorEmpty: "",
+    errorWrong: "",
     cta: "Continua",
   },
   game: {
     ...en.game,
-    title: "Lancio",
-    initialIntro: "Osserva il numero che compare quando il dado viene lanciato.",
-    intro: "Osserva il numero che compare quando il dado viene lanciato.",
+    title: "Lancia il dado",
+    initialIntro: "Premi “Lancia” e memorizza il primo numero.",
+    intro:
+      "Quando hai chiaro il numero, continua.",
     firstResultTemplate: "Numero ottenuto: {value}",
     continueCta: "Continua",
     firstRollCta: "Lancia",
-    rerollCta: "Lancia ancora",
+    rerollCta: "Lancia",
     loading: "Caricamento...",
     errors: {
       ...en.game.errors,
@@ -1603,8 +1787,8 @@ const it = withServerErrors({
   },
   report: {
     ...en.report,
-    title: "Indica il numero",
-    body: "Seleziona il numero uscito quando il dado è stato lanciato.",
+    title: "Che cosa ti è uscito al primo lancio?",
+    body: "Seleziona il numero che ti è uscito al primo lancio.",
     errorSave: "Impossibile salvare la tua risposta.",
   },
   treatment: {
@@ -1612,7 +1796,28 @@ const it = withServerErrors({
     controlTitle: "La tua risposta e anonima",
     controlBody: "Indica quale numero e uscito.",
     socialMessageTemplate:
-      "In un gruppo di {denominator} risultati registrati prima del tuo, {count} persone hanno detto di aver ottenuto un {target}.",
+      "{count} partecipanti su {denominator} prima di te hanno detto di aver ottenuto un {target}.",
+  },
+  bonusDraw: {
+    ...en.bonusDraw,
+    title: "Ottieni possibilità extra per il sorteggio SONAR 2027",
+    intro: "Hai già 1 partecipazione al sorteggio di 2 biglietti per SONAR 2027 per aver preso parte all'attività.",
+    prompt: "Quale numero pensi che le persone ci diranno più spesso?",
+    baseTicket: "1 partecipazione per aver partecipato",
+    predictionTicket: "1 extra se indovini la previsione",
+    recallTicket: "1 extra se ricordi il messaggio",
+    inviteTicket: "1 extra per ogni persona del festival che inviti e che partecipa",
+    achievedLabel: "Ottenuta",
+    predictionAchieved: "Partecipazione extra ottenuta",
+    selectedTemplate: "Previsione salvata: {value}",
+    recallPrompt:
+      "Quante persone ti abbiamo detto che avevano scelto il 6 tra i 60 partecipanti precedenti?",
+    recallOptions: ["0-20", "21-40", "41-60"],
+    recallPlaceholder: "Inserisci un numero da 0 a 60",
+    recallCta: "Salva",
+    recallSavedTemplate: "Risposta salvata: {value}",
+    recallError: "Inserisci un numero tra 0 e 60.",
+    saveError: "Impossibile salvare. Riprova.",
   },
   prizeReveal: {
     ...en.prizeReveal,
@@ -1634,13 +1839,13 @@ const it = withServerErrors({
   loser: {
     ...en.loser,
     eyebrow: "Grazie per aver partecipato",
-    title: "Puoi ancora vincere",
+    title: "Risultati",
     body: "Non sei stato selezionato per il premio in denaro.",
-    bodySecondary: "Continui a partecipare al sorteggio di 2 biglietti VIP.",
+    bodySecondary: "Continui a partecipare al sorteggio di 2 biglietti per SONAR 2027.",
     bodyFooter: "Potrai trovare maggiori informazioni sullo studio e sui suoi risultati aggregati su cotec.es, e sul codice vincente alla fine del festival.",
     shareLabel: "Invita via WhatsApp",
     shareMessageTemplate:
-      "Se sei al Sónar in questo momento, prova questa attività: dura 60 secondi e puoi partecipare al sorteggio di 2 biglietti VIP per il Sónar 2027 e concorrere a premi in denaro fino a 60 euro. Partecipa qui: {link}",
+      "Se sei al Sónar in questo momento, prova questa attività: dura 60 secondi e puoi partecipare al sorteggio di 2 biglietti per il Sónar 2027 e concorrere a premi in denaro fino a 60 euro. Partecipa qui: {link}",
   },
   paused: {
     ...en.paused,
@@ -1660,6 +1865,8 @@ const it = withServerErrors({
     title: "Per ricevere un Bizum",
     intro: "",
     codeLabel: "Codice del premio",
+    braceletLabel: "ID del braccialetto",
+    braceletPlaceholder: "Es: AB12CD34",
     phoneLabel: "Il tuo telefono",
     phonePlaceholder: "Scrivi il tuo telefono",
     donationHint:
@@ -1676,6 +1883,9 @@ const it = withServerErrors({
     alreadyUsed: "Codice gia usato",
     lookupHelpTemplate: "Codice valido · {amount} EUR",
     phoneRequired: "Inserisci un telefono valido per continuare",
+    braceletRequired: "Inserisci l'ID del braccialetto",
+    braceletMismatch:
+      "Braccialetto errato, non coincide con quello registrato inizialmente.",
     consentRequired:
       "Segna l'autorizzazione privacy per continuare",
     successEyebrow: "Richiesta inviata",

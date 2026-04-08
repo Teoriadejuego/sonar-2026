@@ -26,6 +26,14 @@ def bracelet_code(seed: int) -> str:
     return f"EXPO{seed:04d}"
 
 
+def recall_bucket(count: int) -> int:
+    if count <= 20:
+        return 20
+    if count <= 40:
+        return 40
+    return 60
+
+
 class ResearchExportsTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls) -> None:
@@ -57,8 +65,17 @@ class ResearchExportsTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.text)
         return response.json()["session"]
 
+    def access_non_control_session(self, start_seed: int) -> dict:
+        next_seed = start_seed
+        while True:
+            session = self.access_session(bracelet_code(next_seed))
+            if session["treatment_key"] != "control":
+                return session
+            next_seed += 1
+
     def complete_session(self, bracelet_id: str) -> dict:
-        session = self.access_session(bracelet_id)
+        start_seed = int(bracelet_id[4:])
+        session = self.access_non_control_session(start_seed)
         session_id = session["session_id"]
 
         roll_response = self.client.post(
@@ -95,7 +112,18 @@ class ResearchExportsTests(unittest.TestCase):
             },
         )
         self.assertEqual(submit_response.status_code, 200, submit_response.text)
-        return submit_response.json()["session"]
+        completed = submit_response.json()["session"]
+
+        followup_response = self.client.post(
+            f"/v1/session/{session_id}/claim-followup",
+            json={
+                "crowd_prediction_value": 3,
+                "social_recall_count": recall_bucket(snapshot["count_target"]),
+                "language": "es",
+            },
+        )
+        self.assertEqual(followup_response.status_code, 200, followup_response.text)
+        return followup_response.json()["session"]
 
     def parse_csv(self, content: bytes) -> list[dict[str, str]]:
         if not content:
@@ -133,8 +161,15 @@ class ResearchExportsTests(unittest.TestCase):
         self.assertIn("displayed_denominator", rows[0])
         self.assertIn("treatment_deck_index", rows[0])
         self.assertIn("result_deck_index", rows[0])
+        self.assertIn("result_deck_treatment_key", rows[0])
+        self.assertIn("result_deck_treatment_cycle_index", rows[0])
         self.assertIn("payment_deck_index", rows[0])
         self.assertIn("payout_eligible", rows[0])
+        self.assertIn("crowd_prediction_value", rows[0])
+        self.assertIn("social_recall_count", rows[0])
+        self.assertIn("social_recall_correct", rows[0])
+        self.assertEqual(rows[0]["crowd_prediction_value"], "3")
+        self.assertEqual(rows[0]["social_recall_correct"], "True")
         self.assertNotIn("requested_phone", rows[0])
         self.assertNotIn("payout_reference_shown", rows[0])
 
@@ -155,6 +190,12 @@ class ResearchExportsTests(unittest.TestCase):
         self.assertIn("README_EXPORT.md", names)
         self.assertIn("DATASETS_CODEBOOK.md", names)
         self.assertNotIn("payments_admin.csv", names)
+
+        claims_rows = self.parse_csv(archive.read("claims.csv"))
+        self.assertIn("crowd_prediction_value", claims_rows[0])
+        self.assertIn("social_recall_count", claims_rows[0])
+        self.assertIn("social_recall_correct", claims_rows[0])
+        self.assertEqual(claims_rows[0]["crowd_prediction_value"], "3")
 
         manifest = json.loads(archive.read("manifest.json").decode("utf-8"))
         exported_datasets = {item["dataset"] for item in manifest["tables"]}
@@ -181,8 +222,14 @@ class ResearchExportsTests(unittest.TestCase):
         self.assertTrue(any(row["assigned_session_id"] for row in result_cards))
         self.assertTrue(any(row["assigned_session_id"] for row in payment_cards))
         self.assertIn("deck_index", treatment_cards[0])
+        self.assertIn("treatment_key", result_cards[0])
+        self.assertIn("treatment_cycle_index", result_cards[0])
         self.assertIn("result_value", result_cards[0])
         self.assertIn("payout_eligible", payment_cards[0])
+
+        claims_rows = self.parse_csv(self.client.get("/admin/export/claims.csv").content)
+        self.assertEqual(claims_rows[0]["crowd_prediction_value"], "3")
+        self.assertEqual(claims_rows[0]["social_recall_correct"], "True")
 
 
 if __name__ == "__main__":

@@ -5,16 +5,11 @@ import { ScreenFrame } from "./ScreenFrame";
 import { useLanguage } from "../utils/LanguageContext";
 import { usePageTelemetry } from "../utils/usePageTelemetry";
 import { useSession } from "../utils/SessionContext";
-import { formatCopy, type AppLanguage } from "../utils/uiLexicon";
+import { formatCopy } from "../utils/uiLexicon";
 
-const CLOSING_MESSAGE: Record<AppLanguage, string> = {
-  es: "Muchas gracias, has terminado. Cierra el navegador y disfruta de la experiencia SONAR 2026.",
-  ca: "Moltes gracies, ja has acabat. Tanca el navegador i gaudeix de l'experiencia SONAR 2026.",
-  en: "Thank you very much, you have finished. Close the browser and enjoy the SONAR 2026 experience.",
-  fr: "Merci beaucoup, vous avez termine. Fermez le navigateur et profitez de l'experience SONAR 2026.",
-  pt: "Muito obrigado, terminaste. Fecha o navegador e desfruta da experiencia SONAR 2026.",
-  it: "Grazie mille, hai finito. Chiudi il browser e goditi l'esperienza SONAR 2026.",
-};
+interface ExitScreenProps {
+  onContinueToFinal: () => void;
+}
 
 function sanitizeWhatsappPhone(rawPhone: string) {
   const digitsOnly = rawPhone.replace(/\D/g, "");
@@ -24,8 +19,14 @@ function sanitizeWhatsappPhone(rawPhone: string) {
   return digitsOnly;
 }
 
-export function ExitScreen() {
-  const { session, publicConfig, saveDisplaySnapshot, pushTelemetry } = useSession();
+export function ExitScreen({ onContinueToFinal }: ExitScreenProps) {
+  const {
+    session,
+    publicConfig,
+    saveDisplaySnapshot,
+    pushTelemetry,
+    submitClaimFollowup,
+  } = useSession();
   const { copy, language } = useLanguage();
   const { trackClick } = usePageTelemetry("exit");
 
@@ -48,15 +49,13 @@ export function ExitScreen() {
   const winnerCode = session.payment.reference_code ?? "-";
   const winnerAmount = session.payment.amount_eur.toFixed(0);
   const payoutPageLink = `/payout?code=${encodeURIComponent(winnerCode)}&lang=${encodeURIComponent(language)}`;
-  const cotecMatch = loserCopy.bodyFooter.match(/^(.*?)(cotec\.es)(.*)$/i);
-
   useEffect(() => {
     const finalMessageText = session.payment.eligible
       ? `${winnerCopy.eyebrow}. ${winnerCopy.title}. ${formatCopy(
           winnerCopy.codeLabelTemplate,
           { code: winnerCode },
         )}`
-      : `${loserCopy.body} ${loserCopy.bodySecondary} ${loserCopy.bodyFooter}`;
+      : `${loserCopy.body} ${bonusCopy.title}`;
     void saveDisplaySnapshot({
       screen_name: "exit",
       language,
@@ -86,7 +85,7 @@ export function ExitScreen() {
 
   return (
     <ScreenFrame>
-      <div className="flex min-h-full flex-col justify-between gap-8">
+      <div className="sonar-screen-stack sonar-screen-stack--exit justify-between">
         <div className="space-y-5">
           {session.payment.eligible ? (
             <>
@@ -132,7 +131,9 @@ export function ExitScreen() {
           ) : (
             <>
               <div className="space-y-3">
-                <p className="editorial-eyebrow">{loserCopy.eyebrow}</p>
+                <p className="editorial-title editorial-title--landing exit-kicker-title">
+                  {loserCopy.eyebrow}
+                </p>
                 <h2 className="editorial-title editorial-title--compact">
                   {loserCopy.title}
                 </h2>
@@ -144,9 +145,14 @@ export function ExitScreen() {
 
               <BonusDrawPanel
                 copy={bonusCopy}
-                storageKey={`sonar_bonus_prediction:${session.session_id}:${session.claim?.submitted_at ?? session.valid_completed_at ?? "current"}`}
                 inviteStorageKey={`sonar_bonus_invite:${session.session_id}:${session.claim?.submitted_at ?? session.valid_completed_at ?? "current"}`}
-                onSelect={(value) => {
+                predictionValue={session.claim?.crowd_prediction_value ?? null}
+                recallValue={session.claim?.social_recall_count ?? null}
+                showRecallQuestion={!session.is_control}
+                onSelectPrediction={async (value) => {
+                  await submitClaimFollowup({
+                    crowd_prediction_value: value,
+                  });
                   trackClick("bonus_prediction_exit", {
                     target: `bonus_prediction_${value}`,
                     role: "button",
@@ -161,6 +167,27 @@ export function ExitScreen() {
                     payload: {
                       session_id: session.session_id,
                       referral_code: session.referral_code,
+                    },
+                  });
+                }}
+                onSaveRecall={async (value) => {
+                  await submitClaimFollowup({
+                    social_recall_count: value,
+                  });
+                  trackClick("social_recall_exit", {
+                    target: "social_recall_save",
+                    role: "button",
+                    ctaKind: "secondary",
+                    value,
+                  });
+                  pushTelemetry({
+                    event_type: "custom",
+                    event_name: "social_recall_saved",
+                    screen_name: "exit",
+                    value,
+                    payload: {
+                      session_id: session.session_id,
+                      displayed_count_target: session.displayed_count_target,
                     },
                   });
                 }}
@@ -187,37 +214,20 @@ export function ExitScreen() {
                 </a>
               </BonusDrawPanel>
 
-              <div className="sonar-panel p-5">
-                <p className="editorial-small">
-                  {cotecMatch ? (
-                    <>
-                      {cotecMatch[1]}
-                      <a
-                        href="https://cotec.es"
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={() =>
-                          trackClick("open_cotec_site", {
-                            target: "cotec_site",
-                            role: "link",
-                            ctaKind: "secondary",
-                          })
-                        }
-                        className="font-semibold text-slate-950 underline decoration-slate-400 underline-offset-3 transition hover:decoration-slate-950"
-                      >
-                        {cotecMatch[2]}
-                      </a>
-                      {cotecMatch[3]}
-                    </>
-                  ) : (
-                    loserCopy.bodyFooter
-                  )}
-                </p>
-              </div>
-
-              <p className="editorial-micro text-center">
-                {CLOSING_MESSAGE[language]}
-              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  trackClick("exit_continue", {
+                    target: "exit_continue",
+                    role: "button",
+                    ctaKind: "primary",
+                  });
+                  onContinueToFinal();
+                }}
+                className="sonar-primary-button"
+              >
+                {copy.common.continueLabel}
+              </button>
             </>
           )}
         </div>

@@ -291,8 +291,8 @@ def treatment_deck_seed(deck_index: int) -> str:
     return deterministic_seed("treatment_deck", deck_index)
 
 
-def result_deck_seed(deck_index: int) -> str:
-    return deterministic_seed("result_deck", deck_index)
+def result_deck_seed(treatment_key: str, treatment_cycle_index: int) -> str:
+    return deterministic_seed("result_deck", treatment_key, treatment_cycle_index)
 
 
 def payment_deck_seed(deck_index: int) -> str:
@@ -305,9 +305,10 @@ def treatment_deck_values(deck_seed: str) -> list[str]:
 
 def result_deck_values(deck_seed: str) -> list[int]:
     values: list[int] = []
-    for result_value in range(1, 7):
-        values.extend([result_value] * 4)
-    return shuffle_values(values, deck_seed)
+    for block_index in range(4):
+        block_seed = deterministic_seed("result_deck_block", deck_seed, block_index)
+        values.extend(shuffle_values([1, 2, 3, 4, 5, 6], block_seed))
+    return values
 
 
 def payment_deck_values(deck_seed: str) -> list[bool]:

@@ -88,12 +88,12 @@ DATASET_DESCRIPTIONS: dict[str, dict[str, str]] = {
     },
     "result_decks": {
         "category": "analytic",
-        "description": "Estado de los mazos de resultados de 24 cartas.",
+        "description": "Estado de los mazos de resultados de 24 cartas estratificados por tratamiento.",
         "sensitivity": "baja",
     },
     "result_deck_cards": {
         "category": "analytic",
-        "description": "Cartas individuales de resultado para la primera tirada.",
+        "description": "Cartas individuales de resultado para la primera tirada, balanceadas por tratamiento.",
         "sensitivity": "baja",
     },
     "payment_decks": {
@@ -258,6 +258,8 @@ def deck_summary_rows(
                 f"{deck_kind}_deck_id": deck.id,
                 "deck_index": deck.deck_index,
                 "deck_seed": deck.deck_seed,
+                "treatment_key": getattr(deck, "treatment_key", None),
+                "treatment_cycle_index": getattr(deck, "treatment_cycle_index", None),
                 "status": deck.status,
                 "card_count": deck.card_count,
                 "assigned_count": assigned_count,
@@ -382,6 +384,10 @@ def analytic_sessions_rows(db: Session) -> list[dict[str, Any]]:
                 "treatment_deck_index": treatment_deck.deck_index if treatment_deck else None,
                 "treatment_card_position": record.treatment_card_position,
                 "result_deck_index": result_deck.deck_index if result_deck else None,
+                "result_deck_treatment_key": result_deck.treatment_key if result_deck else None,
+                "result_deck_treatment_cycle_index": (
+                    result_deck.treatment_cycle_index if result_deck else None
+                ),
                 "result_card_position": record.result_card_position,
                 "payment_deck_index": payment_deck.deck_index if payment_deck else None,
                 "payment_card_position": record.payment_card_position,
@@ -407,6 +413,19 @@ def analytic_sessions_rows(db: Session) -> list[dict[str, Any]]:
                 ),
                 "reported_matches_any_seen": (
                     int(reported_value in seen_values) if reported_value is not None else None
+                ),
+                "crowd_prediction_value": claim.crowd_prediction_value if claim else None,
+                "crowd_prediction_submitted_at": (
+                    isoformat_or_none(claim.crowd_prediction_submitted_at)
+                    if claim
+                    else None
+                ),
+                "social_recall_count": claim.social_recall_count if claim else None,
+                "social_recall_correct": claim.social_recall_correct if claim else None,
+                "social_recall_submitted_at": (
+                    isoformat_or_none(claim.social_recall_submitted_at)
+                    if claim
+                    else None
                 ),
                 "report_rt_ms": (
                     claim.reaction_ms
@@ -536,6 +555,15 @@ def claims_rows(db: Session) -> list[dict[str, Any]]:
             "last_seen_value": claim.last_seen_value,
             "matches_last_seen": claim.matches_last_seen,
             "matches_any_seen": claim.matches_any_seen,
+            "crowd_prediction_value": claim.crowd_prediction_value,
+            "crowd_prediction_submitted_at": isoformat_or_none(
+                claim.crowd_prediction_submitted_at
+            ),
+            "social_recall_count": claim.social_recall_count,
+            "social_recall_correct": claim.social_recall_correct,
+            "social_recall_submitted_at": isoformat_or_none(
+                claim.social_recall_submitted_at
+            ),
             "reaction_ms": claim.reaction_ms,
             "submitted_at": isoformat_or_none(claim.submitted_at),
         }
@@ -816,6 +844,14 @@ def result_deck_cards_rows(db: Session) -> list[dict[str, Any]]:
         {
             "deck_id": card.deck_id,
             "deck_index": decks[card.deck_id].deck_index if card.deck_id in decks else None,
+            "treatment_key": (
+                decks[card.deck_id].treatment_key if card.deck_id in decks else None
+            ),
+            "treatment_cycle_index": (
+                decks[card.deck_id].treatment_cycle_index
+                if card.deck_id in decks
+                else None
+            ),
             "card_position": card.card_position,
             "result_value": card.result_value,
             "assigned_session_id": card.assigned_session_id,
@@ -1269,6 +1305,13 @@ def _rows_from_decks(rows: list[dict[str, Any]], *, deck_label: str) -> str:
     ) or f"<tr><td colspan='5'>Sin mazos de {escape(deck_label)}</td></tr>"
 
 
+def _rows_from_result_decks(rows: list[dict[str, Any]]) -> str:
+    return "".join(
+        f"<tr><td>{escape(str(row.get('treatment_key') or '-'))}</td><td>{escape(str(row.get('treatment_cycle_index') or '-'))}</td><td>{escape(str(row['deck_index']))}</td><td>{escape(str(row['status']))}</td><td>{escape(str(row['assigned_count']))}</td><td>{escape(str(row['remaining_count']))}</td><td>{escape(str(row['card_count']))}</td></tr>"
+        for row in rows
+    ) or "<tr><td colspan='7'>Sin mazos de resultados</td></tr>"
+
+
 def dashboard_page_html(db: Session) -> str:
     state = db.get(ExperimentState, "global")
     active_operational_note = db.exec(
@@ -1449,8 +1492,8 @@ def dashboard_page_html(db: Session) -> str:
         <div>
           <h2>Mazos de resultados</h2>
           <table>
-            <thead><tr><th>Deck</th><th>Estado</th><th>Asignadas</th><th>Restantes</th><th>Cartas</th></tr></thead>
-            <tbody>{_rows_from_decks(result_decks, deck_label='resultados')}</tbody>
+            <thead><tr><th>Tratamiento</th><th>Ciclo</th><th>Deck</th><th>Estado</th><th>Asignadas</th><th>Restantes</th><th>Cartas</th></tr></thead>
+            <tbody>{_rows_from_result_decks(result_decks)}</tbody>
           </table>
         </div>
         <div>

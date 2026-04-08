@@ -223,6 +223,12 @@ class SubmitReportRequest(BaseModel):
     language: Optional[str] = None
 
 
+class ClaimFollowupRequest(BaseModel):
+    crowd_prediction_value: Optional[int] = PydanticField(default=None, ge=1, le=6)
+    social_recall_count: Optional[int] = PydanticField(default=None, ge=0, le=60)
+    language: Optional[str] = None
+
+
 class DisplaySnapshotRequest(BaseModel):
     screen_name: str
     language: Optional[str] = None
@@ -233,6 +239,21 @@ class DisplaySnapshotRequest(BaseModel):
     payout_phone_shown: Optional[str] = None
     final_amount_eur: Optional[int] = None
     rerolls_visible: Optional[list[int]] = None
+
+
+def is_social_recall_answer_correct(
+    submitted_value: int,
+    displayed_count_target: Optional[int],
+) -> bool:
+    if displayed_count_target is None:
+        return False
+    if submitted_value == 20:
+        return 0 <= displayed_count_target <= 20
+    if submitted_value == 40:
+        return 21 <= displayed_count_target <= 40
+    if submitted_value == 60:
+        return 41 <= displayed_count_target <= 60
+    return submitted_value == displayed_count_target
 
 
 class PaymentLookupRequest(BaseModel):
@@ -620,6 +641,8 @@ def schema_needs_reset() -> bool:
     required_result_deck_columns = {
         "deck_index",
         "deck_seed",
+        "treatment_key",
+        "treatment_cycle_index",
         "card_count",
         "status",
     }
@@ -661,6 +684,11 @@ def schema_needs_reset() -> bool:
         "displayed_count_target",
         "displayed_target_value",
         "displayed_message_version",
+        "crowd_prediction_value",
+        "crowd_prediction_submitted_at",
+        "social_recall_count",
+        "social_recall_correct",
+        "social_recall_submitted_at",
     }
     required_consent_columns = {
         "consent_version",
@@ -1001,14 +1029,16 @@ def deck_status_payload(
     deck_model: Any,
     card_model: Any,
 ) -> dict[str, Any]:
-    active_deck = db.exec(
+    active_decks = db.exec(
         select(deck_model)
         .where(deck_model.status == "active")
         .order_by(deck_model.deck_index)
-    ).first()
-    if not active_deck:
+    ).all()
+    if not active_decks:
         return {
             "active_deck_index": None,
+            "active_deck_indices": [],
+            "active_deck_count": 0,
             "assigned_cards": 0,
             "remaining_cards": 0,
             "card_count": 0,
@@ -1016,20 +1046,24 @@ def deck_status_payload(
                 select(func.count()).select_from(deck_model).where(deck_model.status == "closed")
             ).one(),
         }
+    active_deck_ids = [deck.id for deck in active_decks]
     assigned_cards = db.exec(
         select(func.count())
         .select_from(card_model)
         .where(
-            card_model.deck_id == active_deck.id,
+            card_model.deck_id.in_(active_deck_ids),
             card_model.assigned_session_id != None,  # noqa: E711
         )
     ).one()
     assigned_count = int(assigned_cards or 0)
-    return {
-        "active_deck_index": active_deck.deck_index,
+    card_count = sum(int(deck.card_count) for deck in active_decks)
+    payload = {
+        "active_deck_index": active_decks[0].deck_index,
+        "active_deck_indices": [deck.deck_index for deck in active_decks],
+        "active_deck_count": len(active_decks),
         "assigned_cards": assigned_count,
-        "remaining_cards": max(int(active_deck.card_count) - assigned_count, 0),
-        "card_count": int(active_deck.card_count),
+        "remaining_cards": max(card_count - assigned_count, 0),
+        "card_count": card_count,
         "closed_decks": int(
             db.exec(
                 select(func.count())
@@ -1039,6 +1073,11 @@ def deck_status_payload(
             or 0
         ),
     }
+    if hasattr(deck_model, "treatment_key"):
+        payload["active_treatment_keys"] = [
+            getattr(deck, "treatment_key", None) for deck in active_decks
+        ]
+    return payload
 
 
 def get_active_operational_note(
@@ -1346,12 +1385,20 @@ def create_treatment_deck(db: Session, deck_index: int) -> TreatmentDeck:
     return deck
 
 
-def create_result_deck(db: Session, deck_index: int) -> ResultDeck:
-    deck_seed = result_deck_seed(deck_index)
+def create_result_deck(
+    db: Session,
+    *,
+    deck_index: int,
+    treatment_key: str,
+    treatment_cycle_index: int,
+) -> ResultDeck:
+    deck_seed = result_deck_seed(treatment_key, treatment_cycle_index)
     deck_values = result_deck_values(deck_seed)
     deck = ResultDeck(
         deck_index=deck_index,
         deck_seed=deck_seed,
+        treatment_key=treatment_key,
+        treatment_cycle_index=treatment_cycle_index,
         card_count=len(deck_values),
         status="active",
     )
@@ -1442,7 +1489,7 @@ def ensure_demo_treatment_deck(
 
 
 def ensure_demo_result_deck(
-    db: Session, *, bracelet_id: str, result_value: int
+    db: Session, *, bracelet_id: str, treatment_key: str, result_value: int
 ) -> ResultDeck:
     deck_index = demo_deck_index(bracelet_id)
     existing = db.exec(
@@ -1452,7 +1499,14 @@ def ensure_demo_result_deck(
         return existing
     deck = ResultDeck(
         deck_index=deck_index,
-        deck_seed=deterministic_seed("demo_result", bracelet_id, result_value),
+        deck_seed=deterministic_seed(
+            "demo_result",
+            bracelet_id,
+            treatment_key,
+            result_value,
+        ),
+        treatment_key=treatment_key,
+        treatment_cycle_index=deck_index,
         card_count=1,
         status="demo",
     )
@@ -1511,18 +1565,39 @@ def get_active_treatment_deck(db: Session) -> TreatmentDeck:
     return create_treatment_deck(db, max_positive_deck_index(db, TreatmentDeck) + 1)
 
 
-def get_active_result_deck(db: Session) -> ResultDeck:
+def next_result_treatment_cycle_index(db: Session, *, treatment_key: str) -> int:
+    latest_cycle = db.exec(
+        select(func.max(ResultDeck.treatment_cycle_index)).where(
+            ResultDeck.treatment_key == treatment_key,
+            ResultDeck.deck_index > 0,
+        )
+    ).one()
+    return int(latest_cycle or 0) + 1
+
+
+def get_active_result_deck(db: Session, *, treatment_key: str) -> ResultDeck:
     deck = db.exec(
         with_optional_for_update(
             select(ResultDeck)
-            .where(ResultDeck.status == "active")
+            .where(
+                ResultDeck.status == "active",
+                ResultDeck.treatment_key == treatment_key,
+            )
             .order_by(ResultDeck.deck_index),
             True,
         )
     ).first()
     if deck:
         return deck
-    return create_result_deck(db, max_positive_deck_index(db, ResultDeck) + 1)
+    return create_result_deck(
+        db,
+        deck_index=max_positive_deck_index(db, ResultDeck) + 1,
+        treatment_key=treatment_key,
+        treatment_cycle_index=next_result_treatment_cycle_index(
+            db,
+            treatment_key=treatment_key,
+        ),
+    )
 
 
 def get_active_payment_deck(db: Session) -> PaymentDeck:
@@ -1596,10 +1671,10 @@ def assign_next_treatment_card(
 
 
 def assign_next_result_card(
-    db: Session, *, session_id: str
+    db: Session, *, session_id: str, treatment_key: str
 ) -> tuple[ResultDeck, ResultDeckCard]:
     while True:
-        deck = get_active_result_deck(db)
+        deck = get_active_result_deck(db, treatment_key=treatment_key)
         card = db.exec(
             with_optional_for_update(
                 select(ResultDeckCard)
@@ -1676,6 +1751,7 @@ def assign_demo_cards(
     result_deck = ensure_demo_result_deck(
         db,
         bracelet_id=bracelet_id,
+        treatment_key=str(override["treatment_key"]),
         result_value=int(override["result_value"]),
     )
     result_card = db.exec(
@@ -1716,7 +1792,6 @@ def bootstrap_demo_data(db: Session) -> None:
     get_or_create_pulseras(db)
     get_or_create_experiment_state(db)
     get_active_treatment_deck(db)
-    get_active_result_deck(db)
     get_active_payment_deck(db)
     for bracelet_id in ["CTRL1234", "NORM0000", "NORM0001"]:
         override = demo_override(bracelet_id)
@@ -1730,6 +1805,7 @@ def bootstrap_demo_data(db: Session) -> None:
         ensure_demo_result_deck(
             db,
             bracelet_id=bracelet_id,
+            treatment_key=str(override["treatment_key"]),
             result_value=int(override["result_value"]),
         )
         ensure_demo_payment_deck(
@@ -2176,6 +2252,10 @@ def build_session_payload(db: Session, record: SessionRecord) -> dict[str, Any]:
         "treatment_deck_index": treatment_deck.deck_index if treatment_deck else None,
         "treatment_card_position": record.treatment_card_position,
         "result_deck_index": result_deck.deck_index if result_deck else None,
+        "result_deck_treatment_key": result_deck.treatment_key if result_deck else None,
+        "result_deck_treatment_cycle_index": (
+            result_deck.treatment_cycle_index if result_deck else None
+        ),
         "result_card_position": record.result_card_position,
         "payment_deck_index": payment_deck.deck_index if payment_deck else None,
         "payment_card_position": record.payment_card_position,
@@ -2207,6 +2287,19 @@ def build_session_payload(db: Session, record: SessionRecord) -> dict[str, Any]:
                 "matches_last_seen": claim.matches_last_seen,
                 "matches_any_seen": claim.matches_any_seen,
                 "submitted_at": claim.submitted_at.isoformat(),
+                "crowd_prediction_value": claim.crowd_prediction_value,
+                "crowd_prediction_submitted_at": (
+                    claim.crowd_prediction_submitted_at.isoformat()
+                    if claim.crowd_prediction_submitted_at
+                    else None
+                ),
+                "social_recall_count": claim.social_recall_count,
+                "social_recall_correct": claim.social_recall_correct,
+                "social_recall_submitted_at": (
+                    claim.social_recall_submitted_at.isoformat()
+                    if claim.social_recall_submitted_at
+                    else None
+                ),
             }
             if claim
             else None
@@ -2473,7 +2566,11 @@ def ensure_user_and_session(
             treatment_card,
             legacy_series,
         ) = assign_next_treatment_card(db, session_id=session_id)
-        result_deck, result_card = assign_next_result_card(db, session_id=session_id)
+        result_deck, result_card = assign_next_result_card(
+            db,
+            session_id=session_id,
+            treatment_key=treatment_card.treatment_key,
+        )
         payment_deck, payment_card = assign_next_payment_card(
             db, session_id=session_id
         )
@@ -3439,6 +3536,79 @@ def submit_report(
         )
         db.commit()
         return response_payload
+
+
+@app.post("/v1/session/{session_id}/claim-followup")
+def update_claim_followup(
+    session_id: str,
+    payload: ClaimFollowupRequest,
+    db: Session = Depends(get_session),
+) -> dict[str, Any]:
+    with distributed_lock(f"session:{session_id}"):
+        record = get_session_or_404(db, session_id, for_update=True)
+        ensure_valid_state(
+            record,
+            {"completed_win", "completed_no_win"},
+            "claim-followup",
+        )
+        claim = db.exec(select(Claim).where(Claim.session_id == record.id)).first()
+        if not claim:
+            raise HTTPException(status_code=409, detail="La sesion todavia no tiene claim")
+        if (
+            payload.crowd_prediction_value is None
+            and payload.social_recall_count is None
+        ):
+            raise HTTPException(status_code=400, detail="No hay respuestas para guardar")
+
+        now = utcnow()
+        updated_fields: dict[str, Any] = {}
+
+        if payload.language:
+            record.language_at_claim = payload.language
+            if (
+                record.language_at_access
+                and record.language_at_access != payload.language
+            ):
+                record.language_changed_during_session = True
+
+        if payload.crowd_prediction_value is not None:
+            if claim.crowd_prediction_value is None:
+                claim.crowd_prediction_value = payload.crowd_prediction_value
+                claim.crowd_prediction_submitted_at = now
+                updated_fields["crowd_prediction_value"] = payload.crowd_prediction_value
+            elif claim.crowd_prediction_value == payload.crowd_prediction_value:
+                updated_fields["crowd_prediction_value"] = claim.crowd_prediction_value
+
+        if payload.social_recall_count is not None:
+            if claim.social_recall_count is None:
+                claim.social_recall_count = payload.social_recall_count
+                claim.social_recall_correct = (
+                    is_social_recall_answer_correct(
+                        payload.social_recall_count,
+                        claim.displayed_count_target,
+                    )
+                )
+                claim.social_recall_submitted_at = now
+                updated_fields["social_recall_count"] = payload.social_recall_count
+                updated_fields["social_recall_correct"] = claim.social_recall_correct
+            elif claim.social_recall_count == payload.social_recall_count:
+                updated_fields["social_recall_count"] = claim.social_recall_count
+                updated_fields["social_recall_correct"] = claim.social_recall_correct
+
+        db.add(claim)
+        db.add(record)
+        create_audit(
+            db,
+            entity_type="claim",
+            entity_id=claim.id,
+            action="claim_followup_updated",
+            session_id=record.id,
+            old_state=record.state,
+            new_state=record.state,
+            payload=updated_fields,
+        )
+        db.commit()
+        return {"session": build_session_payload(db, record)}
 
 
 @app.post("/v1/telemetry/batch")

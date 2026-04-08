@@ -26,7 +26,7 @@
   --radius-panel: 1.5rem;
   --radius-control: 1rem;
   --radius-button: 1rem;
-  --content-max: 40rem;
+  --content-max: 42rem;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -114,6 +114,8 @@ button:disabled {
 .screen-frame-content {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 @media (min-width: 640px) {
@@ -165,9 +167,10 @@ button:disabled {
   margin: 0;
   font-size: clamp(2.4rem, 9vw, 4.5rem);
   font-weight: 900;
-  line-height: 0.94;
+  line-height: 0.9;
   letter-spacing: -0.06em;
   color: var(--text);
+  text-wrap: balance;
 }
 
 .editorial-title--compact {
@@ -176,7 +179,7 @@ button:disabled {
 
 .editorial-title--landing {
   font-size: clamp(1.85rem, 6.3vw, 2.75rem);
-  line-height: 1.02;
+  line-height: 0.98;
   letter-spacing: -0.05em;
 }
 
@@ -194,7 +197,7 @@ button:disabled {
 .editorial-small {
   margin: 0;
   font-size: 0.92rem;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--muted);
 }
 
@@ -203,6 +206,60 @@ button:disabled {
   font-size: 0.78rem;
   line-height: 1.4;
   color: var(--muted);
+}
+
+.sonar-screen-stack {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.sonar-screen-stack--landing,
+.sonar-screen-stack--exit {
+  gap: 2rem;
+}
+
+.sonar-screen-stack--game,
+.sonar-screen-stack--report {
+  gap: 1.5rem;
+}
+
+.instructions-hero {
+  display: grid;
+  gap: 1rem;
+  padding: 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: 1.65rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 253, 250, 0.88)),
+    var(--surface-strong);
+  box-shadow: var(--shadow-soft);
+}
+
+.instructions-title {
+  max-width: 8.5ch;
+  line-height: 0.9;
+  text-wrap: balance;
+}
+
+.instructions-subtitle {
+  max-width: 34rem;
+  font-size: 1.02rem;
+  line-height: 1.48;
+}
+
+.instructions-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.instructions-copy-block {
+  display: grid;
+  gap: 0.6rem;
 }
 
 .sonar-panel {
@@ -321,6 +378,12 @@ button:disabled {
   box-shadow: 0 10px 24px rgba(17, 17, 17, 0.12);
 }
 
+.sonar-primary-button--hero {
+  min-height: 4.3rem;
+  font-size: 1rem;
+  letter-spacing: 0.2em;
+}
+
 .sonar-primary-button:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 14px 28px rgba(17, 17, 17, 0.15);
@@ -342,6 +405,11 @@ button:disabled {
 .sonar-secondary-button:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.6);
   border-color: var(--text);
+}
+
+.sonar-secondary-button--wide {
+  width: 100%;
+  min-height: 3.35rem;
 }
 
 .sonar-text-button {
@@ -523,17 +591,17 @@ button:disabled {
 .sonar-prize-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 0.9rem;
 }
 
 .sonar-prize-cell {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 5rem;
-  padding: 1rem 1.1rem;
+  min-height: 5.3rem;
+  padding: 1.1rem 1.15rem;
   border: 1px solid var(--line);
-  border-radius: 1rem;
+  border-radius: 1.15rem;
   background: #fff;
 }
 
@@ -546,6 +614,30 @@ button:disabled {
 .sonar-prize-amount {
   font-size: 1.35rem;
   font-weight: 700;
+}
+
+.sonar-instructions-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.14rem;
+}
+
+.sonar-instructions-item {
+  display: block;
+  padding: 0.08rem 0;
+  font-size: 0.97rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.sonar-instructions-item::before {
+  content: none;
+}
+
+.instructions-panel {
+  padding: 1.1rem 1.2rem;
 }
 
 .sonar-option-list {
@@ -613,23 +705,26 @@ button:disabled {
 .bonus-draw-panel {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1.15rem;
+  gap: 1.15rem;
+  padding: 1.35rem;
   border: 1px solid var(--accent-yellow-line);
-  border-radius: 1.15rem;
-  background: var(--accent-yellow);
+  border-radius: 1.4rem;
+  background:
+    linear-gradient(180deg, rgba(255, 244, 186, 0.95), rgba(255, 250, 223, 0.92));
+  box-shadow: var(--shadow-soft);
 }
 
 .bonus-draw-ticket-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.65rem;
 }
 
 .bonus-draw-ticket-item {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  padding: 0.15rem 0;
 }
 
 .bonus-draw-ticket-item--achieved .bonus-draw-ticket-text {
@@ -681,13 +776,19 @@ button:disabled {
 .bonus-draw-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 0.45rem;
+  gap: 0.55rem;
+}
+
+.bonus-draw-interval-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
 }
 
 .bonus-draw-button {
-  min-height: 2.85rem;
+  min-height: 3rem;
   border: 1px solid rgba(17, 17, 17, 0.14);
-  border-radius: 0.95rem;
+  border-radius: 1rem;
   background: rgba(255, 255, 255, 0.92);
   color: var(--text);
   font-size: 1rem;
@@ -712,6 +813,27 @@ button:disabled {
   background: var(--text);
   color: #fff;
   box-shadow: 0 10px 20px rgba(17, 17, 17, 0.14);
+}
+
+.bonus-draw-button--interval {
+  min-height: 3.35rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+}
+
+.bonus-draw-recall-row {
+  display: flex;
+  gap: 0.65rem;
+  align-items: stretch;
+}
+
+.bonus-draw-recall-input {
+  min-height: 3.1rem;
+}
+
+.bonus-draw-recall-button {
+  min-width: 7.5rem;
 }
 
 .prize-reveal-grid {
@@ -883,13 +1005,90 @@ button:disabled {
   min-height: 18rem;
 }
 
+.sonar-stage-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.15rem;
+  border: 1px solid var(--line);
+  border-radius: 1.75rem;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-soft);
+}
+
+.sonar-stage {
+  padding: 1rem;
+  border-radius: 1.45rem;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.09), transparent 38%),
+    linear-gradient(180deg, #2a2a2a 0%, #161616 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.dice-stage {
+  display: flex;
+  min-height: 16rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.exit-kicker-title {
+  font-size: clamp(1.9rem, 6vw, 2.7rem);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+.dice-launch-idle {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.5rem;
+}
+
+.dice-launch-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 1.6rem;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-soft);
+}
+
+.dice-launch-canvas {
+  display: flex;
+  min-height: 17rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  border-radius: 1.35rem;
+  background:
+    radial-gradient(circle at top, rgba(17, 17, 17, 0.035), transparent 45%),
+    rgba(255, 255, 255, 0.92);
+}
+
+.dice-action-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dice-result-strip {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.86);
+  text-align: center;
+}
+
 .dice {
   width: clamp(10.5rem, 46vw, 13rem);
   height: clamp(10.5rem, 46vw, 13rem);
-  border-radius: 1.4rem;
-  border: 1px solid var(--line-strong);
-  background: var(--surface-strong);
-  color: var(--text);
+  border-radius: 1.5rem;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background:
+    linear-gradient(145deg, #1c1c1c 0%, #0f0f0f 100%);
+  color: #f7f5f2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -897,27 +1096,83 @@ button:disabled {
   font-weight: 900;
   line-height: 1;
   letter-spacing: -0.08em;
-  box-shadow: 0 18px 40px rgba(17, 17, 17, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 16px 34px rgba(0, 0, 0, 0.18);
   user-select: none;
 }
 
 .dice--interactive:hover:not(:disabled) {
   transform: translateY(-1px);
-  border-color: var(--text);
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
-.dice-rolling {
+.dice--empty {
+  color: transparent;
+}
+
+.dice--empty::before {
+  content: "";
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  background: rgba(247, 245, 242, 0.18);
+  box-shadow: 0 0 0 0.8rem rgba(247, 245, 242, 0.05);
+}
+
+.dice--resolved {
+  text-shadow: 0 12px 18px rgba(0, 0, 0, 0.18);
+}
+
+.dice--rolling {
   animation: roll 900ms ease-in-out;
 }
 
 @media (max-width: 480px) {
+  .instructions-title {
+    max-width: 9.5ch;
+    font-size: clamp(2.5rem, 14vw, 3.5rem);
+  }
+
+  .instructions-subtitle {
+    font-size: 1rem;
+  }
+
+  .instructions-panel {
+    padding: 0.9rem;
+  }
+
   .bonus-draw-grid {
     gap: 0.35rem;
+  }
+
+  .bonus-draw-interval-grid {
+    grid-template-columns: 1fr;
   }
 
   .bonus-draw-button {
     min-height: 2.65rem;
     border-radius: 0.85rem;
+  }
+
+  .bonus-draw-recall-row {
+    flex-direction: column;
+  }
+
+  .bonus-draw-recall-button {
+    width: 100%;
+  }
+
+  .dice-result-strip {
+    padding: 0.8rem 0.9rem;
+  }
+
+  .dice-launch-panel {
+    padding: 0.95rem;
+  }
+
+  .dice-launch-canvas {
+    min-height: 14rem;
   }
 }
 

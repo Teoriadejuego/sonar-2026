@@ -23,9 +23,7 @@ export function Dice3D({
   autoRollSource = "auto",
 }: Dice3DProps) {
   const { copy } = useLanguage();
-  const [displayValue, setDisplayValue] = useState<number>(
-    () => Math.floor(Math.random() * 6) + 1,
-  );
+  const [displayValue, setDisplayValue] = useState<number | null>(value ?? null);
   const [isRolling, setIsRolling] = useState(false);
   const autoRollTriggeredRef = useRef<string | null>(null);
 
@@ -41,7 +39,12 @@ export function Dice3D({
       return;
     }
     const timer = window.setInterval(() => {
-      setDisplayValue((prev) => (prev % 6) + 1);
+      setDisplayValue((prev) => {
+        if (prev == null) {
+          return Math.floor(Math.random() * 6) + 1;
+        }
+        return (prev % 6) + 1;
+      });
     }, 90);
     return () => window.clearInterval(timer);
   }, [isRolling]);
@@ -70,8 +73,14 @@ export function Dice3D({
     }
   };
 
-  const sharedClassName =
-    "dice";
+  const sharedClassName = [
+    "dice",
+    interactive ? "dice--interactive" : "",
+    displayValue === null ? "dice--empty" : "dice--resolved",
+    isRolling ? "dice--rolling" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   useEffect(() => {
     if (!autoRollKey) {
@@ -87,7 +96,9 @@ export function Dice3D({
   if (!interactive) {
     return (
       <div className={sharedClassName} aria-live="polite">
-        <span className={isRolling ? "animate-pulse" : ""}>{displayValue}</span>
+        <span className={isRolling ? "animate-pulse" : ""}>
+          {displayValue ?? "\u00A0"}
+        </span>
       </div>
     );
   }
@@ -103,10 +114,12 @@ export function Dice3D({
         }
       }}
       disabled={disabled || !onRollRequest}
-      className={`${sharedClassName} dice--interactive transition disabled:cursor-not-allowed disabled:opacity-70`}
+      className={`${sharedClassName} transition disabled:cursor-not-allowed disabled:opacity-70`}
       aria-label={copy.accessibility.diceRollAria}
     >
-      <span className={isRolling ? "animate-pulse" : ""}>{displayValue}</span>
+      <span className={isRolling ? "animate-pulse" : ""}>
+        {displayValue ?? "\u00A0"}
+      </span>
     </button>
   );
 }

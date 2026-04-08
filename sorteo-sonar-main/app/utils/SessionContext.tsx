@@ -20,6 +20,7 @@ import {
   rollSession,
   submitInterestSignup as submitInterestSignupRequest,
   submitReport,
+  submitClaimFollowup as submitClaimFollowupRequest,
   updateScreenCursor,
   setApiTelemetryReporter,
   type PublicConfig,
@@ -35,9 +36,13 @@ import {
   type SnapshotRecordSummary,
   UserNotFoundError,
 } from "./api";
-import { useLanguage } from "./LanguageContext";
 import { browserLanguage, collectClientContext } from "./clientContext";
-import { UI_LEXICON, formatCopy, type AppLanguage } from "./uiLexicon";
+import {
+  SUPPORTED_LANGUAGES,
+  UI_LEXICON,
+  formatCopy,
+  type AppLanguage,
+} from "./uiLexicon";
 
 type AccessResult =
   | { success: true; session: SessionPayload }
@@ -79,6 +84,10 @@ type SessionContextValue = {
   rollNext: (reactionMs?: number) => Promise<number>;
   prepareForReport: () => Promise<void>;
   submitClaim: (reportedValue: number, reactionMs?: number) => Promise<void>;
+  submitClaimFollowup: (payload: {
+    crowd_prediction_value?: number;
+    social_recall_count?: number;
+  }) => Promise<void>;
   saveDisplaySnapshot: (payload: DisplaySnapshotRequest) => Promise<void>;
   lookupPaymentCode: (code: string) => Promise<PaymentLookupResponse>;
   submitPaymentRequest: (
@@ -99,6 +108,7 @@ const STORAGE_KEY = "sonar_session_v2";
 const TELEMETRY_KEY = "sonar_telemetry_v2";
 const INSTALLATION_KEY = "sonar_installation_v1";
 const EVENT_SEQUENCE_KEY = "sonar_event_sequence_v1";
+const LANGUAGE_STORAGE_KEY = "sonar_language_v1";
 const DEMO_SESSION_PREFIX = "demo-session-";
 const CONFIG_REFRESH_INTERVAL_MS = 60000;
 const CONFIG_REFRESH_MIN_GAP_MS = 20000;
@@ -155,6 +165,17 @@ function writeNumber(key: string, value: number) {
     return;
   }
   window.localStorage.setItem(key, String(value));
+}
+
+function readStoredLanguage(): AppLanguage {
+  if (typeof window === "undefined") {
+    return "es";
+  }
+  const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  if (stored && SUPPORTED_LANGUAGES.includes(stored as AppLanguage)) {
+    return stored as AppLanguage;
+  }
+  return "es";
 }
 
 function getInstallationId() {
@@ -343,6 +364,25 @@ function buildDemoSnapshotRecord(
   };
 }
 
+function isSocialRecallCorrect(
+  submittedValue: number,
+  displayedCountTarget?: number | null,
+) {
+  if (displayedCountTarget == null) {
+    return false;
+  }
+  if (submittedValue === 20) {
+    return displayedCountTarget >= 0 && displayedCountTarget <= 20;
+  }
+  if (submittedValue === 40) {
+    return displayedCountTarget >= 21 && displayedCountTarget <= 40;
+  }
+  if (submittedValue === 60) {
+    return displayedCountTarget >= 41 && displayedCountTarget <= 60;
+  }
+  return submittedValue === displayedCountTarget;
+}
+
 function buildDemoReportSnapshot(
   publicConfig: PublicConfig,
   language: AppLanguage,
@@ -505,7 +545,7 @@ function buildDemoSession(
 }
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const { language } = useLanguage();
+  const [language, setLanguage] = useState<AppLanguage>(readStoredLanguage);
   const [publicConfig, setPublicConfig] =
     useState<PublicConfig>(DEFAULT_PUBLIC_CONFIG);
   const [session, setSession] = useState<SessionPayload | null>(null);
@@ -523,6 +563,51 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   );
   const eventSequenceRef = useRef<number>(readNumber(EVENT_SEQUENCE_KEY, 0));
   const lastLanguageRef = useRef<string>(language);
+
+  useEffect(() => {
+    lastLanguageRef.current = language;
+  }, [language]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const syncStoredLanguage = () => {
+      setLanguage(readStoredLanguage());
+    };
+
+    const onLanguageChanged = (event: Event) => {
+      const nextLanguage = (event as CustomEvent<{ language?: string }>).detail
+        ?.language;
+      if (nextLanguage && SUPPORTED_LANGUAGES.includes(nextLanguage as AppLanguage)) {
+        setLanguage(nextLanguage as AppLanguage);
+        return;
+      }
+      syncStoredLanguage();
+    };
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === LANGUAGE_STORAGE_KEY) {
+        syncStoredLanguage();
+      }
+    };
+
+    syncStoredLanguage();
+    window.addEventListener(
+      "sonar_language_changed",
+      onLanguageChanged as EventListener,
+    );
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      window.removeEventListener(
+        "sonar_language_changed",
+        onLanguageChanged as EventListener,
+      );
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   const commitSession = useCallback((nextSession: SessionPayload | null) => {
     sessionRef.current = nextSession;
@@ -1192,6 +1277,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
               (item) => item.result_value === reportedValue,
             ),
             submitted_at: new Date().toISOString(),
+            crowd_prediction_value: null,
+            crowd_prediction_submitted_at: null,
+            social_recall_count: null,
+            social_recall_correct: null,
+            social_recall_submitted_at: null,
           },
           payment: {
             ...current.payment,
@@ -1238,6 +1328,69 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [braceletId, commitSession, flushTelemetry, language, pushTelemetry, refreshPublicConfig],
+  );
+
+  const submitClaimFollowup = useCallback(
+    async (payload: { crowd_prediction_value?: number; social_recall_count?: number }) => {
+      const current = sessionRef.current;
+      if (!current || !current.claim) {
+        throw new Error("No hay claim disponible");
+      }
+      if (isDemoSession(current)) {
+        const now = new Date().toISOString();
+        commitSession({
+          ...current,
+          claim: {
+            ...current.claim,
+            crowd_prediction_value:
+              payload.crowd_prediction_value ?? current.claim.crowd_prediction_value ?? null,
+            crowd_prediction_submitted_at:
+              payload.crowd_prediction_value !== undefined &&
+              current.claim.crowd_prediction_value == null
+                ? now
+                : current.claim.crowd_prediction_submitted_at ?? null,
+            social_recall_count:
+              payload.social_recall_count ?? current.claim.social_recall_count ?? null,
+            social_recall_correct:
+              payload.social_recall_count !== undefined
+                ? isSocialRecallCorrect(
+                    payload.social_recall_count,
+                    current.displayed_count_target,
+                  )
+                : current.claim.social_recall_correct ?? null,
+            social_recall_submitted_at:
+              payload.social_recall_count !== undefined &&
+              current.claim.social_recall_count == null
+                ? now
+                : current.claim.social_recall_submitted_at ?? null,
+          },
+        });
+        return;
+      }
+      try {
+        const response = await submitClaimFollowupRequest(current.session_id, {
+          ...payload,
+          language,
+        });
+        commitSession(response.session);
+      } catch (error) {
+        pushTelemetry({
+          event_type: "error",
+          event_name: "claim_followup_error",
+          screen_name: "exit",
+          payload: {
+            message:
+              error instanceof Error ? error.message : "Error guardando respuestas finales",
+            ...payload,
+          },
+        });
+        if (error instanceof Error && isExperimentPausedError(error.message)) {
+          await refreshPublicConfig(true);
+        }
+        throw error;
+      }
+    },
+    [commitSession, language, pushTelemetry, refreshPublicConfig],
   );
 
   const saveDisplaySnapshot = useCallback(
@@ -1394,6 +1547,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       rollNext,
       prepareForReport,
       submitClaim,
+      submitClaimFollowup,
       saveDisplaySnapshot,
       lookupPaymentCode,
       submitPaymentRequest,
@@ -1412,6 +1566,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       rollNext,
       prepareForReport,
       submitClaim,
+      submitClaimFollowup,
       saveDisplaySnapshot,
       lookupPaymentCode,
       submitPaymentRequest,
