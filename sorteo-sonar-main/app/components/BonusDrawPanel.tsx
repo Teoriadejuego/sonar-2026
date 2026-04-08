@@ -6,6 +6,7 @@ interface BonusDrawPanelProps {
   inviteStorageKey: string;
   predictionValue?: number | null;
   recallValue?: number | null;
+  recallCorrect?: boolean | null;
   showRecallQuestion?: boolean;
   onSelectPrediction?: (value: number) => Promise<void> | void;
   onSaveRecall?: (value: number) => Promise<void> | void;
@@ -37,6 +38,7 @@ export function BonusDrawPanel({
   inviteStorageKey,
   predictionValue = null,
   recallValue = null,
+  recallCorrect = null,
   showRecallQuestion = false,
   onSelectPrediction,
   onSaveRecall,
@@ -44,6 +46,7 @@ export function BonusDrawPanel({
 }: BonusDrawPanelProps) {
   const [selectedValue, setSelectedValue] = useState<number | null>(predictionValue);
   const [savedRecallValue, setSavedRecallValue] = useState<number | null>(recallValue);
+  const [savedRecallCorrect, setSavedRecallCorrect] = useState<boolean | null>(recallCorrect);
   const [inviteEarned, setInviteEarned] = useState(false);
   const [isSavingPrediction, setIsSavingPrediction] = useState(false);
   const [isSavingRecall, setIsSavingRecall] = useState(false);
@@ -58,11 +61,17 @@ export function BonusDrawPanel({
   }, [recallValue]);
 
   useEffect(() => {
+    setSavedRecallCorrect(recallCorrect);
+  }, [recallCorrect]);
+
+  useEffect(() => {
     setInviteEarned(readInviteEarned(inviteStorageKey));
   }, [inviteStorageKey]);
 
   const hasLockedPrediction = selectedValue !== null;
   const hasSavedRecall = savedRecallValue !== null;
+  const recallAnsweredIncorrectly = hasSavedRecall && savedRecallCorrect === false;
+  const recallAchieved = hasSavedRecall && savedRecallCorrect !== false;
   const recallOptions = useMemo(
     () => [
       { value: 20, label: copy.recallOptions[0] },
@@ -76,30 +85,35 @@ export function BonusDrawPanel({
   const ticketRows = useMemo(
     () =>
       [
-        { badge: "1", label: copy.baseTicket, achieved: true },
+        { badge: "1", label: copy.baseTicket, state: "achieved" as const },
         {
           badge: "+1",
           label: copy.predictionTicket,
-          achieved: hasLockedPrediction,
+          state: hasLockedPrediction ? ("achieved" as const) : ("pending" as const),
         },
         showRecallQuestion
           ? {
-              badge: "+1",
+              badge: recallAnsweredIncorrectly ? "0" : "+1",
               label: copy.recallTicket,
-              achieved: hasSavedRecall,
+              state: recallAnsweredIncorrectly
+                ? ("failed" as const)
+                : recallAchieved
+                  ? ("achieved" as const)
+                  : ("pending" as const),
             }
           : null,
       ].filter(Boolean) as Array<{
         badge: string;
         label: string;
-        achieved: boolean;
+        state: "pending" | "achieved" | "failed";
       }>,
     [
       copy.baseTicket,
       copy.predictionTicket,
       copy.recallTicket,
       hasLockedPrediction,
-      hasSavedRecall,
+      recallAchieved,
+      recallAnsweredIncorrectly,
       showRecallQuestion,
     ],
   );
@@ -163,13 +177,20 @@ export function BonusDrawPanel({
           <div
             key={`${item.badge}-${item.label}`}
             className={`bonus-draw-ticket-item ${
-              item.achieved ? "bonus-draw-ticket-item--achieved" : ""
+              item.state === "achieved" ? "bonus-draw-ticket-item--achieved" : ""
+            } ${
+              item.state === "failed" ? "bonus-draw-ticket-item--failed" : ""
             }`}
           >
             <span className="bonus-draw-ticket-badge">{item.badge}</span>
             <span className="bonus-draw-ticket-text">{item.label}</span>
-            {item.achieved ? (
+            {item.state === "achieved" ? (
               <span className="bonus-draw-ticket-state">{copy.achievedLabel}</span>
+            ) : null}
+            {item.state === "failed" ? (
+              <span className="bonus-draw-ticket-state bonus-draw-ticket-state--failed">
+                {copy.notAchievedLabel}
+              </span>
             ) : null}
           </div>
         ))}

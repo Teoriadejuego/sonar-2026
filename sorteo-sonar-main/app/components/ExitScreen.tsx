@@ -148,6 +148,7 @@ export function ExitScreen({ onContinueToFinal }: ExitScreenProps) {
                 inviteStorageKey={`sonar_bonus_invite:${session.session_id}:${session.claim?.submitted_at ?? session.valid_completed_at ?? "current"}`}
                 predictionValue={session.claim?.crowd_prediction_value ?? null}
                 recallValue={session.claim?.social_recall_count ?? null}
+                recallCorrect={session.claim?.social_recall_correct ?? null}
                 showRecallQuestion={!session.is_control}
                 onSelectPrediction={async (value) => {
                   await submitClaimFollowup({

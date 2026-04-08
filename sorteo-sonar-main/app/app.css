@@ -728,6 +728,11 @@ button:disabled {
   font-weight: 700;
 }
 
+.bonus-draw-ticket-item--failed .bonus-draw-ticket-text {
+  font-weight: 700;
+  color: var(--danger-text);
+}
+
 .bonus-draw-ticket-item--invite {
   margin-top: 0.25rem;
 }
@@ -768,6 +773,17 @@ button:disabled {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.bonus-draw-ticket-item--failed .bonus-draw-ticket-badge {
+  border-color: var(--danger-line);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+.bonus-draw-ticket-state--failed {
+  background: var(--danger-bg);
+  color: var(--danger-text);
 }
 
 .bonus-draw-grid {

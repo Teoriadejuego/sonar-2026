@@ -110,6 +110,7 @@ export type UiCopy = {
     recallTicket: string;
     inviteTicket: string;
     achievedLabel: string;
+    notAchievedLabel: string;
     predictionAchieved: string;
     selectedTemplate: string;
     recallPrompt: string;
@@ -503,7 +504,7 @@ const es = withServerErrors({
   },
   game: {
     title: "Lanza el dado",
-    initialIntro: "Dale a “Lanzar” y memoriza el primer número.",
+      initialIntro: "Dale a “Lanzar” y recuerda el número obtenido.",
     intro:
       "Cuando tengas claro el número, continúa.",
     visibleResultLabel: "",
@@ -544,12 +545,13 @@ const es = withServerErrors({
     intro: "Ya tienes 1 papeleta para el sorteo de 2 entradas para SONAR 2027 por haber participado.",
     prompt:
       "¿Qué número crees que nos dirá más veces la gente?",
-    baseTicket: "1 papeleta por participar",
-    predictionTicket: "1 extra si aciertas la predicción",
-    recallTicket: "1 extra si recuerdas el mensaje",
-    inviteTicket: "1 extra por cada persona del festival que invites y participe",
-    achievedLabel: "Conseguida",
-    predictionAchieved: "Papeleta extra conseguida",
+      baseTicket: "1 papeleta por participar",
+      predictionTicket: "1 extra si aciertas la predicción",
+      recallTicket: "1 extra si recuerdas el mensaje",
+      inviteTicket: "1 extra por cada persona del festival que invites y participe",
+      achievedLabel: "Conseguida",
+      notAchievedLabel: "No conseguida",
+      predictionAchieved: "Papeleta extra conseguida",
     selectedTemplate: "Predicción guardada: {value}",
     recallPrompt:
       "¿Cuánta gente te dijimos que había elegido el 6 de 60 participantes anteriores?",
@@ -756,7 +758,7 @@ const ca = withServerErrors({
   },
   game: {
     title: "Llança el dau",
-    initialIntro: "Prem “Llançar” i memoritza el primer número.",
+      initialIntro: "Prem “Llançar” i recorda el número obtingut.",
     intro:
       "Quan tinguis clar el número, continua.",
     visibleResultLabel: "",
@@ -797,12 +799,13 @@ const ca = withServerErrors({
     intro: "Ja tens 1 papereta per al sorteig de 2 entrades per a SONAR 2027 per haver participat.",
     prompt:
       "Quin número creus que la gent ens dirà més vegades?",
-    baseTicket: "1 papereta per participar",
-    predictionTicket: "1 extra si encertes la predicció",
-    recallTicket: "1 extra si recordes el missatge",
-    inviteTicket: "1 extra per cada persona del festival que convidis i participi",
-    achievedLabel: "Aconseguida",
-    predictionAchieved: "Papereta extra aconseguida",
+      baseTicket: "1 papereta per participar",
+      predictionTicket: "1 extra si encertes la predicció",
+      recallTicket: "1 extra si recordes el missatge",
+      inviteTicket: "1 extra per cada persona del festival que convidis i participi",
+      achievedLabel: "Aconseguida",
+      notAchievedLabel: "No aconseguida",
+      predictionAchieved: "Papereta extra aconseguida",
     selectedTemplate: "Predicció desada: {value}",
     recallPrompt:
       "Quanta gent et vam dir que havia triat el 6 entre 60 participants anteriors?",
@@ -1009,7 +1012,7 @@ const en = withServerErrors({
   },
   game: {
     title: "Roll the die",
-    initialIntro: "Tap “Roll” and remember the first number.",
+      initialIntro: "Tap “Roll” and remember the number obtained.",
     intro:
       "When you have the number clear, continue.",
     visibleResultLabel: "",
@@ -1050,12 +1053,13 @@ const en = withServerErrors({
     intro: "You already have 1 entry for the draw for 2 tickets to SONAR 2027 for taking part.",
     prompt:
       "Which number do you think people will report most often?",
-    baseTicket: "1 entry for taking part",
-    predictionTicket: "1 extra if your prediction is correct",
-    recallTicket: "1 extra if you remember the message",
-    inviteTicket: "1 extra for each person at the festival you invite who takes part",
-    achievedLabel: "Earned",
-    predictionAchieved: "Extra entry earned",
+      baseTicket: "1 entry for taking part",
+      predictionTicket: "1 extra if your prediction is correct",
+      recallTicket: "1 extra if you remember the message",
+      inviteTicket: "1 extra for each person at the festival you invite who takes part",
+      achievedLabel: "Earned",
+      notAchievedLabel: "Not earned",
+      predictionAchieved: "Extra entry earned",
     selectedTemplate: "Prediction saved: {value}",
     recallPrompt:
       "How many people did we say had chosen 6 out of 60 earlier participants?",
@@ -1262,7 +1266,7 @@ const fr = withServerErrors({
   },
   game: {
     title: "Lancez le dé",
-    initialIntro: "Appuyez sur « Lancer » et mémorisez le premier nombre.",
+      initialIntro: "Appuyez sur « Lancer » et retenez le nombre obtenu.",
     intro:
       "Quand vous avez bien le nombre en tête, continuez.",
     visibleResultLabel: "",
@@ -1303,12 +1307,13 @@ const fr = withServerErrors({
     intro: "Vous avez déjà 1 participation au tirage de 2 billets pour SONAR 2027 pour avoir pris part à l'activité.",
     prompt:
       "Quel nombre pensez-vous que les participants nous diront le plus souvent ?",
-    baseTicket: "1 participation pour avoir pris part",
-    predictionTicket: "1 supplémentaire si votre prédiction est correcte",
-    recallTicket: "1 supplémentaire si vous vous souvenez du message",
-    inviteTicket: "1 supplémentaire par personne du festival que vous invitez et qui participe",
-    achievedLabel: "Obtenue",
-    predictionAchieved: "Participation supplémentaire obtenue",
+      baseTicket: "1 participation pour avoir pris part",
+      predictionTicket: "1 supplémentaire si votre prédiction est correcte",
+      recallTicket: "1 supplémentaire si vous vous souvenez du message",
+      inviteTicket: "1 supplémentaire par personne du festival que vous invitez et qui participe",
+      achievedLabel: "Obtenue",
+      notAchievedLabel: "Non obtenue",
+      predictionAchieved: "Participation supplémentaire obtenue",
     selectedTemplate: "Prédiction enregistrée : {value}",
     recallPrompt:
       "Combien de personnes vous avons-nous dit avoir choisi le 6 parmi les 60 participants précédents ?",
@@ -1515,7 +1520,7 @@ const pt = withServerErrors({
   },
   game: {
     title: "Lança o dado",
-    initialIntro: "Carrega em “Lançar” e memoriza o primeiro número.",
+      initialIntro: "Carrega em “Lançar” e lembra-te do número obtido.",
     intro:
       "Quando tiveres claro o número, continua.",
     visibleResultLabel: "",
@@ -1556,12 +1561,13 @@ const pt = withServerErrors({
     intro: "Já tens 1 participação no sorteio de 2 entradas para o SONAR 2027 por teres participado.",
     prompt:
       "Que número achas que as pessoas nos vão dizer mais vezes?",
-    baseTicket: "1 participação por participar",
-    predictionTicket: "1 extra se acertares na previsão",
-    recallTicket: "1 extra se te lembrares da mensagem",
-    inviteTicket: "1 extra por cada pessoa do festival que convidares e que participe",
-    achievedLabel: "Conseguida",
-    predictionAchieved: "Participação extra conseguida",
+      baseTicket: "1 participação por participar",
+      predictionTicket: "1 extra se acertares na previsão",
+      recallTicket: "1 extra se te lembrares da mensagem",
+      inviteTicket: "1 extra por cada pessoa do festival que convidares e que participe",
+      achievedLabel: "Conseguida",
+      notAchievedLabel: "Não conseguida",
+      predictionAchieved: "Participação extra conseguida",
     selectedTemplate: "Previsão guardada: {value}",
     recallPrompt:
       "Quantas pessoas te dissemos que tinham escolhido o 6 entre 60 participantes anteriores?",
@@ -1770,7 +1776,7 @@ const it = withServerErrors({
   game: {
     ...en.game,
     title: "Lancia il dado",
-    initialIntro: "Premi “Lancia” e memorizza il primo numero.",
+      initialIntro: "Premi “Lancia” e ricorda il numero ottenuto.",
     intro:
       "Quando hai chiaro il numero, continua.",
     firstResultTemplate: "Numero ottenuto: {value}",
@@ -1803,12 +1809,13 @@ const it = withServerErrors({
     title: "Ottieni possibilità extra per il sorteggio SONAR 2027",
     intro: "Hai già 1 partecipazione al sorteggio di 2 biglietti per SONAR 2027 per aver preso parte all'attività.",
     prompt: "Quale numero pensi che le persone ci diranno più spesso?",
-    baseTicket: "1 partecipazione per aver partecipato",
-    predictionTicket: "1 extra se indovini la previsione",
-    recallTicket: "1 extra se ricordi il messaggio",
-    inviteTicket: "1 extra per ogni persona del festival che inviti e che partecipa",
-    achievedLabel: "Ottenuta",
-    predictionAchieved: "Partecipazione extra ottenuta",
+      baseTicket: "1 partecipazione per aver partecipato",
+      predictionTicket: "1 extra se indovini la previsione",
+      recallTicket: "1 extra se ricordi il messaggio",
+      inviteTicket: "1 extra per ogni persona del festival che inviti e che partecipa",
+      achievedLabel: "Ottenuta",
+      notAchievedLabel: "Non ottenuta",
+      predictionAchieved: "Partecipazione extra ottenuta",
     selectedTemplate: "Previsione salvata: {value}",
     recallPrompt:
       "Quante persone ti abbiamo detto che avevano scelto il 6 tra i 60 partecipanti precedenti?",
