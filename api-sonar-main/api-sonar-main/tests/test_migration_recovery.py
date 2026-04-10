@@ -62,6 +62,79 @@ class MigrationRecoveryTests(unittest.TestCase):
 
         self.assertIn("automatic repair was refused", str(context.exception))
 
+    def test_head_revision_backfills_missing_experiment_state_columns(self) -> None:
+        SQLModel.metadata.drop_all(engine)
+        with engine.begin() as connection:
+            connection.execute(text("DROP TABLE IF EXISTS alembic_version"))
+            connection.execute(
+                text(
+                    """
+                    CREATE TABLE experiment_state (
+                        id VARCHAR NOT NULL PRIMARY KEY,
+                        current_phase VARCHAR,
+                        phase_transition_threshold INTEGER,
+                        valid_completed_count INTEGER,
+                        phase_2_activated_at DATETIME,
+                        treatment_version VARCHAR NOT NULL,
+                        allocation_version VARCHAR NOT NULL,
+                        created_at DATETIME,
+                        updated_at DATETIME
+                    )
+                    """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO experiment_state (
+                        id,
+                        current_phase,
+                        phase_transition_threshold,
+                        valid_completed_count,
+                        phase_2_activated_at,
+                        treatment_version,
+                        allocation_version,
+                        created_at,
+                        updated_at
+                    ) VALUES (
+                        'global',
+                        'seed_high',
+                        17,
+                        0,
+                        NULL,
+                        'legacy_treatment',
+                        'legacy_allocation',
+                        CURRENT_TIMESTAMP,
+                        CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+            )
+            connection.execute(
+                text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)")
+            )
+            connection.execute(
+                text("INSERT INTO alembic_version (version_num) VALUES ('20260408_02')")
+            )
+
+        apply_migrations()
+
+        with engine.begin() as connection:
+            columns = {
+                row[1]
+                for row in connection.execute(text("PRAGMA table_info(experiment_state)"))
+            }
+            status = connection.execute(
+                text("SELECT experiment_status FROM experiment_state WHERE id = 'global'")
+            ).scalar_one()
+
+        self.assertIn("experiment_status", columns)
+        self.assertIn("paused_at", columns)
+        self.assertIn("resumed_at", columns)
+        self.assertIn("pause_reason", columns)
+        self.assertEqual(status, "active")
+        self.assertEqual(current_database_revision(), head_revision(alembic_config()))
+
 
 if __name__ == "__main__":
     unittest.main()
