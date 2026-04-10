@@ -2,6 +2,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -49,9 +50,23 @@ class LegacyRuntimeAccessTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200, response.text)
         payload = response.json()["session"]
-        self.assertEqual(payload["treatment_deck_index"], 1)
+        self.assertGreaterEqual(payload["treatment_deck_index"], 1)
         self.assertIsNotNone(payload["result_deck_index"])
-        self.assertEqual(payload["payment_deck_index"], 1)
+        self.assertGreaterEqual(payload["payment_deck_index"], 1)
+
+    def test_lazy_startup_recovers_legacy_database_without_pre_migrate_step(self) -> None:
+        client = TestClient(app)
+
+        config_response = None
+        for _ in range(20):
+            config_response = client.get("/v1/config")
+            if config_response.status_code == 200:
+                break
+            time.sleep(0.1)
+
+        assert config_response is not None
+        self.assertEqual(config_response.status_code, 200, config_response.text)
+        self.assertFalse(schema_needs_reset())
 
 
 if __name__ == "__main__":

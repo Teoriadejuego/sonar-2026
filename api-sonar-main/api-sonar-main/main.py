@@ -2913,6 +2913,14 @@ def initialize_application_state() -> None:
             time.sleep(settings.startup_dependency_retry_interval_seconds)
             continue
         try:
+            try:
+                from migrate import apply_migrations
+
+                apply_migrations()
+            except Exception:  # noqa: BLE001
+                logger.exception(
+                    "startup_background_migrations_failed_non_blocking"
+                )
             with Session(engine) as db:
                 if settings.auto_bootstrap_demo_data and settings.database_is_sqlite:
                     try:
