@@ -113,6 +113,18 @@ class ConfigPayloadTests(unittest.TestCase):
         self.assertEqual(session_payload["treatment_key"], "control")
         self.assertTrue(session_payload["selected_for_payment"])
 
+    def test_ready_healthcheck_stays_green_during_lazy_startup(self) -> None:
+        SQLModel.metadata.drop_all(engine)
+        SQLModel.metadata.create_all(engine)
+
+        client = TestClient(app)
+        response = client.get("/health/ready")
+
+        self.assertEqual(response.status_code, 200, response.text)
+        payload = response.json()
+        self.assertTrue(payload["database_ready"])
+        self.assertTrue(payload["redis_ready"])
+
 
 if __name__ == "__main__":
     unittest.main()

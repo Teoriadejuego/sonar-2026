@@ -2892,8 +2892,6 @@ def readiness_payload() -> dict[str, Any]:
     payload["ok"] = (
         dependency_status["database_ready"]
         and dependency_status["redis_ready"]
-        and payload["startup_initialized"]
-        and not payload["startup_error"]
     )
     return payload
 
