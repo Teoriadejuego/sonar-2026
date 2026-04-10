@@ -66,6 +66,30 @@ class ConfigPayloadTests(unittest.TestCase):
         self.assertEqual(payload["current_phase"], "design_62_treatments_v1")
         self.assertEqual(payload["experiment_control"]["status"], "active")
 
+    def test_access_session_bootstraps_runtime_from_empty_db(self) -> None:
+        SQLModel.metadata.drop_all(engine)
+        SQLModel.metadata.create_all(engine)
+
+        client = TestClient(app)
+        response = client.post(
+            "/v1/session/access",
+            json={
+                "bracelet_id": "TEST0001",
+                "consent_accepted": True,
+                "consent_age_confirmed": True,
+                "consent_info_accepted": True,
+                "consent_data_accepted": True,
+                "language": "es",
+                "client_installation_id": "lazy-bootstrap-probe",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        session_payload = response.json()["session"]
+        self.assertEqual(session_payload["treatment_deck_index"], 1)
+        self.assertEqual(session_payload["payment_deck_index"], 1)
+        self.assertIsNotNone(session_payload["result_deck_index"])
+
 
 if __name__ == "__main__":
     unittest.main()

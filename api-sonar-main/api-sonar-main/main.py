@@ -2890,7 +2890,8 @@ def readiness_payload() -> dict[str, Any]:
         "startup_error": startup_state["error"],
     }
     payload["ok"] = (
-        all(dependency_status.values())
+        dependency_status["database_ready"]
+        and dependency_status["redis_ready"]
         and payload["startup_initialized"]
         and not payload["startup_error"]
     )
@@ -2906,7 +2907,7 @@ def initialize_application_state() -> None:
         _startup_state["error"] = None
     while True:
         readiness = startup_dependency_status()
-        if not all(readiness.values()):
+        if not readiness["database_ready"] or not readiness["redis_ready"]:
             logger.warning(
                 "startup_dependencies_not_ready",
                 extra={"structured_payload": readiness},
@@ -2916,8 +2917,15 @@ def initialize_application_state() -> None:
         try:
             with Session(engine) as db:
                 if settings.auto_bootstrap_demo_data:
-                    bootstrap_demo_data(db)
+                    try:
+                        bootstrap_demo_data(db)
+                    except Exception:  # noqa: BLE001
+                        db.rollback()
+                        logger.exception(
+                            "startup_bootstrap_failed_lazy_runtime_recovery_enabled"
+                        )
                 state = get_or_create_experiment_state(db)
+                db.commit()
                 set_experiment_status_cache(state.experiment_status, state.pause_reason)
         except Exception as exc:  # noqa: BLE001
             update_startup_state(initialized=False, initializing=True, error=str(exc))
