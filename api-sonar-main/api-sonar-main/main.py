@@ -2,6 +2,7 @@ import csv
 import hashlib
 import io
 import json
+import threading
 import time
 import zipfile
 from datetime import UTC, datetime, timedelta
@@ -135,6 +136,19 @@ from runtime import (
 from settings import settings
 
 app = FastAPI(title="Sonar Experimental API")
+
+_STARTUP_STATE_UNSET = object()
+_startup_state_lock = threading.Lock()
+_startup_state: dict[str, Any] = {
+    "initialized": False,
+    "initializing": False,
+    "error": None,
+    "last_readiness": {
+        "database_ready": False,
+        "redis_ready": not settings.require_redis,
+        "schema_ready": False,
+    },
+}
 
 app.add_middleware(
     CORSMiddleware,
@@ -1316,6 +1330,13 @@ def max_positive_deck_index(db: Session, model: Any) -> int:
     return int(current_max) if current_max is not None else 0
 
 
+def max_positive_root_sequence(db: Session) -> int:
+    current_max = db.exec(
+        select(func.max(SeriesRoot.root_sequence)).where(SeriesRoot.root_sequence > 0)
+    ).one()
+    return int(current_max) if current_max is not None else 0
+
+
 def close_legacy_root(db: Session, root_id: Optional[str], reason: str) -> None:
     if not root_id:
         return
@@ -1562,7 +1583,11 @@ def get_active_treatment_deck(db: Session) -> TreatmentDeck:
     ).first()
     if deck:
         return deck
-    return create_treatment_deck(db, max_positive_deck_index(db, TreatmentDeck) + 1)
+    next_deck_index = max(
+        max_positive_deck_index(db, TreatmentDeck),
+        max_positive_root_sequence(db),
+    ) + 1
+    return create_treatment_deck(db, next_deck_index)
 
 
 def next_result_treatment_cycle_index(db: Session, *, treatment_key: str) -> int:
@@ -2753,52 +2778,114 @@ def startup_dependency_status() -> dict[str, bool]:
     database_ok = database_ready()
     redis_ok = redis_ping() if settings.require_redis else True
     schema_ok = not schema_needs_reset() if database_ok else False
-    return {
+    payload = {
         "database_ready": database_ok,
         "redis_ready": redis_ok,
         "schema_ready": schema_ok,
     }
+    with _startup_state_lock:
+        _startup_state["last_readiness"] = dict(payload)
+    return payload
 
 
-def wait_for_startup_dependencies() -> dict[str, bool]:
-    deadline = time.monotonic() + settings.startup_dependency_timeout_seconds
-    last_status = startup_dependency_status()
-    while time.monotonic() < deadline:
-        last_status = startup_dependency_status()
-        if all(last_status.values()):
-            return last_status
-        logger.warning(
-            "startup_dependencies_not_ready",
-            extra={"structured_payload": last_status},
+def current_startup_state() -> dict[str, Any]:
+    with _startup_state_lock:
+        return {
+            "initialized": bool(_startup_state["initialized"]),
+            "initializing": bool(_startup_state["initializing"]),
+            "error": _startup_state["error"],
+            "last_readiness": dict(_startup_state["last_readiness"]),
+        }
+
+
+def update_startup_state(
+    *,
+    initialized: Optional[bool] = None,
+    initializing: Optional[bool] = None,
+    error: Any = _STARTUP_STATE_UNSET,
+    last_readiness: Optional[dict[str, bool]] = None,
+) -> None:
+    with _startup_state_lock:
+        if initialized is not None:
+            _startup_state["initialized"] = initialized
+        if initializing is not None:
+            _startup_state["initializing"] = initializing
+        if error is not _STARTUP_STATE_UNSET:
+            _startup_state["error"] = error
+        if last_readiness is not None:
+            _startup_state["last_readiness"] = dict(last_readiness)
+
+
+def readiness_payload() -> dict[str, Any]:
+    dependency_status = startup_dependency_status()
+    startup_state = current_startup_state()
+    payload = {
+        **dependency_status,
+        "startup_initialized": startup_state["initialized"],
+        "startup_initializing": startup_state["initializing"],
+        "startup_error": startup_state["error"],
+    }
+    payload["ok"] = (
+        all(dependency_status.values())
+        and payload["startup_initialized"]
+        and not payload["startup_error"]
+    )
+    return payload
+
+
+def initialize_application_state() -> None:
+    with _startup_state_lock:
+        if _startup_state["initialized"] or _startup_state["initializing"]:
+            return
+        _startup_state["initialized"] = False
+        _startup_state["initializing"] = True
+        _startup_state["error"] = None
+    while True:
+        readiness = startup_dependency_status()
+        if not all(readiness.values()):
+            logger.warning(
+                "startup_dependencies_not_ready",
+                extra={"structured_payload": readiness},
+            )
+            time.sleep(settings.startup_dependency_retry_interval_seconds)
+            continue
+        try:
+            with Session(engine) as db:
+                if settings.auto_bootstrap_demo_data:
+                    bootstrap_demo_data(db)
+                state = get_or_create_experiment_state(db)
+                set_experiment_status_cache(state.experiment_status, state.pause_reason)
+        except Exception as exc:  # noqa: BLE001
+            update_startup_state(initialized=False, initializing=True, error=str(exc))
+            logger.exception("startup_initialization_failed")
+            time.sleep(settings.startup_dependency_retry_interval_seconds)
+            continue
+        update_startup_state(
+            initialized=True,
+            initializing=False,
+            error=None,
+            last_readiness=readiness,
         )
-        time.sleep(settings.startup_dependency_retry_interval_seconds)
-    return last_status
+        logger.info(
+            "startup_completed",
+            extra={
+                "structured_payload": {
+                    "database_url": settings.database_url,
+                    "redis_url": settings.redis_url,
+                    "auto_bootstrap_demo_data": settings.auto_bootstrap_demo_data,
+                }
+            },
+        )
+        return
 
 
 @app.on_event("startup")
 def on_startup() -> None:
-    readiness = wait_for_startup_dependencies()
-    if not readiness["database_ready"]:
-        raise RuntimeError("Database is not reachable. Run PostgreSQL and apply migrations before startup.")
-    if settings.require_redis and not readiness["redis_ready"]:
-        raise RuntimeError("Redis is not reachable. Run Redis before startup.")
-    if not readiness["schema_ready"]:
-        raise RuntimeError("Database schema is not ready. Run `alembic upgrade head` before startup.")
-    with Session(engine) as db:
-        if settings.auto_bootstrap_demo_data:
-            bootstrap_demo_data(db)
-        state = get_or_create_experiment_state(db)
-        set_experiment_status_cache(state.experiment_status, state.pause_reason)
-    logger.info(
-        "startup_completed",
-        extra={
-            "structured_payload": {
-                "database_url": settings.database_url,
-                "redis_url": settings.redis_url,
-                "auto_bootstrap_demo_data": settings.auto_bootstrap_demo_data,
-            }
-        },
-    )
+    threading.Thread(
+        target=initialize_application_state,
+        name="sonar-startup",
+        daemon=True,
+    ).start()
 
 
 @app.get("/")
@@ -2813,14 +2900,16 @@ def health_live() -> dict[str, Any]:
 
 @app.get("/health/ready")
 def health_ready() -> Response:
-    payload = startup_dependency_status()
-    payload["ok"] = all(payload.values())
+    payload = readiness_payload()
     status_code = 200 if payload["ok"] else 503
-    return Response(content=json.dumps(payload), media_type="application/json", status_code=status_code)
+    return JSONResponse(content=payload, status_code=status_code)
 
 
 @app.get("/health")
-def healthcheck() -> dict[str, Any]:
+def healthcheck() -> Any:
+    readiness = readiness_payload()
+    if not readiness["ok"]:
+        return JSONResponse(content=readiness, status_code=503)
     with Session(engine) as db:
         experiment_state = get_or_create_experiment_state(db)
         prizes = prize_summary(db)
