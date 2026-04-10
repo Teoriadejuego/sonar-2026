@@ -1037,6 +1037,70 @@ def prize_summary(db: Session) -> dict[str, Any]:
     }
 
 
+def experiment_control_payload(state: ExperimentState) -> dict[str, Any]:
+    return {
+        "status": state.experiment_status,
+        "paused": state.experiment_status == "paused",
+        "paused_at": state.paused_at.isoformat() if state.paused_at else None,
+    }
+
+
+def build_config_payload(db: Session) -> dict[str, Any]:
+    experiment_state = get_or_create_experiment_state(db)
+    current_phase = experiment_state.current_phase
+    treatment_definitions = phase_treatments(current_phase)
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "experiment_version": EXPERIMENT_VERSION,
+        "ui_version": UI_VERSION,
+        "consent_version": CONSENT_VERSION,
+        "deck_version": DECK_VERSION,
+        "payment_version": PAYMENT_VERSION,
+        "telemetry_version": TELEMETRY_VERSION,
+        "lexicon_version": LEXICON_VERSION,
+        "current_phase": current_phase,
+        "phase_transition_threshold": PHASE_TRANSITION_VALID_COMPLETED_THRESHOLD,
+        "max_attempts": MAX_ATTEMPTS,
+        "participant_limit": PARTICIPANT_LIMIT,
+        "window_size": WINDOW_SIZE,
+        "displayed_denominator": DISPLAYED_DENOMINATOR,
+        "treatment_deck_size": TREATMENT_DECK_SIZE,
+        "result_deck_size": RESULT_DECK_SIZE,
+        "payment_deck_size": PAYMENT_DECK_SIZE,
+        "payment_winners_per_deck": 1,
+        "prize_eur": PRIZE_EUR,
+        "treatments": list(TREATMENT_KEYS),
+        "seed_initial_counts": {
+            treatment_key: int(config["displayed_count_target"])
+            for treatment_key, config in treatment_definitions.items()
+            if config["displayed_count_target"] is not None
+        },
+        "treatment_display_counts": {
+            treatment_key: config["displayed_count_target"]
+            for treatment_key, config in treatment_definitions.items()
+        },
+        "treatment_targets": {
+            treatment_key: treatment["norm_target_value"]
+            for treatment_key, treatment in treatment_definitions.items()
+        },
+        "collapse_consecutive_claims": 0,
+        "treatment_version": treatment_version_for_phase(current_phase),
+        "allocation_version": allocation_version_for_phase(current_phase),
+        "deployment_context": DEPLOYMENT_CONTEXT,
+        "site_code": SITE_CODE,
+        "campaign_code": CAMPAIGN_CODE,
+        "environment_label": ENVIRONMENT_LABEL,
+        "demo_ids": {
+            "winner_control": "CTRL1234",
+            "loser_norm_0": "NORM0000",
+            "loser_norm_1": "NORM0001",
+        },
+        "experiment_control": experiment_control_payload(experiment_state),
+        "copy": public_copy(),
+        "support": public_support(),
+    }
+
+
 def deck_status_payload(
     db: Session,
     *,
@@ -2953,67 +3017,7 @@ def healthcheck() -> Any:
 @app.get("/v1/config")
 def config() -> dict[str, Any]:
     with Session(engine) as db:
-        experiment_state = get_or_create_experiment_state(db)
-        current_phase = experiment_state.current_phase
-    treatment_definitions = phase_treatments(current_phase)
-    return {
-        "schema_version": SCHEMA_VERSION,
-        "experiment_version": EXPERIMENT_VERSION,
-        "ui_version": UI_VERSION,
-        "consent_version": CONSENT_VERSION,
-        "deck_version": DECK_VERSION,
-        "payment_version": PAYMENT_VERSION,
-        "telemetry_version": TELEMETRY_VERSION,
-        "lexicon_version": LEXICON_VERSION,
-        "current_phase": current_phase,
-        "phase_transition_threshold": PHASE_TRANSITION_VALID_COMPLETED_THRESHOLD,
-        "max_attempts": MAX_ATTEMPTS,
-        "participant_limit": PARTICIPANT_LIMIT,
-        "window_size": WINDOW_SIZE,
-        "displayed_denominator": DISPLAYED_DENOMINATOR,
-        "treatment_deck_size": TREATMENT_DECK_SIZE,
-        "result_deck_size": RESULT_DECK_SIZE,
-        "payment_deck_size": PAYMENT_DECK_SIZE,
-        "payment_winners_per_deck": 1,
-        "prize_eur": PRIZE_EUR,
-        "treatments": list(TREATMENT_KEYS),
-        "seed_initial_counts": {
-            treatment_key: int(config["displayed_count_target"])
-            for treatment_key, config in treatment_definitions.items()
-            if config["displayed_count_target"] is not None
-        },
-        "treatment_display_counts": {
-            treatment_key: config["displayed_count_target"]
-            for treatment_key, config in treatment_definitions.items()
-        },
-        "treatment_targets": {
-            treatment_key: treatment["norm_target_value"]
-            for treatment_key, treatment in treatment_definitions.items()
-        },
-        "collapse_consecutive_claims": 0,
-        "treatment_version": treatment_version_for_phase(current_phase),
-        "allocation_version": allocation_version_for_phase(current_phase),
-        "deployment_context": DEPLOYMENT_CONTEXT,
-        "site_code": SITE_CODE,
-        "campaign_code": CAMPAIGN_CODE,
-        "environment_label": ENVIRONMENT_LABEL,
-        "demo_ids": {
-            "winner_control": "CTRL1234",
-            "loser_norm_0": "NORM0000",
-            "loser_norm_1": "NORM0001",
-        },
-        "experiment_control": {
-            "status": experiment_state.experiment_status,
-            "paused": experiment_state.experiment_status == "paused",
-            "paused_at": (
-                experiment_state.paused_at.isoformat()
-                if experiment_state.paused_at
-                else None
-            ),
-        },
-        "copy": public_copy(),
-        "support": public_support(),
-    }
+        return build_config_payload(db)
 
 
 @app.post("/v1/interest-signup")
