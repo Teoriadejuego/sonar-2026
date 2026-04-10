@@ -77,7 +77,7 @@ def upgrade() -> None:
                 sa.Column("operational_note_text", sa.Text(), nullable=True),
             )
         index_name = f"ix_{table_name}_operational_note_id"
-        if not _has_index(table_name, index_name):
+        if _has_table(table_name) and not _has_index(table_name, index_name):
             op.create_index(
                 index_name,
                 table_name,
@@ -87,7 +87,7 @@ def upgrade() -> None:
 
     if not _has_column("sessions", "qr_entry_code"):
         op.add_column("sessions", sa.Column("qr_entry_code", sa.String(), nullable=True))
-    if not _has_index("sessions", "ix_sessions_qr_entry_code"):
+    if _has_table("sessions") and not _has_index("sessions", "ix_sessions_qr_entry_code"):
         op.create_index("ix_sessions_qr_entry_code", "sessions", ["qr_entry_code"], unique=False)
 
 

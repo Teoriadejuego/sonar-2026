@@ -199,12 +199,12 @@ def upgrade() -> None:
         "ix_sessions_payment_deck_id": ["payment_deck_id"],
         "ix_sessions_payment_card_position": ["payment_card_position"],
     }.items():
-        if not _has_index("sessions", index_name):
+        if _has_table("sessions") and not _has_index("sessions", index_name):
             op.create_index(index_name, "sessions", columns)
 
     if not _has_column("snapshot_records", "is_control"):
         op.add_column("snapshot_records", sa.Column("is_control", sa.Boolean(), nullable=True))
-    if not _has_index("snapshot_records", "ix_snapshot_records_is_control"):
+    if _has_table("snapshot_records") and not _has_index("snapshot_records", "ix_snapshot_records_is_control"):
         op.create_index("ix_snapshot_records_is_control", "snapshot_records", ["is_control"])
 
 

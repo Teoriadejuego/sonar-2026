@@ -380,6 +380,93 @@ class MigrationRecoveryTests(unittest.TestCase):
         with mock.patch("migrate.bootstrap_demo_data", side_effect=RuntimeError("boom")):
             seed_demo()
 
+    def test_head_revision_recovers_missing_tables_from_inconsistent_schema(self) -> None:
+        SQLModel.metadata.drop_all(engine)
+        with engine.begin() as connection:
+            connection.execute(text("DROP TABLE IF EXISTS alembic_version"))
+            connection.execute(
+                text(
+                    """
+                    CREATE TABLE experiment_state (
+                        id VARCHAR NOT NULL PRIMARY KEY,
+                        current_phase VARCHAR,
+                        experiment_status VARCHAR,
+                        phase_transition_threshold INTEGER,
+                        valid_completed_count INTEGER,
+                        phase_2_activated_at DATETIME,
+                        paused_at DATETIME,
+                        resumed_at DATETIME,
+                        pause_reason TEXT,
+                        treatment_version VARCHAR NOT NULL,
+                        allocation_version VARCHAR NOT NULL,
+                        created_at DATETIME,
+                        updated_at DATETIME
+                    )
+                    """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO experiment_state (
+                        id,
+                        current_phase,
+                        experiment_status,
+                        phase_transition_threshold,
+                        valid_completed_count,
+                        phase_2_activated_at,
+                        paused_at,
+                        resumed_at,
+                        pause_reason,
+                        treatment_version,
+                        allocation_version,
+                        created_at,
+                        updated_at
+                    ) VALUES (
+                        'global',
+                        'design_62_treatments_v1',
+                        'active',
+                        6000,
+                        0,
+                        NULL,
+                        NULL,
+                        NULL,
+                        NULL,
+                        'treatment_deck_62_v1',
+                        'balanced_assignment_v1',
+                        CURRENT_TIMESTAMP,
+                        CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+            )
+            connection.execute(
+                text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)")
+            )
+            connection.execute(
+                text("INSERT INTO alembic_version (version_num) VALUES ('20260410_04')")
+            )
+
+        apply_migrations()
+
+        with engine.begin() as connection:
+            tables = {
+                row[0]
+                for row in connection.execute(
+                    text("SELECT name FROM sqlite_master WHERE type = 'table'")
+                )
+            }
+
+        for required_table in [
+            "sessions",
+            "claims",
+            "result_decks",
+            "payment_decks",
+            "telemetry_events",
+        ]:
+            self.assertIn(required_table, tables)
+        self.assertEqual(current_database_revision(), head_revision(alembic_config()))
+
 
 if __name__ == "__main__":
     unittest.main()

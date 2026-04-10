@@ -46,7 +46,13 @@ BIGINT_COLUMNS: dict[str, list[str]] = {
 }
 
 
+def _has_table(table_name: str) -> bool:
+    return table_name in inspect(op.get_bind()).get_table_names()
+
+
 def _column_type_lookup(table_name: str) -> dict[str, sa.types.TypeEngine]:
+    if not _has_table(table_name):
+        return {}
     inspector = inspect(op.get_bind())
     return {
         column["name"]: column["type"]
@@ -63,6 +69,8 @@ def _should_widen(column_type: sa.types.TypeEngine) -> bool:
 
 def upgrade() -> None:
     for table_name, column_names in BIGINT_COLUMNS.items():
+        if not _has_table(table_name):
+            continue
         current_types = _column_type_lookup(table_name)
         with op.batch_alter_table(table_name) as batch_op:
             for column_name in column_names:
@@ -79,6 +87,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     for table_name, column_names in BIGINT_COLUMNS.items():
+        if not _has_table(table_name):
+            continue
         current_types = _column_type_lookup(table_name)
         with op.batch_alter_table(table_name) as batch_op:
             for column_name in column_names:

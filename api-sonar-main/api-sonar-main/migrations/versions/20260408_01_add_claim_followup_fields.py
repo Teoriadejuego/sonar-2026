@@ -59,13 +59,13 @@ def upgrade() -> None:
         if not _has_column("claims", column_name):
             op.add_column("claims", column)
 
-    if not _has_index("claims", "ix_claims_crowd_prediction_value"):
+    if _has_table("claims") and not _has_index("claims", "ix_claims_crowd_prediction_value"):
         op.create_index(
             "ix_claims_crowd_prediction_value",
             "claims",
             ["crowd_prediction_value"],
         )
-    if not _has_index("claims", "ix_claims_social_recall_correct"):
+    if _has_table("claims") and not _has_index("claims", "ix_claims_social_recall_correct"):
         op.create_index(
             "ix_claims_social_recall_correct",
             "claims",

@@ -38,6 +38,9 @@ def _has_index(table_name: str, index_name: str) -> bool:
 
 
 def upgrade() -> None:
+    if not _has_table("result_decks"):
+        return
+
     if not _has_column("result_decks", "treatment_key"):
         op.add_column(
             "result_decks",
