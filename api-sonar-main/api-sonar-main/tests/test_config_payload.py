@@ -90,6 +90,29 @@ class ConfigPayloadTests(unittest.TestCase):
         self.assertEqual(session_payload["payment_deck_index"], 1)
         self.assertIsNotNone(session_payload["result_deck_index"])
 
+    def test_demo_ids_work_without_eager_bootstrap(self) -> None:
+        SQLModel.metadata.drop_all(engine)
+        SQLModel.metadata.create_all(engine)
+
+        client = TestClient(app)
+        response = client.post(
+            "/v1/session/access",
+            json={
+                "bracelet_id": "CTRL1234",
+                "consent_accepted": True,
+                "consent_age_confirmed": True,
+                "consent_info_accepted": True,
+                "consent_data_accepted": True,
+                "language": "es",
+                "client_installation_id": "lazy-demo-probe",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        session_payload = response.json()["session"]
+        self.assertEqual(session_payload["treatment_key"], "control")
+        self.assertTrue(session_payload["selected_for_payment"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,6 +12,7 @@ from sqlmodel import Session, SQLModel
 
 from database import engine
 from main import bootstrap_demo_data
+from settings import settings
 
 
 def alembic_config() -> Config:
@@ -122,6 +123,8 @@ def reset_schema() -> None:
 
 
 def seed_demo() -> None:
+    if not settings.auto_bootstrap_demo_data or not settings.database_is_sqlite:
+        return
     with Session(engine) as session:
         try:
             bootstrap_demo_data(session)

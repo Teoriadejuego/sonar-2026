@@ -2916,7 +2916,7 @@ def initialize_application_state() -> None:
             continue
         try:
             with Session(engine) as db:
-                if settings.auto_bootstrap_demo_data:
+                if settings.auto_bootstrap_demo_data and settings.database_is_sqlite:
                     try:
                         bootstrap_demo_data(db)
                     except Exception:  # noqa: BLE001
