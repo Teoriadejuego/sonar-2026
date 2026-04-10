@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import traceback
 
 from alembic import command
 from alembic.config import Config
@@ -122,7 +123,14 @@ def reset_schema() -> None:
 
 def seed_demo() -> None:
     with Session(engine) as session:
-        bootstrap_demo_data(session)
+        try:
+            bootstrap_demo_data(session)
+        except Exception:  # noqa: BLE001
+            session.rollback()
+            print(
+                "Demo bootstrap failed during migrate.py; continuing because runtime bootstrap can recover.",
+            )
+            traceback.print_exc()
 
 
 def main() -> None:
