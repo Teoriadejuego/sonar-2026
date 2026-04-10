@@ -51,6 +51,7 @@ from experiment import (
     deterministic_seed,
     displayed_message_version_for_phase,
     normalize_bracelet_id,
+    normalize_phase_key,
     payment_deck_seed,
     payment_deck_values,
     phase_treatments,
@@ -961,6 +962,10 @@ def get_or_create_experiment_state(db: Session, *, for_update: bool = False) -> 
     ).first()
     if state:
         changed = False
+        normalized_phase = normalize_phase_key(state.current_phase)
+        if state.current_phase != normalized_phase:
+            state.current_phase = normalized_phase
+            changed = True
         if state.current_phase != PHASE_1_MAIN:
             state.current_phase = PHASE_1_MAIN
             changed = True

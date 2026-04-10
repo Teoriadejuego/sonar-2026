@@ -13,7 +13,7 @@ os.environ["AUTO_BOOTSTRAP_DEMO_DATA"] = "false"
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel
+from sqlmodel import Session, SQLModel, select
 
 from database import engine
 from main import app, build_config_payload
@@ -65,6 +65,20 @@ class ConfigPayloadTests(unittest.TestCase):
         payload = response.json()
         self.assertEqual(payload["current_phase"], "design_62_treatments_v1")
         self.assertEqual(payload["experiment_control"]["status"], "active")
+
+    def test_config_endpoint_normalizes_unknown_phase_state(self) -> None:
+        with Session(engine) as db:
+            state = db.exec(select(ExperimentState).where(ExperimentState.id == "global")).one()
+            state.current_phase = "broken_live_phase"
+            db.add(state)
+            db.commit()
+
+        client = TestClient(app)
+        response = client.get("/v1/config")
+
+        self.assertEqual(response.status_code, 200, response.text)
+        payload = response.json()
+        self.assertEqual(payload["current_phase"], "design_62_treatments_v1")
 
     def test_access_session_bootstraps_runtime_from_empty_db(self) -> None:
         SQLModel.metadata.drop_all(engine)

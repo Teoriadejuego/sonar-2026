@@ -111,6 +111,19 @@ CURRENT_PHASE = str(EXPERIMENT_SETTINGS["design_key"])
 PHASE_1_MAIN = CURRENT_PHASE
 PHASE_2_ROBUSTNESS = LEGACY_PHASE_DISABLED
 
+# Railway/production has carried forward legacy experiment_state.current_phase
+# values from older designs. The 62-treatment design is now the only active
+# runtime, so any stale or malformed phase key must resolve to the current
+# design instead of taking the API down.
+PHASE_COMPATIBILITY_ALIASES = {
+    "": PHASE_1_MAIN,
+    PHASE_1_MAIN: PHASE_1_MAIN,
+    "seed_low": PHASE_1_MAIN,
+    "seed_high": PHASE_1_MAIN,
+    "phase_2": PHASE_1_MAIN,
+    LEGACY_PHASE_DISABLED: PHASE_1_MAIN,
+}
+
 WINDOW_SIZE = int(EXPERIMENT_SETTINGS["window_size"])
 DISPLAYED_DENOMINATOR = int(EXPERIMENT_SETTINGS["displayed_denominator"])
 DEFAULT_NORM_TARGET_VALUE = int(EXPERIMENT_SETTINGS["norm_target_value"])
@@ -186,6 +199,11 @@ DEMO_ID_OVERRIDES = {
 }
 
 
+def normalize_phase_key(phase_key: str | None) -> str:
+    candidate = str(phase_key or "").strip()
+    return PHASE_COMPATIBILITY_ALIASES.get(candidate, PHASE_1_MAIN)
+
+
 def phase_config(_phase_key: str) -> dict[str, Any]:
     return {
         "label": "Diseno con 62 tratamientos individuales",
@@ -201,12 +219,14 @@ def phase_treatments(_phase_key: str) -> dict[str, dict[str, Any]]:
 
 
 def treatment_config(_phase_key: str, treatment_key: str) -> dict[str, Any]:
+    normalize_phase_key(_phase_key)
     if treatment_key not in TREATMENT_DEFINITIONS:
         raise KeyError(f"Tratamiento no configurado: {treatment_key}")
     return TREATMENT_DEFINITIONS[treatment_key]
 
 
 def assignment_weights_for_phase(_phase_key: str) -> dict[str, float]:
+    normalize_phase_key(_phase_key)
     return {
         treatment_key: float(config["assignment_weight"])
         for treatment_key, config in TREATMENT_DEFINITIONS.items()
@@ -214,6 +234,7 @@ def assignment_weights_for_phase(_phase_key: str) -> dict[str, float]:
 
 
 def series_labels_for_phase(_phase_key: str) -> dict[str, str]:
+    normalize_phase_key(_phase_key)
     return {
         treatment_key: str(config["label"])
         for treatment_key, config in TREATMENT_DEFINITIONS.items()
@@ -221,6 +242,7 @@ def series_labels_for_phase(_phase_key: str) -> dict[str, str]:
 
 
 def seed_initial_counts_for_phase(_phase_key: str) -> dict[str, int]:
+    normalize_phase_key(_phase_key)
     return {
         treatment_key: int(config["displayed_count_target"])
         for treatment_key, config in TREATMENT_DEFINITIONS.items()
@@ -229,18 +251,22 @@ def seed_initial_counts_for_phase(_phase_key: str) -> dict[str, int]:
 
 
 def treatment_version_for_phase(_phase_key: str) -> str:
+    normalize_phase_key(_phase_key)
     return TREATMENT_VERSION
 
 
 def phase_version_for_phase(_phase_key: str) -> str:
+    normalize_phase_key(_phase_key)
     return PHASE_VERSION
 
 
 def allocation_version_for_phase(_phase_key: str) -> str:
+    normalize_phase_key(_phase_key)
     return ALLOCATION_VERSION
 
 
 def displayed_message_version_for_phase(_phase_key: str) -> str:
+    normalize_phase_key(_phase_key)
     return DISPLAYED_MESSAGE_VERSION
 
 
