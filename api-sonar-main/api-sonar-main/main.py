@@ -2922,11 +2922,19 @@ def initialize_application_state() -> None:
                     except Exception:  # noqa: BLE001
                         db.rollback()
                         logger.exception(
-                            "startup_bootstrap_failed_lazy_runtime_recovery_enabled"
+                                "startup_bootstrap_failed_lazy_runtime_recovery_enabled"
                         )
                 state = get_or_create_experiment_state(db)
                 db.commit()
-                set_experiment_status_cache(state.experiment_status, state.pause_reason)
+                try:
+                    set_experiment_status_cache(
+                        state.experiment_status,
+                        state.pause_reason,
+                    )
+                except Exception:  # noqa: BLE001
+                    logger.exception(
+                        "startup_status_cache_write_failed_non_blocking"
+                    )
         except Exception as exc:  # noqa: BLE001
             update_startup_state(initialized=False, initializing=True, error=str(exc))
             logger.exception("startup_initialization_failed")
