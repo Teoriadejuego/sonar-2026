@@ -852,8 +852,10 @@ export async function accessSession(
 
 export async function resumeSession(
   sessionId: string,
+  init?: RequestInit,
 ): Promise<SessionEnvelope> {
   return requestJson<SessionEnvelope>(`/v1/session/${sessionId}/resume`, {
+    ...(init ?? {}),
     method: "GET",
     headers: { "Content-Type": "application/json" },
   });

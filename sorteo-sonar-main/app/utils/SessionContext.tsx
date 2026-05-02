@@ -726,7 +726,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
 
     let cancelled = false;
-    resumeSession(stored.sessionId)
+    withRequestTimeout((init) => resumeSession(stored.sessionId, init))
       .then((response) => {
         if (cancelled) {
           return;
