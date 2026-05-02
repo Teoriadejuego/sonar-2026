@@ -59,6 +59,13 @@ _SESSION_PATH_RE = re.compile(r"/v1/session/[0-9a-fA-F]{32}")
 _HTTP_METRICS_KEY_PREFIX = "sonar:metrics:http:"
 _HTTP_METRICS_SAMPLES_SUFFIX = ":samples"
 _COUNTER_GROUP_KEY_PREFIX = "sonar:metrics:counters:"
+_RUNTIME_RESET_REDIS_PATTERNS = (
+    f"{_HTTP_METRICS_KEY_PREFIX}*",
+    f"{_COUNTER_GROUP_KEY_PREFIX}*",
+    "sonar:ratelimit:*",
+    "sonar:receipt:*",
+    "sonar:experiment:status",
+)
 
 
 def get_redis() -> Redis:
@@ -98,6 +105,19 @@ def reset_observability_metrics() -> None:
         _inmemory_http_metrics.clear()
         _inmemory_http_samples.clear()
         _inmemory_counter_groups.clear()
+
+
+def clear_runtime_state() -> dict[str, int]:
+    reset_observability_metrics()
+    deleted_redis_keys = 0
+    if settings.require_redis:
+        redis_client = get_redis()
+        keys_to_delete: set[str] = set()
+        for pattern in _RUNTIME_RESET_REDIS_PATTERNS:
+            keys_to_delete.update(str(key) for key in redis_client.scan_iter(pattern))
+        if keys_to_delete:
+            deleted_redis_keys = int(redis_client.delete(*sorted(keys_to_delete)) or 0)
+    return {"deleted_redis_keys": deleted_redis_keys}
 
 
 def _record_http_metric_inmemory(

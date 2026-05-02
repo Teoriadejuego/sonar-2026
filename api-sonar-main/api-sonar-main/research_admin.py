@@ -1469,7 +1469,10 @@ def exports_page_html(
         <thead><tr><th>Nombre</th><th>Capa</th><th>Sensibilidad</th><th>Registros</th><th>Tamano aprox.</th><th>Generado</th><th>Descripcion</th><th>Exportar</th></tr></thead>
         <tbody>{''.join(rows_html)}</tbody>
       </table>
-      <p style="margin-top:16px;"><a class="secondary" href="/admin/dashboard">Abrir dashboard cientifico-operativo</a></p>
+      <p style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
+        <a class="secondary" href="/admin/dashboard">Abrir dashboard cientifico-operativo</a>
+        <a class="secondary" href="/admin/payments">Abrir panel administrativo Bizum</a>
+      </p>
     </div>
   </body>
 </html>
@@ -1863,6 +1866,237 @@ def live_payments_payload(db: Session) -> dict[str, Any]:
         },
         "recent_winners": recent_winners,
     }
+
+
+def admin_payments_payload(db: Session) -> dict[str, Any]:
+    payments = db.exec(select(Payment).order_by(Payment.created_at.desc())).all()
+    payout_requests = db.exec(
+        select(PayoutRequest).order_by(PayoutRequest.created_at.desc())
+    ).all()
+    sessions = db.exec(select(SessionRecord).order_by(SessionRecord.created_at.desc())).all()
+    users = db.exec(select(User)).all()
+
+    payment_by_id = {payment.id: payment for payment in payments}
+    session_by_id = {record.id: record for record in sessions}
+    user_by_id = {user.id: user for user in users}
+
+    rows: list[dict[str, Any]] = []
+    for payout_request in payout_requests:
+        payment = payment_by_id.get(payout_request.payment_id)
+        session_record = session_by_id.get(payout_request.session_id)
+        user = user_by_id.get(session_record.user_id) if session_record else None
+        accepted_conditions = bool(
+            session_record
+            and session_record.consent_accepted
+            and session_record.consent_age_confirmed
+            and session_record.consent_info_accepted
+            and session_record.consent_data_accepted
+        )
+        amount_eur = (
+            round(payment.amount_cents / 100, 2)
+            if payment and payment.amount_cents is not None
+            else 0.0
+        )
+        payment_status = payment.status if payment else "missing"
+        request_status = payout_request.status or "submitted"
+        needs_action = payment_status in {"queued", "pending"} and request_status != "processed"
+        donation_requested = bool(payout_request.donation_requested)
+        rows.append(
+            {
+                "payment_id": payout_request.payment_id,
+                "payout_request_id": payout_request.id,
+                "session_id": payout_request.session_id,
+                "bracelet_id": user.bracelet_id if user else None,
+                "reference_code": payout_request.payout_reference or payment.payout_reference if payment else None,
+                "requested_phone": payout_request.requested_phone,
+                "requested_phone_display": "ONG" if donation_requested else payout_request.requested_phone,
+                "donation_requested": donation_requested,
+                "accepted_conditions": accepted_conditions,
+                "accepted_conditions_label": "Si" if accepted_conditions else "No",
+                "amount_eur": amount_eur,
+                "payment_status": payment_status,
+                "request_status": request_status,
+                "language_used": payout_request.language_used,
+                "submitted_at": isoformat_or_none(payout_request.created_at),
+                "processed_at": isoformat_or_none(payout_request.processed_at),
+                "paid_at": isoformat_or_none(payment.paid_at) if payment else None,
+                "needs_action": needs_action,
+            }
+        )
+
+    rows.sort(
+        key=lambda item: (
+            0 if item["needs_action"] else 1,
+            item["submitted_at"] or "",
+        )
+    )
+
+    pending_rows = [row for row in rows if row["needs_action"]]
+    pending_bizum_rows = [row for row in pending_rows if not row["donation_requested"]]
+    pending_donation_rows = [row for row in pending_rows if row["donation_requested"]]
+    donation_rows = [row for row in rows if row["donation_requested"]]
+    processed_rows = [row for row in rows if row["payment_status"] == "paid"]
+    processed_donation_rows = [
+        row for row in processed_rows if row["donation_requested"]
+    ]
+
+    return {
+        "generated_at": datetime.now(UTC).isoformat(),
+        "summary": {
+            "requests_total": len(rows),
+            "pending_total": len(pending_rows),
+            "pending_bizum_count": len(pending_bizum_rows),
+            "pending_bizum_amount_eur": round(
+                sum(row["amount_eur"] for row in pending_bizum_rows), 2
+            ),
+            "pending_donation_count": len(pending_donation_rows),
+            "pending_donation_amount_eur": round(
+                sum(row["amount_eur"] for row in pending_donation_rows), 2
+            ),
+            "donation_requested_total_eur": round(
+                sum(row["amount_eur"] for row in donation_rows), 2
+            ),
+            "donation_processed_total_eur": round(
+                sum(row["amount_eur"] for row in processed_donation_rows), 2
+            ),
+            "paid_total_eur": round(
+                sum(row["amount_eur"] for row in processed_rows), 2
+            ),
+        },
+        "rows": rows,
+    }
+
+
+def admin_payments_page_html(payload: dict[str, Any]) -> str:
+    summary = payload["summary"]
+    rows_html: list[str] = []
+    for row in payload["rows"]:
+        reference_code = escape(str(row["reference_code"] or "-"))
+        requested_phone = escape(str(row["requested_phone_display"] or "-"))
+        bracelet_id = escape(str(row["bracelet_id"] or "-"))
+        amount_eur = escape(f"{row['amount_eur']:.2f}")
+        status_label = escape(
+            "pendiente"
+            if row["needs_action"]
+            else "gestionado" if row["payment_status"] == "paid" else row["payment_status"]
+        )
+        request_label = escape(
+            "donacion ONG" if row["donation_requested"] else "bizum"
+        )
+        action_html = (
+            f"""
+            <form method="post" action="/admin/payments/{escape(str(row['payment_id']))}/mark-paid" onsubmit="return confirm('¿Marcar esta solicitud como gestionada?');">
+              <button type="submit">{'Marcar donacion' if row['donation_requested'] else 'Marcar Bizum'}</button>
+            </form>
+            """
+            if row["needs_action"]
+            else "<span class=\"muted\">Ya gestionado</span>"
+        )
+        rows_html.append(
+            f"""
+            <tr>
+              <td>{escape(str(row['submitted_at'] or '-'))}</td>
+              <td><strong>{reference_code}</strong></td>
+              <td>{requested_phone}</td>
+              <td>{request_label}</td>
+              <td>{amount_eur} EUR</td>
+              <td>{escape(row['accepted_conditions_label'])}</td>
+              <td>{bracelet_id}</td>
+              <td>{status_label}</td>
+              <td>{action_html}</td>
+            </tr>
+            """
+        )
+
+    if not rows_html:
+        rows_html.append(
+            """
+            <tr>
+              <td colspan="9" class="muted">Todavia no hay solicitudes de Bizum o donacion.</td>
+            </tr>
+            """
+        )
+
+    return f"""
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="refresh" content="20" />
+    <title>Panel administrativo Bizum</title>
+    <style>
+      body {{ font-family: Arial, sans-serif; margin:0; padding:24px; background:#f6f4ee; color:#111; }}
+      .wrap {{ max-width:1200px; margin:0 auto; }}
+      .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin:20px 0 28px; }}
+      .card {{ background:white; border-radius:20px; padding:20px; box-shadow:0 18px 48px rgba(0,0,0,.06); }}
+      h1,h2 {{ margin:0 0 12px; text-transform:uppercase; }}
+      .eyebrow {{ color:#555; }}
+      .metric {{ font-size:32px; font-weight:800; margin-top:8px; }}
+      .muted {{ color:#666; font-size:13px; }}
+      .toolbar {{ display:flex; gap:12px; flex-wrap:wrap; margin:12px 0 24px; }}
+      a.button, button {{ display:inline-block; padding:12px 16px; border-radius:999px; background:#111; color:white; text-decoration:none; font-weight:700; border:none; cursor:pointer; }}
+      a.secondary {{ display:inline-block; padding:10px 14px; border-radius:999px; border:1px solid rgba(0,0,0,.12); color:#111; text-decoration:none; }}
+      table {{ width:100%; border-collapse:collapse; background:white; border-radius:20px; overflow:hidden; }}
+      th,td {{ padding:14px; border-bottom:1px solid rgba(0,0,0,.08); text-align:left; vertical-align:top; }}
+      th {{ font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:#666; }}
+      form {{ margin:0; }}
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <p class="eyebrow">Administrativo</p>
+      <h1>Bizum y donaciones</h1>
+      <p>Recarga cada 20 segundos. Si prefieres, actualiza manualmente para ver nuevas solicitudes.</p>
+      <div class="toolbar">
+        <a class="secondary" href="/admin/dashboard">Volver al dashboard</a>
+        <a class="secondary" href="/admin/exports">Abrir exports</a>
+        <a class="secondary" href="/admin/payments/live">Ver JSON live</a>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <div class="muted">Bizum pendientes</div>
+          <div class="metric">{summary['pending_bizum_count']}</div>
+          <div class="muted">{summary['pending_bizum_amount_eur']:.2f} EUR por transferir</div>
+        </div>
+        <div class="card">
+          <div class="muted">Donacion ONG pendiente</div>
+          <div class="metric">{summary['pending_donation_count']}</div>
+          <div class="muted">{summary['pending_donation_amount_eur']:.2f} EUR pendientes</div>
+        </div>
+        <div class="card">
+          <div class="muted">Sumatorio ONG</div>
+          <div class="metric">{summary['donation_requested_total_eur']:.2f} EUR</div>
+          <div class="muted">{summary['donation_processed_total_eur']:.2f} EUR ya gestionados</div>
+        </div>
+        <div class="card">
+          <div class="muted">Solicitudes totales</div>
+          <div class="metric">{summary['requests_total']}</div>
+          <div class="muted">{summary['paid_total_eur']:.2f} EUR ya pagados o donados</div>
+        </div>
+      </div>
+
+      <h2>Solicitudes</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Codigo</th>
+            <th>Telefono</th>
+            <th>Destino</th>
+            <th>Importe</th>
+            <th>Acepto condiciones</th>
+            <th>Pulsera</th>
+            <th>Estado</th>
+            <th>Accion</th>
+          </tr>
+        </thead>
+        <tbody>{''.join(rows_html)}</tbody>
+      </table>
+    </div>
+  </body>
+</html>
+"""
 
 
 def live_qr_metrics_payload(db: Session) -> dict[str, Any]:
@@ -3078,6 +3312,19 @@ def dashboard_page_html(db: Session) -> str:
         <div class="status">
           `closing` bloquea nuevas entradas y deja terminar sesiones activas. `closed` corta tambien las sesiones en curso.
         </div>
+        <div class="status danger" style="margin-top:16px;">
+          Reinicio total online: borra sesiones, claims, pagos, QR, referrals, telemetria y metricas acumuladas. Despues deja el backend otra vez en `live`.
+        </div>
+        <input
+          id="reset-passphrase"
+          type="password"
+          placeholder="Contrasena de reinicio total"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <div class="control-row">
+          <button id="system-reset-button" class="danger">Reiniciar todo online</button>
+        </div>
         <div id="control-status" class="status"></div>
       </div>
       <div class="card controls">
@@ -3183,6 +3430,33 @@ def dashboard_page_html(db: Session) -> str:
           status.textContent = error.message || 'No se pudo activar el cierre';
         }}
       }}
+      async function postSystemReset() {{
+        const status = document.getElementById('control-status');
+        const reason = document.getElementById('experiment-reason').value;
+        const passphrase = document.getElementById('reset-passphrase').value;
+        if (!passphrase.trim()) {{
+          status.textContent = 'Escribe la contrasena de reinicio total.';
+          return;
+        }}
+        if (!window.confirm('Esto borrara todos los datos online del experimento y reabrira el sistema vacio. Quieres continuar?')) {{
+          return;
+        }}
+        status.textContent = 'Reiniciando todo el sistema online...';
+        try {{
+          const response = await fetch('/admin/system/reset', {{
+            method: 'POST',
+            headers: {{ 'Content-Type': 'application/json' }},
+            body: JSON.stringify({{ passphrase, reason }}),
+          }});
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.detail || 'No se pudo reiniciar el sistema');
+          document.getElementById('reset-passphrase').value = '';
+          status.textContent = `Reset completado. Sesiones antes: ${{data.before_counts.sessions}}. Sesiones ahora: ${{data.after_counts.sessions}}. Backend listo: ${{data.readiness.ok ? 'si' : 'no'}}.`;
+          window.setTimeout(() => window.location.reload(), 1200);
+        }} catch (error) {{
+          status.textContent = error.message || 'No se pudo reiniciar el sistema';
+        }}
+      }}
       async function postOperationalNote(path, body) {{
         const status = document.getElementById('operational-note-status');
         status.textContent = 'Actualizando contexto operativo...';
@@ -3211,6 +3485,7 @@ def dashboard_page_html(db: Session) -> str:
         'closed',
         'Se cerrara el experimento de inmediato y tambien se bloquearan las sesiones en curso. Quieres continuar?'
       ));
+      document.getElementById('system-reset-button').addEventListener('click', () => postSystemReset());
       document.getElementById('operational-note-save').addEventListener('click', () => {{
         const noteText = document.getElementById('operational-note-text').value.trim();
         if (!noteText) {{

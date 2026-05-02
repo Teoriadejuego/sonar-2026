@@ -74,6 +74,60 @@ class PaymentAndSnapshotTests(unittest.TestCase):
                 return session
             next_seed += 1
 
+    def create_payment_request(
+        self,
+        bracelet_id: str,
+        *,
+        donation_requested: bool = False,
+        phone: str = "0034693494561",
+        message_text: str = "",
+    ) -> tuple[str, str, float]:
+        session = self.access_session(bracelet_id)
+        session_id = session["session_id"]
+        self.make_winner(session_id)
+
+        roll_response = self.client.post(
+            f"/v1/session/{session_id}/roll",
+            json={
+                "attempt_index": 1,
+                "reaction_ms": 900,
+                "idempotency_key": f"roll-{session_id}",
+            },
+        )
+        self.assertEqual(roll_response.status_code, 200, roll_response.text)
+        first_value = roll_response.json()["attempt"]["result_value"]
+
+        self.client.post(
+            f"/v1/session/{session_id}/prepare-report",
+            json={"idempotency_key": f"prepare-{session_id}"},
+        )
+        submit_response = self.client.post(
+            f"/v1/session/{session_id}/submit-report",
+            json={
+                "reported_value": first_value,
+                "reaction_ms": 1200,
+                "idempotency_key": f"submit-{session_id}",
+                "language": "en",
+            },
+        )
+        self.assertEqual(submit_response.status_code, 200, submit_response.text)
+        payment_summary = submit_response.json()["session"]["payment"]
+        reference_code = payment_summary["reference_code"]
+
+        payment_submit_response = self.client.post(
+            "/v1/payment/submit",
+            json={
+                "code": reference_code,
+                "bracelet_id": bracelet_id,
+                "phone": phone,
+                "language": "en",
+                "donation_requested": donation_requested,
+                "message_text": message_text,
+            },
+        )
+        self.assertEqual(payment_submit_response.status_code, 200, payment_submit_response.text)
+        return session_id, reference_code, float(payment_submit_response.json()["amount_eur"])
+
     def test_first_roll_is_preserved_and_claim_followup_is_persisted(self) -> None:
         session = self.access_session("NORM0000")
         session_id = session["session_id"]
@@ -318,6 +372,74 @@ class PaymentAndSnapshotTests(unittest.TestCase):
         )
         self.assertEqual(invalid_submit.status_code, 400, invalid_submit.text)
         self.assertIn("Pulsera erronea", invalid_submit.text)
+
+    def test_admin_payments_page_lists_bizum_phone_and_donation_total(self) -> None:
+        _, bizum_code, bizum_amount = self.create_payment_request(
+            bracelet_code(13),
+            donation_requested=False,
+            phone="0034693494561",
+        )
+        _, donation_code, donation_amount = self.create_payment_request(
+            bracelet_code(14),
+            donation_requested=True,
+            phone="",
+            message_text="Donacion ONG",
+        )
+
+        page_response = self.client.get("/admin/payments")
+        self.assertEqual(page_response.status_code, 200, page_response.text)
+        self.assertIn("Bizum y donaciones", page_response.text)
+        self.assertIn(bizum_code, page_response.text)
+        self.assertIn("34693494561", page_response.text)
+        self.assertIn(donation_code, page_response.text)
+        self.assertIn("ONG", page_response.text)
+        self.assertIn("Si", page_response.text)
+
+        live_response = self.client.get("/admin/payments/live")
+        self.assertEqual(live_response.status_code, 200, live_response.text)
+        payload = live_response.json()
+        self.assertEqual(payload["summary"]["pending_bizum_count"], 1)
+        self.assertEqual(payload["summary"]["pending_donation_count"], 1)
+        self.assertEqual(
+            payload["summary"]["donation_requested_total_eur"],
+            donation_amount,
+        )
+        self.assertEqual(
+            payload["summary"]["pending_bizum_amount_eur"],
+            bizum_amount,
+        )
+
+    def test_admin_mark_payment_paid_updates_payment_and_request(self) -> None:
+        _, reference_code, _ = self.create_payment_request(
+            bracelet_code(15),
+            donation_requested=False,
+            phone="0034693494561",
+        )
+
+        with Session(engine) as db:
+            payment = db.exec(
+                select(Payment).where(Payment.payout_reference == reference_code)
+            ).first()
+            self.assertIsNotNone(payment)
+            payment_id = payment.id
+
+        response = self.client.post(
+            f"/admin/payments/{payment_id}/mark-paid",
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 303, response.text)
+        self.assertEqual(response.headers["location"], "/admin/payments")
+
+        with Session(engine) as db:
+            payment = db.get(Payment, payment_id)
+            payout_request = db.exec(
+                select(PayoutRequest).where(PayoutRequest.payment_id == payment_id)
+            ).first()
+            self.assertEqual(payment.status, "paid")
+            self.assertIsNotNone(payment.paid_at)
+            self.assertIsNotNone(payout_request)
+            self.assertEqual(payout_request.status, "processed")
+            self.assertIsNotNone(payout_request.processed_at)
 
 
 if __name__ == "__main__":

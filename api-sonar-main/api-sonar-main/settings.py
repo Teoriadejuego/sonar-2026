@@ -44,6 +44,11 @@ class Settings:
     )
     admin_username: str = os.getenv("ADMIN_USERNAME", "admin")
     admin_password: str = os.getenv("ADMIN_PASSWORD", "changeme")
+    admin_reset_enabled: bool = env_bool("ADMIN_RESET_ENABLED", True)
+    admin_reset_passphrase: str = os.getenv(
+        "ADMIN_RESET_PASSPHRASE",
+        "antonioalfonsoautoriza",
+    )
     auto_bootstrap_demo_data: bool = env_bool("AUTO_BOOTSTRAP_DEMO_DATA", True)
     require_redis: bool = env_bool("REQUIRE_REDIS", True)
     require_admin_auth: bool = env_bool("REQUIRE_ADMIN_AUTH", False)

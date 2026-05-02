@@ -90,6 +90,8 @@ from experiment import (
 )
 from research_admin import (
     DATASET_DESCRIPTIONS,
+    admin_payments_page_html,
+    admin_payments_payload,
     build_export_bundle,
     dashboard_page_html,
     dataset_export_stats,
@@ -137,6 +139,7 @@ from models import (
     make_uuid,
 )
 from runtime import (
+    clear_runtime_state,
     cache_receipt,
     check_admin_credentials,
     distributed_lock,
@@ -289,12 +292,13 @@ async def admin_and_request_logging(request: Request, call_next):
             )
         },
     )
-    record_http_metric(
-        method=request.method,
-        path=request.url.path,
-        status_code=response.status_code,
-        duration_ms=duration_ms,
-    )
+    if response.headers.get("X-Sonar-Skip-Metrics") != "1":
+        record_http_metric(
+            method=request.method,
+            path=request.url.path,
+            status_code=response.status_code,
+            duration_ms=duration_ms,
+        )
     return response
 
 
@@ -399,6 +403,11 @@ class AdminExperimentModeRequest(BaseModel):
 class AdminPanicRequest(BaseModel):
     mode: str = PydanticField(default=EXPERIMENT_MODE_CLOSED, min_length=6, max_length=7)
     soft: bool = False
+    reason: Optional[str] = None
+
+
+class AdminSystemResetRequest(BaseModel):
+    passphrase: str = PydanticField(min_length=8, max_length=256)
     reason: Optional[str] = None
 
 
@@ -1563,6 +1572,80 @@ def experiment_control_payload(state: ExperimentState) -> dict[str, Any]:
         "mode_changed_by": state.experiment_mode_changed_by,
         "mode_reason": state.experiment_mode_reason,
     }
+
+
+def verify_admin_reset_passphrase(raw_passphrase: str) -> None:
+    if not settings.admin_reset_enabled:
+        raise HTTPException(status_code=403, detail="Reinicio administrativo desactivado")
+    expected = (settings.admin_reset_passphrase or "").strip()
+    if not expected:
+        raise HTTPException(
+            status_code=503,
+            detail="No hay contrasena de reinicio configurada",
+        )
+    if raw_passphrase.strip() != expected:
+        raise HTTPException(status_code=403, detail="Contrasena de reinicio incorrecta")
+
+
+def admin_reset_counts_payload(db: Session) -> dict[str, int]:
+    return {
+        "users": int(db.exec(select(func.count()).select_from(User)).one() or 0),
+        "sessions": int(
+            db.exec(select(func.count()).select_from(SessionRecord)).one() or 0
+        ),
+        "claims": int(db.exec(select(func.count()).select_from(Claim)).one() or 0),
+        "payments": int(db.exec(select(func.count()).select_from(Payment)).one() or 0),
+        "payout_requests": int(
+            db.exec(select(func.count()).select_from(PayoutRequest)).one() or 0
+        ),
+        "gateway_scans": int(
+            db.exec(select(func.count()).select_from(GatewayAccessLog)).one() or 0
+        ),
+        "referral_clicks": int(
+            db.exec(select(func.count()).select_from(ReferralClick)).one() or 0
+        ),
+        "interest_signups": int(
+            db.exec(select(func.count()).select_from(InterestSignup)).one() or 0
+        ),
+        "emails_interest": int(
+            db.exec(select(func.count()).select_from(EmailInterest)).one() or 0
+        ),
+        "telemetry_events": int(
+            db.exec(select(func.count()).select_from(TelemetryEvent)).one() or 0
+        ),
+        "audit_events": int(
+            db.exec(select(func.count()).select_from(AuditEvent)).one() or 0
+        ),
+    }
+
+
+def reset_gateway_failover_runtime_state() -> None:
+    update_gateway_failover_state(
+        monitor_enabled=settings.gateway_failover_enabled,
+        monitor_running=False,
+        last_checked_at=None,
+        last_event=None,
+        primary={
+            "url": settings.gateway_primary_healthcheck_url,
+            "healthy": None,
+            "consecutive_failures": 0,
+            "consecutive_successes": 0,
+            "last_status_code": None,
+            "last_latency_ms": None,
+            "last_error": None,
+            "last_checked_at": None,
+        },
+        backup={
+            "url": settings.gateway_backup_healthcheck_url,
+            "healthy": None,
+            "consecutive_failures": 0,
+            "consecutive_successes": 0,
+            "last_status_code": None,
+            "last_latency_ms": None,
+            "last_error": None,
+            "last_checked_at": None,
+        },
+    )
 
 
 def session_state_counts_payload(db: Session) -> dict[str, int]:
@@ -4270,6 +4353,122 @@ def on_startup() -> None:
     ).start()
 
 
+def perform_admin_system_reset(*, actor: str, reason: Optional[str] = None) -> dict[str, Any]:
+    reset_started_at = utcnow()
+    readiness_before = startup_dependency_status()
+    update_startup_state(
+        initialized=False,
+        initializing=True,
+        error="Reinicio administrativo en curso",
+        last_readiness={
+            **readiness_before,
+            "schema_ready": False,
+        },
+    )
+
+    with Session(engine) as snapshot_db:
+        before_counts = admin_reset_counts_payload(snapshot_db)
+
+    try:
+        try:
+            set_experiment_status_cache(
+                "active",
+                "admin_reset_in_progress",
+                EXPERIMENT_MODE_CLOSED,
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("admin_system_reset_cache_guard_failed_non_blocking")
+
+        from migrate import apply_migrations
+
+        migrated = apply_migrations(reset_requested=True, strict=True)
+        if not migrated:
+            raise RuntimeError("El reset no pudo converger al esquema actual")
+
+        runtime_cleared = clear_runtime_state()
+        reset_gateway_failover_runtime_state()
+
+        with Session(engine) as db:
+            if settings.auto_bootstrap_demo_data and settings.database_is_sqlite:
+                bootstrap_demo_data(db)
+            state = get_or_create_experiment_state(db)
+            db.commit()
+            after_counts = admin_reset_counts_payload(db)
+            experiment_control = experiment_control_payload(state)
+            try:
+                set_experiment_status_cache(
+                    state.experiment_status,
+                    state.pause_reason,
+                    normalize_experiment_mode(state.experiment_mode),
+                )
+            except Exception:  # noqa: BLE001
+                logger.exception("admin_system_reset_cache_restore_failed_non_blocking")
+
+        final_readiness = startup_dependency_status()
+        update_startup_state(
+            initialized=True,
+            initializing=False,
+            error=None,
+            last_readiness=final_readiness,
+        )
+        logger.warning(
+            "admin_system_reset_completed",
+            extra={
+                "structured_payload": {
+                    "actor": actor,
+                    "reason": reason.strip() if reason else None,
+                    "reset_started_at": reset_started_at.isoformat(),
+                    "before_counts": before_counts,
+                    "after_counts": after_counts,
+                    "runtime_cleared": runtime_cleared,
+                    "readiness": final_readiness,
+                }
+            },
+        )
+        return {
+            "ok": True,
+            "reset_started_at": reset_started_at.isoformat(),
+            "reset_completed_at": utcnow().isoformat(),
+            "reset_by": actor,
+            "reason": reason.strip() if reason else None,
+            "before_counts": before_counts,
+            "after_counts": after_counts,
+            "runtime_reset": runtime_cleared,
+            "experiment_control": experiment_control,
+            "readiness": {
+                **final_readiness,
+                "ok": bool(
+                    final_readiness["database_ready"]
+                    and final_readiness["redis_ready"]
+                    and final_readiness["schema_ready"]
+                ),
+            },
+        }
+    except Exception as exc:
+        failure_readiness = startup_dependency_status()
+        update_startup_state(
+            initialized=False,
+            initializing=False,
+            error=str(exc),
+            last_readiness=failure_readiness,
+        )
+        logger.exception(
+            "admin_system_reset_failed",
+            extra={
+                "structured_payload": {
+                    "actor": actor,
+                    "reason": reason.strip() if reason else None,
+                    "reset_started_at": reset_started_at.isoformat(),
+                    "readiness": failure_readiness,
+                }
+            },
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo reiniciar completamente el sistema",
+        ) from exc
+
+
 def get_gateway_route(db: Session, qr_code: str) -> Optional[GatewayRoute]:
     normalized_qr_code = normalize_gateway_qr_code(qr_code)
     return db.exec(
@@ -6573,6 +6772,26 @@ def admin_unpanic(
         }
 
 
+@app.post("/admin/system/reset")
+def admin_system_reset(
+    payload: AdminSystemResetRequest,
+    request: Request,
+    db: Session = Depends(get_session),
+) -> JSONResponse:
+    actor = get_admin_actor(request)
+    verify_admin_reset_passphrase(payload.passphrase)
+    db.close()
+    with distributed_lock("admin-system-reset"):
+        result = perform_admin_system_reset(actor=actor, reason=payload.reason)
+    return JSONResponse(
+        content=result,
+        headers={
+            "Cache-Control": "no-store, max-age=0",
+            "X-Sonar-Skip-Metrics": "1",
+        },
+    )
+
+
 @app.get("/admin/roots")
 def admin_roots(db: Session = Depends(get_session)) -> list[dict[str, Any]]:
     roots = db.exec(select(SeriesRoot).order_by(SeriesRoot.root_sequence)).all()
@@ -6668,6 +6887,86 @@ def admin_exports(db: Session = Depends(get_session)) -> HTMLResponse:
 @app.get("/admin/dashboard", response_class=HTMLResponse)
 def admin_dashboard(db: Session = Depends(get_session)) -> HTMLResponse:
     return HTMLResponse(dashboard_page_html(db))
+
+
+@app.get("/admin/payments", response_class=HTMLResponse)
+def admin_payments_page(db: Session = Depends(get_session)) -> HTMLResponse:
+    return HTMLResponse(admin_payments_page_html(admin_payments_payload(db)))
+
+
+@app.get("/admin/payments/live")
+def admin_payments_live(db: Session = Depends(get_session)) -> JSONResponse:
+    return JSONResponse(
+        content=admin_payments_payload(db),
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
+
+
+@app.post("/admin/payments/{payment_id}/mark-paid")
+def admin_mark_payment_paid(
+    payment_id: str,
+    request: Request,
+    db: Session = Depends(get_session),
+) -> RedirectResponse:
+    actor = get_admin_actor(request)
+    payment = db.get(Payment, payment_id)
+    if not payment:
+        raise HTTPException(status_code=404, detail="Pago no encontrado")
+
+    payout_request = db.exec(
+        select(PayoutRequest).where(PayoutRequest.payment_id == payment.id)
+    ).first()
+    old_payment_status = payment.status
+    old_request_status = payout_request.status if payout_request else None
+    changed = False
+
+    if payment.status != "paid":
+        payment.status = "paid"
+        payment.paid_at = utcnow()
+        db.add(payment)
+        changed = True
+
+    if payout_request and payout_request.status != "processed":
+        payout_request.status = "processed"
+        payout_request.processed_at = utcnow()
+        db.add(payout_request)
+        changed = True
+
+    if changed:
+        create_audit(
+            db,
+            entity_type="payment",
+            entity_id=payment.id,
+            action="admin_payment_mark_paid",
+            session_id=payment.session_id,
+            old_state=old_payment_status,
+            new_state=payment.status,
+            payload={
+                "actor": actor,
+                "request_status_before": old_request_status,
+                "request_status_after": payout_request.status if payout_request else None,
+                "donation_requested": bool(
+                    payout_request.donation_requested if payout_request else False
+                ),
+            },
+        )
+        logger.info(
+            "admin_payment_mark_paid",
+            extra={
+                "structured_payload": {
+                    "payment_id": payment.id,
+                    "session_id": payment.session_id,
+                    "actor": actor,
+                    "old_status": old_payment_status,
+                    "new_status": payment.status,
+                    "request_old_status": old_request_status,
+                    "request_new_status": payout_request.status if payout_request else None,
+                }
+            },
+        )
+        db.commit()
+
+    return RedirectResponse(url="/admin/payments", status_code=303)
 
 
 @app.get("/admin/metrics")

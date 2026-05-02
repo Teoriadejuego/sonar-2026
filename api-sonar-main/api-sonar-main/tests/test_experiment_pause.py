@@ -12,10 +12,11 @@ TEST_DB_DIR = tempfile.mkdtemp(prefix="sonar_pause_tests_")
 os.environ["DATABASE_URL"] = f"sqlite:///{os.path.join(TEST_DB_DIR, 'test.db')}"
 os.environ["REQUIRE_REDIS"] = "false"
 os.environ["REQUIRE_ADMIN_AUTH"] = "false"
+os.environ["ADMIN_RESET_PASSPHRASE"] = "antonioalfonsoautoriza"
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session, SQLModel, func, select
 
 from database import engine
 from main import app, bootstrap_demo_data
@@ -26,6 +27,7 @@ from models import (
     InterestSignup,
     SessionRecord,
     Throw,
+    User,
 )
 
 
@@ -621,6 +623,73 @@ class ExperimentPauseTests(unittest.TestCase):
         with Session(engine) as db:
             logs = db.exec(select(ExperimentClosureLog)).all()
             self.assertEqual(len(logs), 0)
+
+    def test_admin_system_reset_requires_passphrase_and_restores_clean_runtime(self) -> None:
+        session = self.access_session(bracelet_code(41))
+        self.assertIsNotNone(session["session_id"])
+
+        interest_response = self.client.post(
+            "/interest",
+            json={"email": "reset@example.com", "source": "panic_screen"},
+        )
+        self.assertEqual(interest_response.status_code, 200, interest_response.text)
+
+        dashboard_response = self.client.get("/admin/dashboard")
+        self.assertEqual(dashboard_response.status_code, 200, dashboard_response.text)
+        self.assertIn("Reiniciar todo online", dashboard_response.text)
+        self.assertIn("Contrasena de reinicio total", dashboard_response.text)
+
+        rejected = self.client.post(
+            "/admin/system/reset",
+            json={"passphrase": "incorrecta", "reason": "qa negative"},
+        )
+        self.assertEqual(rejected.status_code, 403, rejected.text)
+
+        with Session(engine) as db:
+            self.assertEqual(db.exec(select(func.count()).select_from(User)).one(), 1)
+            self.assertEqual(
+                db.exec(select(func.count()).select_from(SessionRecord)).one(),
+                1,
+            )
+            self.assertEqual(
+                db.exec(select(func.count()).select_from(EmailInterest)).one(),
+                1,
+            )
+
+        reset_response = self.client.post(
+            "/admin/system/reset",
+            json={
+                "passphrase": "antonioalfonsoautoriza",
+                "reason": "reset completo de pruebas",
+            },
+        )
+        self.assertEqual(reset_response.status_code, 200, reset_response.text)
+        payload = reset_response.json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["before_counts"]["sessions"], 1)
+        self.assertEqual(payload["before_counts"]["emails_interest"], 1)
+        self.assertEqual(payload["after_counts"]["users"], 0)
+        self.assertEqual(payload["after_counts"]["sessions"], 0)
+        self.assertEqual(payload["after_counts"]["emails_interest"], 0)
+        self.assertEqual(payload["experiment_control"]["mode"], "live")
+        self.assertTrue(payload["experiment_control"]["accepting_entries"])
+        self.assertTrue(payload["readiness"]["ok"])
+
+        with Session(engine) as db:
+            self.assertEqual(db.exec(select(func.count()).select_from(User)).one(), 0)
+            self.assertEqual(
+                db.exec(select(func.count()).select_from(SessionRecord)).one(),
+                0,
+            )
+            self.assertEqual(
+                db.exec(select(func.count()).select_from(EmailInterest)).one(),
+                0,
+            )
+
+        ready = self.client.get("/health/ready")
+        self.assertEqual(ready.status_code, 200, ready.text)
+        reopened = self.access_session(bracelet_code(42))
+        self.assertIsNotNone(reopened["session_id"])
 
 
 if __name__ == "__main__":
