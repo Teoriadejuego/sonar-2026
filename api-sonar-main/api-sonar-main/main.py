@@ -4926,13 +4926,19 @@ def access_session(
             failure_stage = getattr(exc, "sonar_stage", "unknown")
             logger.exception(
                 "session_access_failed",
-                extra={"bracelet_id": bracelet_id, "stage": failure_stage},
+                extra={
+                    "bracelet_id": bracelet_id,
+                    "stage": failure_stage,
+                    "error_type": type(exc).__name__,
+                },
             )
             raise HTTPException(
                 status_code=500,
                 detail={
                     "message": "No se pudo inicializar la sesion",
                     "stage": failure_stage,
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
                 },
             ) from exc
         if created_now:
