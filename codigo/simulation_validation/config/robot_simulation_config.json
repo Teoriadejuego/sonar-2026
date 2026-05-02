@@ -8,8 +8,8 @@
   "backend_flow_default_participants": 600,
   "treatment_weights": {
     "control": 0.1,
-    "seed_low": 0.45,
-    "seed_high": 0.45
+    "norm_0": 0.45,
+    "norm_60": 0.45
   },
   "robot_mix": {
     "type_a_norm_imitator": 0.35,

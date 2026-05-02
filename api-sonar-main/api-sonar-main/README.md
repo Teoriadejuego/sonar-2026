@@ -1,19 +1,31 @@
 # API Sonar 2026
 
-Backend experimental en FastAPI + SQLModel para el estudio de honestidad de Sonar 2026.
+Backend experimental en FastAPI + SQLModel para el estudio de honestidad de SONAR 2026.
+
+## Diseno experimental activo
+
+El backend implementa un unico diseno publico:
+
+- `control`
+- `norm_0..norm_60`
+- denominador fijo `60`
+- `control` no muestra norma social
+- `norm_X` muestra una norma fija equivalente a `X/60`
+- el valor mostrado depende solo del tratamiento asignado
+- la norma visible no se recalcula con claims previos
+- `prepare-report` congela el snapshot antes del claim
+- `submit-report` no recalcula ni actualiza una ventana social dinamica
 
 ## Que implementa
 
-- Sesion unica persistente por pulsera.
-- Tres condiciones configurables: `control`, `seed_low`, `seed_high`.
-- Series espejo agrupadas por `root`.
-- Mazo balanceado preasignado por posicion y por intento.
-- Pago preasignado por backend.
-- Rerolls registrados.
-- Snapshot de tratamiento congelado justo antes del claim.
-- Ventana social visible configurable, actualmente de 60 observaciones.
-- Longitud de serie configurable, actualmente 120 participantes por serie.
-- Telemetria pasiva y flags basicos de calidad y antifraude.
+- sesion unica persistente por pulsera
+- asignacion balanceada de 62 tratamientos
+- mazos balanceados de tratamiento, resultado y pago
+- pago preasignado por backend
+- rerolls registrados
+- snapshot congelado justo antes del claim
+- telemetria minima y no bloqueante
+- admin, exports, dashboard y control de cierre
 
 ## Arranque
 
@@ -37,7 +49,7 @@ Reconstruir base demo:
 python migrate.py
 ```
 
-Inspeccionar seed y roots:
+Inspeccionar bootstrap y series:
 
 ```powershell
 python seed.py
@@ -57,4 +69,8 @@ python seed.py
 
 ## Datos demo
 
-Si la base esta vacia, el backend crea automaticamente pulseras demo desde `10000001` en adelante y un `root` activo inicial.
+Si la base esta vacia, el backend crea automaticamente demos compatibles con el diseno vigente:
+
+- `CTRL1234`
+- `NORM0000`
+- `NORM0001`

@@ -21,12 +21,11 @@ from config_analysis import (
     LANGUAGE_WEIGHTS,
     MAX_ATTEMPTS,
     PAYMENT_VERSION,
+    DISPLAY_COUNTS,
     PRIZE_MAP,
     RANDOM_SEED,
     ROOT_COUNT,
     ROOT_IDS,
-    SEED_INITIAL_COUNTS,
-    SEED_FILL_ORDERS,
     SERIES_MAX_LENGTH,
     TARGET_VALUES,
     TREATMENT_COUNTS,
@@ -247,15 +246,10 @@ def build_series_and_sessions(position_plan: pd.DataFrame, rng: np.random.Genera
             positions = allocations[treatment_key][root_id]
             visible_window: deque[int] | None = None
             if treatment_key != "control":
-                seed_count = int(SEED_INITIAL_COUNTS[treatment_key] or 0)
-                non_target_count = VISIBLE_WINDOW - seed_count
-                seed_fill_order = SEED_FILL_ORDERS[treatment_key]
+                displayed_count = int(DISPLAY_COUNTS[treatment_key] or 0)
+                non_target_count = VISIBLE_WINDOW - displayed_count
                 visible_window = deque(
-                    (
-                        [0] * non_target_count + [1] * seed_count
-                        if seed_fill_order == "target_last"
-                        else [1] * seed_count + [0] * non_target_count
-                    ),
+                    [1] * displayed_count + [0] * non_target_count,
                     maxlen=VISIBLE_WINDOW,
                 )
 
@@ -458,7 +452,7 @@ def build_series_and_sessions(position_plan: pd.DataFrame, rng: np.random.Genera
                     "treatment_key": treatment_key,
                     "treatment_family": treatment_family,
                     "norm_target_value": norm_target_value,
-                    "seed_initial_count": SEED_INITIAL_COUNTS[treatment_key],
+                    "displayed_count_target_initial": DISPLAY_COUNTS[treatment_key],
                     "completed_count": len(positions),
                     "position_counter": len(positions),
                     "max_position_filled": max(positions) if positions else 0,

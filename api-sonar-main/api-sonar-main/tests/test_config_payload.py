@@ -34,7 +34,7 @@ class ConfigPayloadTests(unittest.TestCase):
             db.add(
                 ExperimentState(
                     id="global",
-                    current_phase="seed_high",
+                    current_phase="legacy_old_phase",
                     experiment_status="active",
                     phase_transition_threshold=17,
                     valid_completed_count=12,
@@ -56,9 +56,20 @@ class ConfigPayloadTests(unittest.TestCase):
         self.assertEqual(payload["experiment_control"]["mode"], "live")
         self.assertEqual(len(payload["treatments"]), 62)
         self.assertIn("control", payload["treatments"])
+        self.assertIn("norm_0", payload["treatments"])
+        self.assertIn("norm_17", payload["treatments"])
         self.assertIn("norm_60", payload["treatments"])
         self.assertNotIn("seed_low", payload["treatments"])
         self.assertNotIn("seed_high", payload["treatments"])
+        self.assertNotIn("seed_initial_counts", payload)
+        self.assertEqual(payload["displayed_denominator"], 60)
+        self.assertEqual(payload["social_norm_design"], "fixed_by_treatment")
+        self.assertIsNone(payload["treatment_display_counts"]["control"])
+        self.assertEqual(payload["treatment_display_counts"]["norm_0"], 0)
+        self.assertEqual(payload["treatment_display_counts"]["norm_17"], 17)
+        self.assertEqual(payload["treatment_display_counts"]["norm_60"], 60)
+        self.assertEqual(payload["treatment_display_denominators"]["norm_0"], 60)
+        self.assertEqual(payload["treatment_display_denominators"]["norm_60"], 60)
 
     def test_config_endpoint_returns_200_with_legacy_state(self) -> None:
         client = TestClient(app)
@@ -160,6 +171,8 @@ class ConfigPayloadTests(unittest.TestCase):
         self.assertNotIn("consent_record", session_payload)
         self.assertNotIn("snapshot_record", session_payload)
         self.assertNotIn("screen_metrics", session_payload)
+        self.assertNotIn("visible_count_target", session_payload["series"])
+        self.assertNotIn("actual_count_target", session_payload["series"])
         self.assertNotIn("visible_window_version", session_payload["series"])
         self.assertNotIn("actual_window_version", session_payload["series"])
 
@@ -173,6 +186,8 @@ class ConfigPayloadTests(unittest.TestCase):
         self.assertIn("client_context", analytics_payload)
         self.assertIn("consent_record", analytics_payload)
         self.assertIn("snapshot_record", analytics_payload)
+        self.assertIn("visible_count_target", analytics_payload["series"])
+        self.assertIn("actual_count_target", analytics_payload["series"])
         self.assertIn("visible_window_version", analytics_payload["series"])
         self.assertIn("actual_window_version", analytics_payload["series"])
 

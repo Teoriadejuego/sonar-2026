@@ -8,7 +8,6 @@ from typing import Any
 
 
 CONTROL_TREATMENT_KEY = "control"
-LEGACY_PHASE_DISABLED = "legacy_disabled"
 
 
 def project_parameters_path() -> Path:
@@ -109,20 +108,6 @@ ENVIRONMENT_LABEL = os.getenv("ENVIRONMENT_LABEL", METADATA["environment_label"]
 
 CURRENT_PHASE = str(EXPERIMENT_SETTINGS["design_key"])
 PHASE_1_MAIN = CURRENT_PHASE
-PHASE_2_ROBUSTNESS = LEGACY_PHASE_DISABLED
-
-# Railway/production has carried forward legacy experiment_state.current_phase
-# values from older designs. The 62-treatment design is now the only active
-# runtime, so any stale or malformed phase key must resolve to the current
-# design instead of taking the API down.
-PHASE_COMPATIBILITY_ALIASES = {
-    "": PHASE_1_MAIN,
-    PHASE_1_MAIN: PHASE_1_MAIN,
-    "seed_low": PHASE_1_MAIN,
-    "seed_high": PHASE_1_MAIN,
-    "phase_2": PHASE_1_MAIN,
-    LEGACY_PHASE_DISABLED: PHASE_1_MAIN,
-}
 
 WINDOW_SIZE = int(EXPERIMENT_SETTINGS["window_size"])
 DISPLAYED_DENOMINATOR = int(EXPERIMENT_SETTINGS["displayed_denominator"])
@@ -201,7 +186,7 @@ DEMO_ID_OVERRIDES = {
 
 def normalize_phase_key(phase_key: str | None) -> str:
     candidate = str(phase_key or "").strip()
-    return PHASE_COMPATIBILITY_ALIASES.get(candidate, PHASE_1_MAIN)
+    return PHASE_1_MAIN if candidate != PHASE_1_MAIN else candidate
 
 
 def phase_config(_phase_key: str) -> dict[str, Any]:
@@ -241,7 +226,7 @@ def series_labels_for_phase(_phase_key: str) -> dict[str, str]:
     }
 
 
-def seed_initial_counts_for_phase(_phase_key: str) -> dict[str, int]:
+def treatment_display_counts_for_phase(_phase_key: str) -> dict[str, int]:
     normalize_phase_key(_phase_key)
     return {
         treatment_key: int(config["displayed_count_target"])
@@ -409,8 +394,14 @@ def commitment_hash(*parts: Any) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
-def seed_window_values(_phase_key: str, _treatment_key: str) -> list[int]:
-    return []
+def fixed_social_window_values(_phase_key: str, treatment_key: str) -> list[int]:
+    treatment = treatment_config(_phase_key, treatment_key)
+    displayed_count_target = treatment["displayed_count_target"]
+    target_value = treatment["norm_target_value"]
+    if displayed_count_target is None or target_value is None:
+        return []
+    filler_count = max(0, DISPLAYED_DENOMINATOR - int(displayed_count_target))
+    return [int(target_value)] * int(displayed_count_target) + [0] * filler_count
 
 
 def treatment_message(

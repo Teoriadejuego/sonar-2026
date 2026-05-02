@@ -1,173 +1,112 @@
 # Methodology
 
-Resumen metodologico de SONAR 2026.
+Resumen metodologico del diseno vigente de SONAR 2026.
 
-Actualizado: `2026-03-22`
+Actualizado: `2026-05-02`
 
 ## 1. Pregunta de investigacion
 
-SONAR 2026 estudia como cambia el comportamiento de reporte en una tarea de honestidad privada cuando se introduce informacion social descriptiva sobre lo que han hecho participantes anteriores.
-
-La variable social no se presenta como norma moral. Se presenta como norma descriptiva visible.
+SONAR 2026 estudia como cambia el reporte en una tarea de honestidad privada cuando se introduce una norma descriptiva visible fija.
 
 ## 2. Unidad de participacion
 
-Una participacion corresponde a una sesion asociada a una pulsera.
+Cada participacion es una sesion asociada a una pulsera.
 
-Cada sesion registra:
+La sesion registra:
 
-- identificador de pulsera,
-- idioma,
-- tratamiento,
-- secuencia de pantallas,
-- tiradas,
-- tiempo de respuesta,
-- claim final,
-- elegibilidad de pago,
-- snapshots visibles,
-- telemetria,
-- fuente de entrada QR o invitacion.
+- pulsera
+- idioma
+- tratamiento
+- secuencia de pantallas
+- tiradas
+- snapshot visible antes del claim
+- claim final
+- elegibilidad de pago
+- trazabilidad operativa minima
 
 ## 3. Flujo experimental
 
-1. Acceso con pulsera.
-2. Consentimiento y checks basicos.
-3. Instrucciones.
-4. Pregunta de comprension.
-5. Tirada privada inicial del dado.
-6. Tiradas extra de comprobacion opcionales.
-7. Preparacion del reporte con snapshot congelado.
-8. Reporte del numero de la primera tirada.
-9. Resolucion de ganador/no ganador.
-10. Pantallas finales de engagement, pago o cierre.
+1. acceso con pulsera
+2. consentimiento
+3. instrucciones
+4. comprension
+5. primera tirada privada
+6. rerolls opcionales
+7. `prepare-report`
+8. reporte del numero de la primera tirada
+9. resolucion final
 
-## 4. Variable clave de comportamiento
+## 4. Diseno experimental vigente
 
-La instruccion central es:
-
-- solo cuenta la primera tirada,
-- el participante puede ver tiradas extra,
-- el backend guarda tanto la primera tirada real como el numero reportado,
-- la deshonestidad no se observa individualmente en interfaz, pero puede analizarse estadisticamente y, cuando procede, a nivel de sesion dado que el backend si conoce la primera tirada real.
-
-## 5. Tratamientos
-
-La fase principal actual incluye:
+El diseno experimental vigente es:
 
 - `control`
-- `seed_low`
-- `seed_high`
+- `norm_0`
+- `norm_1`
+- ...
+- `norm_60`
 
-La informacion maestra esta en [../project_parameters.json](../project_parameters.json).
+Propiedades fijas:
 
-Configuracion de trabajo actual:
+- `62` tratamientos en total
+- denominador fijo `60`
+- valor objetivo fijo `6`
+- `control` no muestra norma social
+- `norm_X` muestra `X de 60 participantes...`
 
-- ventana visible: `60`
-- longitud de serie: `120`
-- objetivo normativo: `6`
-- `seed_low`: arranque con `10` objetivos en ventana
-- `seed_high`: arranque con `50` objetivos en ventana
+Frase canonica:
 
-El mensaje que ve el participante se genera a partir del estado visible de la ventana, no de una frase fija hardcodeada.
+> El diseno experimental vigente es `control + norm_0..norm_60`. La norma social es fija por tratamiento y no se actualiza dinamicamente durante la sesion.
 
-## 6. Snapshot visible y concurrencia
+## 5. Que ve el participante
 
-Una decision importante del sistema es que el mensaje visible para cada participante se congela cuando entra en la fase de reporte.
+En `control`, el participante ve un mensaje neutro sin conteo social.
 
-Eso significa:
+En `norm_X`, el participante ve un mensaje fijo derivado del tratamiento asignado. El conteo mostrado depende solo de `X` y del denominador `60`.
 
-- si dos personas llegan casi a la vez a la pantalla de decision,
-- ambas pueden ver el mismo mensaje social,
-- la ventana solo cambia cuando cada una envia su claim.
+La norma social mostrada no cambia durante la sesion del participante.
 
-Esto evita que el contenido visible “salte” mientras alguien esta decidiendo.
+## 6. Snapshot visible y claim
 
-## 7. Pagos e incentivos
+La decision metodologica central es:
+
+- `prepare-report` congela el mensaje visible
+- `submit-report` reutiliza exactamente ese snapshot
+- el claim no depende de claims previos de otros participantes
+
+Eso significa que:
+
+- el mensaje visible no fluctua mientras una persona esta decidiendo
+- el snapshot persistido y el claim deben coincidir siempre
+
+## 7. Que no forma parte del runtime activo
+
+No forman parte del runtime metodologico vigente:
+
+- un diseno antiguo de dos brazos de norma baja/alta
+- etiquetas antiguas de seeds discretas
+- una norma social recalculada con claims previos
+- ventanas sociales dinamicas como requisito operativo
+
+Si existen tablas o campos heredados para compatibilidad, no deben interpretarse como parte causal del diseno actual.
+
+## 8. Incentivos
 
 La seleccion para pago se resuelve en backend.
 
-La tasa configurada hoy es:
+La tasa configurada actual es `1/100`, y el importe depende del numero reportado si la sesion resulta elegible.
 
-- `1 / 100`
+## 9. Telemetria minima
 
-Importante:
+La telemetria cientificamente retenida se reduce a:
 
-- es una tasa esperada probabilistica,
-- no una cuota exacta blindada a un numero cerrado de ganadores.
-
-Si una sesion es elegible, el importe depende del numero reportado.
-
-## 8. Capas finales de engagement
-
-Despues de la resolucion principal, la app puede mostrar:
-
-- pantalla de revelado visual de fichas,
-- pantalla final con sorteo VIP,
-- prediccion adicional del numero mas reportado,
-- enlace de invitacion por WhatsApp.
-
-Estas capas no cambian la logica experimental principal. Funcionan como extension de engagement y trazabilidad.
-
-## 9. Medidas principales y auxiliares
-
-### Principales
-
+- `session_start`
+- `first_throw`
+- `reroll_count`
 - `reported_value`
-- `true_first_result`
-- `is_honest`
-- `payment_eligible`
-- `amount_eur`
+- `reaction_time`
+- `session_end`
 
-### Auxiliares
+## 10. Interpretacion
 
-- tiempos por pantalla,
-- numero de tiradas,
-- comprension,
-- QR de entrada,
-- referral source,
-- idioma,
-- notas operativas activas en ese momento.
-
-## 10. Telemetria y reconstruccion
-
-La app guarda suficiente informacion para reconstruir:
-
-- que vio el participante,
-- en que orden,
-- con que tratamiento,
-- con que idioma,
-- con que contexto operativo.
-
-Documentos relacionados:
-
-- [../TELEMETRY_SPEC.md](../TELEMETRY_SPEC.md)
-- [../DATA_EXPORTS.md](../DATA_EXPORTS.md)
-- [../DATASETS_CODEBOOK.md](../DATASETS_CODEBOOK.md)
-
-## 11. Etica y privacidad
-
-El sistema minimiza datos visibles en frontend y usa la pulsera como identificador operativo.
-
-Puntos honestos a tener en cuenta:
-
-- el sistema esta pensado para analisis agregado y trazabilidad operativa,
-- hoy los datos de payout no estan en una base fisicamente separada del resto,
-- las decisiones de copy etico deben seguir siendo consistentes con la implementacion real.
-
-## 12. Estado metodologico actual
-
-SONAR ya es util para:
-
-- revision de UX y copy,
-- pruebas de flujo,
-- pilotos controlados,
-- despliegue de review con coautores.
-
-Antes de una recogida final cerrada conviene fijar de manera definitiva:
-
-- ventana,
-- longitud de serie,
-- politica exacta de payout,
-- redaccion etica final,
-- plan de contingencia y redirect externo.
-
+El contraste principal del sistema vigente es un gradiente de norma descriptiva fija entre `norm_0` y `norm_60`, con `control` como referencia sin norma visible.

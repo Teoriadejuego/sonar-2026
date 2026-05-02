@@ -13,18 +13,18 @@ def load_analysis_data() -> pd.DataFrame:
 
 def model_row(frame: pd.DataFrame, outcome: str, label: str) -> dict[str, object]:
     sample = frame.loc[frame["treatment_key"].isin(list(MAIN_COMPARISON))].copy()
-    sample["high_seed"] = (sample["treatment_key"] == MAIN_COMPARISON[0]).astype(int)
+    sample["high_norm"] = (sample["treatment_key"] == MAIN_COMPARISON[0]).astype(int)
     result = smf.ols(
-        formula=f"{outcome} ~ high_seed + position_index + I(position_index ** 2) + I(position_index ** 3) + C(root_id) + C(true_first_result)",
+        formula=f"{outcome} ~ high_norm + position_index + I(position_index ** 2) + I(position_index ** 3) + C(root_id) + C(true_first_result)",
         data=sample,
     ).fit(cov_type="cluster", cov_kwds={"groups": sample["root_id"]})
     return {
         "specification": label,
-        "estimate": float(result.params["high_seed"]),
-        "std_error": float(result.bse["high_seed"]),
-        "ci_lower": float(result.conf_int().loc["high_seed", 0]),
-        "ci_upper": float(result.conf_int().loc["high_seed", 1]),
-        "p_value": float(result.pvalues["high_seed"]),
+        "estimate": float(result.params["high_norm"]),
+        "std_error": float(result.bse["high_norm"]),
+        "ci_lower": float(result.conf_int().loc["high_norm", 0]),
+        "ci_upper": float(result.conf_int().loc["high_norm", 1]),
+        "p_value": float(result.pvalues["high_norm"]),
         "n_obs": int(result.nobs),
     }
 

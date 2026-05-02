@@ -43,7 +43,6 @@ from experiment import (
     PAYMENT_VERSION,
     PARTICIPANT_LIMIT,
     PHASE_1_MAIN,
-    PHASE_2_ROBUSTNESS,
     PHASE_TRANSITION_VALID_COMPLETED_THRESHOLD,
     PRIZE_EUR,
     QUALITY_THRESHOLDS,
@@ -75,8 +74,6 @@ from experiment import (
     reroll_value_for_session,
     result_deck_seed,
     result_deck_values,
-    seed_initial_counts_for_phase,
-    seed_window_values,
     series_labels_for_phase,
     stable_hash,
     stable_json,
@@ -128,7 +125,6 @@ from models import (
     ResultDeckCard,
     Series,
     SeriesRoot,
-    SeriesWindowEntry,
     SessionRecord,
     SessionClientContext,
     SnapshotRecord,
@@ -1672,6 +1668,11 @@ def build_config_payload(db: Session) -> dict[str, Any]:
     experiment_state = get_or_create_experiment_state(db)
     current_phase = experiment_state.current_phase
     treatment_definitions = phase_treatments(current_phase)
+    public_treatments = [CONTROL_TREATMENT_KEY] + [
+        treatment_key
+        for treatment_key in TREATMENT_KEYS
+        if treatment_key != CONTROL_TREATMENT_KEY
+    ]
     return {
         "schema_version": SCHEMA_VERSION,
         "experiment_version": EXPERIMENT_VERSION,
@@ -1692,20 +1693,20 @@ def build_config_payload(db: Session) -> dict[str, Any]:
         "payment_deck_size": PAYMENT_DECK_SIZE,
         "payment_winners_per_deck": 1,
         "prize_eur": PRIZE_EUR,
-        "treatments": list(TREATMENT_KEYS),
-        "seed_initial_counts": {
-            treatment_key: int(config["displayed_count_target"])
-            for treatment_key, config in treatment_definitions.items()
-            if config["displayed_count_target"] is not None
-        },
+        "treatments": public_treatments,
         "treatment_display_counts": {
             treatment_key: config["displayed_count_target"]
+            for treatment_key, config in treatment_definitions.items()
+        },
+        "treatment_display_denominators": {
+            treatment_key: config["displayed_denominator"]
             for treatment_key, config in treatment_definitions.items()
         },
         "treatment_targets": {
             treatment_key: treatment["norm_target_value"]
             for treatment_key, treatment in treatment_definitions.items()
         },
+        "social_norm_design": "fixed_by_treatment",
         "collapse_consecutive_claims": 0,
         "treatment_version": treatment_version_for_phase(current_phase),
         "allocation_version": allocation_version_for_phase(current_phase),
@@ -2704,64 +2705,6 @@ def get_deck_value(
     return deck
 
 
-def get_window_entries(
-    db: Session, *, series_id: str, window_type: str
-) -> list[SeriesWindowEntry]:
-    return db.exec(
-        select(SeriesWindowEntry)
-        .where(
-            SeriesWindowEntry.series_id == series_id,
-            SeriesWindowEntry.window_type == window_type,
-        )
-        .order_by(SeriesWindowEntry.slot_index)
-    ).all()
-
-
-def append_actual_window_entry(
-    db: Session,
-    *,
-    series: Series,
-    claim: Claim,
-) -> None:
-    entries = get_window_entries(db, series_id=series.id, window_type="actual")
-    window_size = max(1, int(series.sample_size or WINDOW_SIZE))
-
-    if len(entries) >= window_size:
-        oldest_entry = entries[0]
-        db.delete(oldest_entry)
-        remaining_entries = entries[1:]
-        for index, entry in enumerate(remaining_entries):
-            if entry.slot_index != index:
-                entry.slot_index = index
-                db.add(entry)
-        entries = remaining_entries
-
-    db.add(
-        SeriesWindowEntry(
-            series_id=series.id,
-            window_type="actual",
-            slot_index=len(entries),
-            value=claim.reported_value,
-            source="claim",
-            claim_id=claim.id,
-        )
-    )
-
-    target_value = series.norm_target_value
-    actual_window_values = [entry.value for entry in entries] + [claim.reported_value]
-    series.actual_count_target = (
-        sum(1 for value in actual_window_values if value == target_value)
-        if target_value is not None
-        else 0
-    )
-    series.actual_window_version = int(series.actual_window_version or 0) + 1
-    if target_value is not None and claim.reported_value == target_value:
-        series.full_target_streak += 1
-    else:
-        series.full_target_streak = 0
-    db.add(series)
-
-
 def session_has_critical_fraud(db: Session, record: SessionRecord) -> bool:
     critical_flag = db.exec(
         select(FraudFlag).where(
@@ -2784,16 +2727,6 @@ def is_valid_completed_session(db: Session, record: SessionRecord) -> bool:
     if session_has_critical_fraud(db, record):
         return False
     return True
-
-
-def maybe_activate_phase_2(
-    db: Session,
-    *,
-    state: ExperimentState,
-    triggering_session_id: str,
-) -> bool:
-    return False
-
 
 def maybe_close_root(db: Session, *, root: SeriesRoot, reason: str) -> None:
     if root.status != "active":
@@ -3202,10 +3135,10 @@ def build_series_payload(
         "displayed_count_target": record.displayed_count_target,
         "displayed_denominator": record.displayed_denominator,
         "completed_count": series.completed_count,
-        "visible_count_target": series.visible_count_target,
-        "actual_count_target": series.actual_count_target,
     }
     if payload_mode == SESSION_PAYLOAD_MODE_ANALYTICS:
+        payload["visible_count_target"] = series.visible_count_target
+        payload["actual_count_target"] = series.actual_count_target
         payload["visible_window_version"] = series.visible_window_version
         payload["actual_window_version"] = series.actual_window_version
     return payload
@@ -5336,8 +5269,9 @@ def submit_report(
         )
         db.add(claim)
         db.flush()
-        append_actual_window_entry(db, series=series, claim=claim)
 
+        # The active design uses a fixed treatment-level social norm.
+        # Completed claims do not update any participant-facing norm state.
         series.completed_count += 1
         series.is_closed = True
         series.close_reason = series.close_reason or "session_completed"
@@ -5845,11 +5779,6 @@ def admin_experiment(db: Session = Depends(get_session)) -> dict[str, Any]:
         "experiment_mode_reason": state.experiment_mode_reason,
         "phase_transition_threshold": state.phase_transition_threshold,
         "valid_completed_count": state.valid_completed_count,
-        "phase_2_activated_at": (
-            state.phase_2_activated_at.isoformat()
-            if state.phase_2_activated_at
-            else None
-        ),
         "paused_at": state.paused_at.isoformat() if state.paused_at else None,
         "resumed_at": state.resumed_at.isoformat() if state.resumed_at else None,
         "pause_reason": state.pause_reason,

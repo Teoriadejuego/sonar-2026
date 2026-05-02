@@ -109,8 +109,8 @@ class RuntimeHardeningTests(unittest.TestCase):
         self.assertEqual(response.status_code, 403, response.text)
         self.assertIn("otro dispositivo", response.text)
 
-    def test_submit_report_updates_actual_fifo_window(self) -> None:
-        session = self.access_non_control_session(10, "install-fifo")
+    def test_submit_report_does_not_update_legacy_actual_window(self) -> None:
+        session = self.access_non_control_session(10, "install-fixed-norm")
         session_id = session["session_id"]
         headers = self.session_headers(session_id)
 
@@ -170,9 +170,9 @@ class RuntimeHardeningTests(unittest.TestCase):
                 )
             ).all()
             self.assertIsNotNone(series)
-            self.assertEqual(len(entries), 1)
-            self.assertEqual(series.actual_window_version, 1)
-            self.assertEqual(series.actual_count_target, 1)
+            self.assertEqual(len(entries), 0)
+            self.assertEqual(series.actual_window_version, 0)
+            self.assertEqual(series.actual_count_target, 0)
 
 
 if __name__ == "__main__":

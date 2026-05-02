@@ -147,7 +147,7 @@ class MigrationRecoveryTests(unittest.TestCase):
                         updated_at
                     ) VALUES (
                         'global',
-                        'seed_high',
+                        'legacy_old_phase',
                         17,
                         0,
                         NULL,

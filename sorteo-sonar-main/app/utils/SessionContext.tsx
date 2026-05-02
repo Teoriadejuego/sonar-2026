@@ -219,6 +219,13 @@ const IDLE_VISUAL_TRANSITION: VisualTransitionState = {
   targetScreen: null,
 };
 
+function detectOnlineStatus() {
+  if (typeof window === "undefined") {
+    return true;
+  }
+  return window.navigator.onLine !== false;
+}
+
 function readJson<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") {
     return fallback;
@@ -389,9 +396,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<SessionPayload | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isHydrating, setIsHydrating] = useState(true);
-  const [isOnline, setIsOnline] = useState(
-    () => typeof navigator === "undefined" || navigator.onLine,
-  );
+  const [isOnline, setIsOnline] = useState(detectOnlineStatus);
   const [pendingAction, setPendingAction] = useState<PendingActionState | null>(
     null,
   );
@@ -460,7 +465,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const syncOnlineState = () => {
-      setIsOnline(window.navigator.onLine);
+      setIsOnline(detectOnlineStatus());
     };
     syncOnlineState();
     window.addEventListener("online", syncOnlineState);
@@ -710,7 +715,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (stored?.sessionSnapshot) {
       commitSession(stored.sessionSnapshot);
     }
-    if (!stored?.sessionId) {
+    const storedSessionId = stored?.sessionId;
+    if (!storedSessionId) {
       setIsHydrating(false);
       return;
     }
@@ -726,7 +732,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
 
     let cancelled = false;
-    withRequestTimeout((init) => resumeSession(stored.sessionId, init))
+    withRequestTimeout((init) => resumeSession(storedSessionId, init))
       .then((response) => {
         if (cancelled) {
           return;

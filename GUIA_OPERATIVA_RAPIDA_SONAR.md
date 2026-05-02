@@ -7,6 +7,7 @@ Actualizado: `2026-05-02`
 Nota:
 
 - para operativa de staff y reduccion de errores humanos, usar como referencia principal `docs/FIELD_OPERATIONS_PROTOCOL.md`
+- el diseno experimental vigente es `control + norm_0..norm_60`; la norma social es fija por tratamiento y no se actualiza dinamicamente durante la sesion
 
 ## 1. Direcciones importantes
 

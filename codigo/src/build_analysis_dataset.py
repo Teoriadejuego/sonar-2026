@@ -7,9 +7,9 @@ import pandas as pd
 
 from config_analysis import (
     DATA_DIR,
+    DISPLAY_COUNTS,
     HIGH_TREATMENT_KEY,
     RANDOM_SEED,
-    SEED_INITIAL_COUNTS,
     SERIES_MAX_LENGTH,
 )
 from utils import append_log, ensure_directories, position_segment, save_dataframe
@@ -53,9 +53,9 @@ def main() -> None:
     analysis["treated_high_norm"] = (
         analysis["treatment_key"] == HIGH_TREATMENT_KEY
     ).astype(int)
-    analysis["treatment_seed_level"] = (
+    analysis["treatment_display_count"] = (
         analysis["treatment_key"]
-        .map({key: value or 0 for key, value in SEED_INITIAL_COUNTS.items()})
+        .map({key: value or 0 for key, value in DISPLAY_COUNTS.items()})
         .fillna(0)
         .astype(int)
     )

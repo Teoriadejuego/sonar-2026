@@ -1,25 +1,32 @@
 # simulation_validation
 
-Validación sintética integral de SONAR con dos modos:
+Validacion sintetica integral de SONAR con dos modos:
 
-- simulación analítica directa de 6000 sujetos válidos
-- simulación de flujo contra el backend real usando `access`, `roll`, `prepare-report` y `submit-report`
+- simulacion analitica directa de sujetos validos
+- simulacion de flujo contra el backend real usando `access`, `roll`, `prepare-report` y `submit-report`
+
+## Diseno experimental asumido
+
+La simulacion activa solo asume:
+
+- `control`
+- `norm_0..norm_60`
+- denominador fijo `60`
+- mensaje social fijo por tratamiento
 
 ## Robots
 
 ### Tipo A - Imitador de norma
 
-- en `seed_low` reporta `6` con probabilidad igual al seed visible
-- en `seed_high` reporta `6` con probabilidad igual al seed visible
-- con la configuración actual eso equivale a `10/60` frente a `50/60`
-- si no reporta `6`, reporta la verdad
+- en `norm_0` reporta `6` con probabilidad baja
+- en `norm_60` reporta `6` con probabilidad alta
+- en general, la probabilidad de reportar `6` sigue la intensidad visible del tratamiento asignado
 - en control sigue una regla neutra: alta probabilidad de verdad y baja probabilidad base de `6`
 
 ### Tipo B - Mixto aleatorio / honesto
 
 - 50% dice la verdad
-- 50% reporta un número uniforme entre `1` y `6`
-- el aleatorio sí puede coincidir con el valor verdadero
+- 50% reporta un numero uniforme entre `1` y `6`
 
 ### Tipo C - Mentiroso prudente 5
 
@@ -30,90 +37,19 @@ Validación sintética integral de SONAR con dos modos:
 
 - siempre reporta la verdad
 
-## Configuración
+## Configuracion
 
 Archivo:
 
 - `config/robot_simulation_config.json`
 
-Parámetros principales:
+La logica experimental se sincroniza con `project_parameters.json`.
 
-- tamaño total de muestra
-- mezcla de robots
-- pesos por tratamiento
-- idiomas
-- propensión a rerolls
-- ruido técnico básico
+## Patrones esperados
 
-La lógica experimental de ventana, seeds y longitud de serie se sincroniza con `project_parameters.json`.
-
-## Cómo ejecutar
-
-Desde:
-
-```powershell
-cd "C:\Users\Usuario\Desktop\AAC\codex\2026 SONAR\codigo\simulation_validation"
-```
-
-### 1. Generar población robótica
-
-```powershell
-& "C:\Users\Usuario\Desktop\AAC\codex\2026 SONAR\.venv\Scripts\python.exe" src/generate_robot_population.py
-```
-
-### 2. Simulación directa de 6000 sujetos
-
-```powershell
-& "C:\Users\Usuario\Desktop\AAC\codex\2026 SONAR\.venv\Scripts\python.exe" src/run_direct_simulation.py
-```
-
-### 3. Simulación del flujo real del backend
-
-Por defecto usa el tamaño configurado para validación rápida del flujo.
-
-```powershell
-& "C:\Users\Usuario\Desktop\AAC\codex\2026 SONAR\.venv\Scripts\python.exe" src/run_backend_flow_simulation.py
-```
-
-Para lanzarla a 6000:
-
-```powershell
-& "C:\Users\Usuario\Desktop\AAC\codex\2026 SONAR\.venv\Scripts\python.exe" src/run_backend_flow_simulation.py --participants 6000
-```
-
-### 4. Validar resultados
-
-```powershell
-& "C:\Users\Usuario\Desktop\AAC\codex\2026 SONAR\.venv\Scripts\python.exe" src/validate_simulation_outputs.py
-```
-
-### 5. Construir tablas
-
-```powershell
-& "C:\Users\Usuario\Desktop\AAC\codex\2026 SONAR\.venv\Scripts\python.exe" src/build_robot_analysis_tables.py
-```
-
-### 6. Generar figuras
-
-```powershell
-& "C:\Users\Usuario\Desktop\AAC\codex\2026 SONAR\.venv\Scripts\python.exe" src/figures_robot_validation.py
-```
-
-## Qué mirar
-
-- `data/simulated_sessions.csv`
-- `data/simulated_series.csv`
-- `data/simulated_position_plan.csv`
-- `data/backend_flow_sessions.csv`
-- `outputs/tables/table_4_validation_checks.csv`
-- `outputs/figures/`
-- `outputs/logs/`
-
-## Qué patrones esperamos observar
-
-- Tipo A reporta más `6` en `seed_high` que en `seed_low`
+- Tipo A reporta mas `6` en `norm_60` que en `norm_0`
 - Tipo C produce exceso de `5` cuando la verdad es `1` o `2`
 - Tipo D es completamente honesto
-- `seed_high` muestra más `reported_6` que `seed_low`
-- las series espejo comparten la misma verdad por posición
-- el backend flow produce sesiones completadas sin corrupción de estado
+- `norm_60` muestra mas `reported_6` que `norm_0`
+- las series espejo comparten la misma verdad por posicion
+- el backend flow produce sesiones completadas sin corrupcion de estado

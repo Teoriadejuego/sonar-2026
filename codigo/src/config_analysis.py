@@ -38,15 +38,12 @@ def _exact_counts(total: int, weight_map: dict[str, float]) -> dict[str, int]:
 PROJECT_PARAMETERS = _load_project_parameters()
 METADATA = PROJECT_PARAMETERS["metadata"]
 EXPERIMENT = PROJECT_PARAMETERS["experiment"]
-PHASE_KEY = "phase_1_main"
-PHASE_SETTINGS = EXPERIMENT["phases"][PHASE_KEY]
-PHASE_TREATMENTS = PHASE_SETTINGS["treatments"]
 
 RANDOM_SEED = 20260319
 EXPERIMENT_VERSION = str(METADATA["experiment_version"])
-EXPERIMENT_PHASE = PHASE_KEY
-TREATMENT_VERSION = str(PHASE_SETTINGS["treatment_version"])
-ALLOCATION_VERSION = str(PHASE_SETTINGS["allocation_version"])
+EXPERIMENT_PHASE = str(EXPERIMENT["design_key"])
+TREATMENT_VERSION = str(EXPERIMENT["treatment_version"])
+ALLOCATION_VERSION = str(EXPERIMENT["allocation_version"])
 DECK_VERSION = str(METADATA["deck_version"])
 PAYMENT_VERSION = str(METADATA["payment_version"])
 TELEMETRY_VERSION = str(METADATA["telemetry_version"])
@@ -57,57 +54,37 @@ VALID_COMPLETED_SESSIONS = 6000
 SERIES_MAX_LENGTH = int(EXPERIMENT["participant_limit"])
 VISIBLE_WINDOW = int(EXPERIMENT["window_size"])
 MAX_ATTEMPTS = int(EXPERIMENT["max_attempts"])
-DECK_BLOCK_SIZE = int(EXPERIMENT["deck_block_size"])
+DECK_BLOCK_SIZE = int(EXPERIMENT["result_deck_size"])
 FESTIVAL_DAYS = 4
 BASE_START_UTC = datetime(2026, 6, 11, 12, 0, 0)
 
-TREATMENT_ORDER = ["control"] + sorted(
-    [key for key in PHASE_TREATMENTS if key != "control"],
-    key=lambda key: int(PHASE_TREATMENTS[key]["seed_initial_count"] or 0),
-)
+TREATMENT_ORDER = ["control"] + [f"norm_{count}" for count in range(VISIBLE_WINDOW + 1)]
 NON_CONTROL_TREATMENTS = [key for key in TREATMENT_ORDER if key != "control"]
-LOW_TREATMENT_KEY = NON_CONTROL_TREATMENTS[0]
-HIGH_TREATMENT_KEY = NON_CONTROL_TREATMENTS[-1]
-LOW_SEED_COUNT = int(PHASE_TREATMENTS[LOW_TREATMENT_KEY]["seed_initial_count"])
-HIGH_SEED_COUNT = int(PHASE_TREATMENTS[HIGH_TREATMENT_KEY]["seed_initial_count"])
+LOW_TREATMENT_KEY = "norm_0"
+HIGH_TREATMENT_KEY = f"norm_{VISIBLE_WINDOW}"
 
 TREATMENT_WEIGHTS = {
-    key: float(settings["assignment_weight"])
-    for key, settings in PHASE_TREATMENTS.items()
+    key: 1.0 / int(EXPERIMENT["treatment_deck_size"])
+    for key in TREATMENT_ORDER
 }
 TREATMENT_COUNTS = _exact_counts(VALID_COMPLETED_SESSIONS, TREATMENT_WEIGHTS)
 TREATMENT_FAMILIES = {
-    key: str(settings["treatment_family"])
-    for key, settings in PHASE_TREATMENTS.items()
+    key: ("control" if key == "control" else "six_norm")
+    for key in TREATMENT_ORDER
 }
-TREATMENT_LABELS = {
-    key: str(settings["label"])
-    for key, settings in PHASE_TREATMENTS.items()
-}
+TREATMENT_LABELS = {key: key for key in TREATMENT_ORDER}
 TREATMENT_COLORS = {
     "control": "#6f6f6f",
     LOW_TREATMENT_KEY: "#204a87",
     HIGH_TREATMENT_KEY: "#b04a11",
 }
-SEED_INITIAL_COUNTS = {
-    key: (
-        int(settings["seed_initial_count"])
-        if settings["seed_initial_count"] is not None
-        else None
-    )
-    for key, settings in PHASE_TREATMENTS.items()
-}
-SEED_FILL_ORDERS = {
-    key: str(settings.get("seed_fill_order") or "target_first")
-    for key, settings in PHASE_TREATMENTS.items()
+DISPLAY_COUNTS = {
+    key: (None if key == "control" else int(key.split("_", 1)[1]))
+    for key in TREATMENT_ORDER
 }
 TARGET_VALUES = {
-    key: (
-        int(settings["norm_target_value"])
-        if settings["norm_target_value"] is not None
-        else None
-    )
-    for key, settings in PHASE_TREATMENTS.items()
+    key: (None if key == "control" else int(EXPERIMENT["norm_target_value"]))
+    for key in TREATMENT_ORDER
 }
 
 ROOT_COUNT = math.ceil(max(TREATMENT_COUNTS.values()) / SERIES_MAX_LENGTH)

@@ -12,7 +12,7 @@ When sources conflict, the authoritative order is:
 6. `sorteo-sonar-main/app/utils/uiLexicon.ts`
 7. Operational docs and QA reports
 
-Legacy references to `seed_low`, `seed_high`, old demo IDs, or endogenous visible windows are superseded by the active 62-treatment design and the current runtime implementation.
+Legacy references to older two-arm seed designs, old demo IDs, or endogenous visible windows are superseded by the active 62-treatment design and the current runtime implementation.
 
 ## Functional requirements
 
@@ -58,7 +58,7 @@ Legacy references to `seed_low`, `seed_high`, old demo IDs, or endogenous visibl
 20. `E-20` The backend must persist enough information to reconstruct the assigned treatment, the first real result, the payment assignment, and the exact visible message from exports.
 21. `E-21` The report snapshot must be frozen before claim submission and reused consistently when determining the claim and final visible outcome.
 22. `E-22` Legacy `root` and `series` entities may remain for compatibility and analytics, but they must not replace the 62/24/100 deck design as the causal assignment mechanism.
-23. `E-23` The system must persist actual completed-claim FIFO window entries for audit and compatibility, but those entries must not be used to generate the participant-facing social message in the active 62-treatment design.
+23. `E-23` Legacy `series_window_entries` may remain only for migration or export compatibility, but they must not be required by the active runtime and must not be updated as part of the participant-facing social-norm flow.
 
 ## Technical requirements
 

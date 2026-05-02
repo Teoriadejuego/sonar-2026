@@ -18,7 +18,7 @@ class ExperimentState(SQLModel, table=True):
     __tablename__ = "experiment_state"
 
     id: str = Field(default="global", primary_key=True)
-    current_phase: str = Field(default="phase_1_main", index=True)
+    current_phase: str = Field(default="design_62_treatments_v1", index=True)
     experiment_status: str = Field(default="active", index=True)
     experiment_mode: str = Field(default="live", index=True)
     experiment_mode_changed_at: Optional[datetime] = None
@@ -26,6 +26,8 @@ class ExperimentState(SQLModel, table=True):
     experiment_mode_reason: Optional[str] = Field(default=None, sa_column=Column(Text))
     phase_transition_threshold: int = Field(default=6000)
     valid_completed_count: int = Field(default=0)
+    # Legacy field retained for migration compatibility. The active runtime
+    # no longer has a phase-2 treatment regime.
     phase_2_activated_at: Optional[datetime] = None
     paused_at: Optional[datetime] = None
     resumed_at: Optional[datetime] = None
@@ -244,6 +246,9 @@ class Series(SQLModel, table=True):
     position_counter: int = Field(default=0)
     completed_count: int = Field(default=0)
     visible_count_target: int = Field(default=0)
+    # Legacy audit fields retained for export compatibility. They are no
+    # longer updated by the active runtime because the participant-facing
+    # social norm is fixed by treatment.
     actual_count_target: int = Field(default=0)
     full_target_streak: int = Field(default=0)
     visible_window_version: int = Field(default=0)
@@ -260,6 +265,8 @@ class SeriesWindowEntry(SQLModel, table=True):
             "series_id", "window_type", "slot_index", name="uq_window_slot"
         ),
     )
+    # Legacy compatibility table. The active 62-treatment runtime does not
+    # maintain participant-facing norm state from completed claims here.
 
     id: Optional[int] = Field(default=None, primary_key=True)
     series_id: str = Field(foreign_key="series.id", index=True)

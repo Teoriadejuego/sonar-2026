@@ -46,8 +46,8 @@ def main() -> int:
         row["treatment_key"]: row["n"]
         for row in analysis.get("reported_6_rates", [])
     }
-    p_high_low = analysis["fisher_tests"]["seed_high_vs_seed_low"]["p_value"]
-    p_high_control = analysis["fisher_tests"]["seed_high_vs_control"]["p_value"]
+    p_high_low = analysis["fisher_tests"]["high_norm_vs_low_norm"]["p_value"]
+    p_high_control = analysis["fisher_tests"]["high_norm_vs_control"]["p_value"]
 
     tex = rf"""
 \documentclass[9pt,twocolumn,twoside]{{pnas-new}}
@@ -67,7 +67,7 @@ def main() -> int:
 \keywords{{honesty | social norms | die-rolling | field experiment | mobile experiment}}
 
 \begin{{abstract}}
-We simulate {summary['users_requested']} synthetic participants through the public SONAR online deployment in batches of at most 10 concurrent sessions. Synthetic agents roll once, observe the assigned descriptive-norm treatment, and report the value according to a treatment-dependent lying rule: in control, the probability of misreporting is fixed at 0.5; in non-control conditions, the probability of misreporting is tied to the displayed proportion of previous reported 6s. The simulation preserves the online production flow, including access, roll, prepare-report, and submit-report endpoints. We recover the empirical distribution of real first rolls, the distribution of reported values, treatment-by-outcome balance, and the relationship between treatment and reported 6s. Across successful sessions, reported 6 rates are {rates.get('control', 0):.3f} in control (n={sample_sizes.get('control', 0)}), {rates.get('seed_low', 0):.3f} in the low-norm condition (n={sample_sizes.get('seed_low', 0)}), and {rates.get('seed_high', 0):.3f} in the high-norm condition (n={sample_sizes.get('seed_high', 0)}). These simulated outcomes provide a stress-tested analysis scaffold and a transparent audit trail for subsequent experimental reporting.
+We simulate {summary['users_requested']} synthetic participants through the public SONAR online deployment in batches of at most 10 concurrent sessions. Synthetic agents roll once, observe the assigned descriptive-norm treatment, and report the value according to a treatment-dependent lying rule: in control, the probability of misreporting is fixed at 0.5; in non-control conditions, the probability of misreporting is tied to the displayed proportion of reported 6s encoded by the assigned fixed norm treatment. The simulation preserves the online production flow, including access, roll, prepare-report, and submit-report endpoints. We recover the empirical distribution of real first rolls, the distribution of reported values, treatment-by-outcome balance, and the relationship between treatment and reported 6s. Across successful sessions, reported 6 rates are {rates.get('control', 0):.3f} in control (n={sample_sizes.get('control', 0)}), {rates.get('norm_0', 0):.3f} in the low-norm condition (n={sample_sizes.get('norm_0', 0)}), and {rates.get('norm_60', 0):.3f} in the high-norm condition (n={sample_sizes.get('norm_60', 0)}). These simulated outcomes provide a stress-tested analysis scaffold and a transparent audit trail for subsequent experimental reporting.
 \end{{abstract}}
 
 \begin{{document}}

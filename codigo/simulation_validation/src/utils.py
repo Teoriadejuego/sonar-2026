@@ -32,9 +32,9 @@ from experiment import (  # noqa: E402
     assignment_weights_for_phase,
     balanced_sequence,
     deterministic_seed,
+    fixed_social_window_values,
     payout_amount_for_claim,
     payout_eligible,
-    seed_window_values,
     treatment_config,
 )
 
@@ -48,10 +48,10 @@ ROBOT_LABELS = {
 
 TREATMENT_ORDER = ["control"] + sorted(
     [key for key in assignment_weights_for_phase(PHASE_1_MAIN) if key != "control"],
-    key=lambda key: int(treatment_config(PHASE_1_MAIN, key)["seed_initial_count"] or 0),
+    key=lambda key: int(treatment_config(PHASE_1_MAIN, key)["displayed_count_target"] or 0),
 )
-LOW_TREATMENT_KEY = TREATMENT_ORDER[1]
-HIGH_TREATMENT_KEY = TREATMENT_ORDER[2]
+LOW_TREATMENT_KEY = "norm_0"
+HIGH_TREATMENT_KEY = f"norm_{WINDOW_SIZE}"
 TREATMENT_COLORS = {
     "control": "#7f8c8d",
     LOW_TREATMENT_KEY: "#1f77b4",
@@ -126,7 +126,7 @@ def initialize_series_windows(series: SeriesState) -> None:
         series.visible_window = []
         series.visible_count_target = 0
     else:
-        series.visible_window = seed_window_values(PHASE_1_MAIN, series.treatment_key)
+        series.visible_window = fixed_social_window_values(PHASE_1_MAIN, series.treatment_key)
         series.visible_count_target = sum(
             1 for value in series.visible_window if value == series.norm_target_value
         )

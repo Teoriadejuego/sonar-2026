@@ -625,8 +625,8 @@ export type SessionPayload = {
     displayed_count_target?: number | null;
     displayed_denominator?: number | null;
     completed_count: number;
-    visible_count_target: number;
-    actual_count_target: number;
+    visible_count_target?: number;
+    actual_count_target?: number;
     visible_window_version?: number;
     actual_window_version?: number;
   };

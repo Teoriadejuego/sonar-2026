@@ -120,7 +120,7 @@ Subsecciones recomendadas:
 ### Figuras
 
 - distribucion de reportes por tratamiento,
-- evolucion de la ventana social,
+- gradiente de norma fija por tratamiento (`norm_0` a `norm_60`),
 - funnel por pantallas,
 - origen de entrada QR / WhatsApp.
 
@@ -148,4 +148,3 @@ Incluir:
 - detalle tecnico de concurrencia,
 - codebook de variables,
 - plan de contingencia.
-

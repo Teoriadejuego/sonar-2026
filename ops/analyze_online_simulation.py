@@ -114,6 +114,9 @@ def main() -> int:
     save_figure(fig, figures_dir / "figure_reported_distribution.png")
 
     # Figure 3: treatment x actual result heatmap
+    low_norm_key = "norm_0"
+    high_norm_key = "norm_60"
+
     heatmap = (
         successful.pivot_table(
             index="treatment_key",
@@ -122,7 +125,7 @@ def main() -> int:
             aggfunc="count",
             fill_value=0,
         )
-        .reindex(index=["control", "seed_low", "seed_high"], fill_value=0)
+        .reindex(index=["control", low_norm_key, high_norm_key], fill_value=0)
         .reindex(columns=[1, 2, 3, 4, 5, 6], fill_value=0)
     )
     fig, ax = plt.subplots(figsize=(10, 5))
@@ -133,7 +136,7 @@ def main() -> int:
     save_figure(fig, figures_dir / "figure_treatment_by_true_result_heatmap.png")
 
     # Figure 4: main hypothesis graph
-    treatment_order = ["control", "seed_low", "seed_high"]
+    treatment_order = ["control", low_norm_key, high_norm_key]
     hypothesis_rows = []
     for treatment_key in treatment_order:
         subset = successful[successful["treatment_key"] == treatment_key]
@@ -179,8 +182,8 @@ def main() -> int:
 
     # Stats for main hypothesis
     control = successful[successful["treatment_key"] == "control"]
-    low = successful[successful["treatment_key"] == "seed_low"]
-    high = successful[successful["treatment_key"] == "seed_high"]
+    low = successful[successful["treatment_key"] == low_norm_key]
+    high = successful[successful["treatment_key"] == high_norm_key]
 
     fisher_low_high = stats.fisher_exact(
         [
@@ -209,15 +212,15 @@ def main() -> int:
         "required_data_check": build_required_data_check(successful),
         "reported_6_rates": hypothesis_rows,
         "fisher_tests": {
-            "seed_high_vs_seed_low": {
+            "high_norm_vs_low_norm": {
                 "odds_ratio": fisher_low_high.statistic,
                 "p_value": fisher_low_high.pvalue,
             },
-            "seed_high_vs_control": {
+            "high_norm_vs_control": {
                 "odds_ratio": fisher_control_high.statistic,
                 "p_value": fisher_control_high.pvalue,
             },
-            "seed_low_vs_control": {
+            "low_norm_vs_control": {
                 "odds_ratio": fisher_control_low.statistic,
                 "p_value": fisher_control_low.pvalue,
             },

@@ -79,19 +79,19 @@ def run_validation() -> pd.DataFrame:
     )
 
     type_a = sessions[sessions["robot_type"] == "type_a_norm_imitator"]
-    type_a_seed_low = type_a.loc[
+    type_a_low_norm = type_a.loc[
         type_a["treatment_key"] == LOW_TREATMENT_KEY,
         "reported_6",
     ].mean()
-    type_a_seed_high = type_a.loc[
+    type_a_high_norm = type_a.loc[
         type_a["treatment_key"] == HIGH_TREATMENT_KEY,
         "reported_6",
     ].mean()
     checks.append(
         validation_row(
-            "type_a_reports_more_6_in_seed_high_than_seed_low",
-            bool(type_a_seed_high > type_a_seed_low),
-            f"seed_high={type_a_seed_high:.3f} seed_low={type_a_seed_low:.3f}",
+            "type_a_reports_more_6_in_high_norm_than_low_norm",
+            bool(type_a_high_norm > type_a_low_norm),
+            f"{HIGH_TREATMENT_KEY}={type_a_high_norm:.3f} {LOW_TREATMENT_KEY}={type_a_low_norm:.3f}",
         )
     )
 
@@ -129,7 +129,7 @@ def run_validation() -> pd.DataFrame:
     control_mean = treatment_means.get("control", 0.0)
     checks.append(
         validation_row(
-            "series_evolution_seed_high_above_seed_low_with_control_reference",
+            "high_norm_above_low_norm_with_control_reference",
             bool(
                 treatment_means.get(HIGH_TREATMENT_KEY, 0.0)
                 > treatment_means.get(LOW_TREATMENT_KEY, 1.0)

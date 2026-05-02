@@ -71,8 +71,8 @@ def regression_row(
 ) -> dict[str, object]:
     sample = restricted_window(frame, start, end)
     sample = sample.loc[sample["treatment_key"].isin(list(MAIN_COMPARISON))].copy()
-    sample["high_seed"] = (sample["treatment_key"] == MAIN_COMPARISON[0]).astype(int)
-    formula = f"{outcome} ~ high_seed + position_index + I(position_index ** 2) + I(position_index ** 3) + C(root_id)"
+    sample["high_norm"] = (sample["treatment_key"] == MAIN_COMPARISON[0]).astype(int)
+    formula = f"{outcome} ~ high_norm + position_index + I(position_index ** 2) + I(position_index ** 3) + C(root_id)"
     if with_truth_control:
         formula += " + C(true_first_result)"
     result = smf.ols(formula=formula, data=sample).fit(
@@ -83,11 +83,11 @@ def regression_row(
         "specification": label,
         "window": f"{start}-{end}",
         "model_type": "LPM + root FE" if not with_truth_control else "LPM + root FE + truth",
-        "estimate": float(result.params["high_seed"]),
-        "std_error": float(result.bse["high_seed"]),
-        "ci_lower": float(result.conf_int().loc["high_seed", 0]),
-        "ci_upper": float(result.conf_int().loc["high_seed", 1]),
-        "p_value": float(result.pvalues["high_seed"]),
+        "estimate": float(result.params["high_norm"]),
+        "std_error": float(result.bse["high_norm"]),
+        "ci_lower": float(result.conf_int().loc["high_norm", 0]),
+        "ci_upper": float(result.conf_int().loc["high_norm", 1]),
+        "p_value": float(result.pvalues["high_norm"]),
         "n_obs": int(result.nobs),
         "n_roots": int(sample["root_id"].nunique()),
     }
@@ -117,20 +117,20 @@ def build_table_1(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_main_results(frame: pd.DataFrame, outcome: str) -> pd.DataFrame:
-    seed_sample = frame.loc[frame["treatment_key"].isin(list(MAIN_COMPARISON))].copy()
+    norm_sample = frame.loc[frame["treatment_key"].isin(list(MAIN_COMPARISON))].copy()
     early_start, early_end = EARLY_SEGMENT
     late_start, late_end = LATE_SEGMENT
     full_start, full_end = FULL_SEGMENT
     rows = [
-        diff_in_means_row(seed_sample, outcome, "Main sample", full_start, full_end),
-        diff_in_means_row(seed_sample, outcome, "Early positions", early_start, early_end),
-        diff_in_means_row(seed_sample, outcome, "Late positions", late_start, late_end),
-        regression_row(seed_sample, outcome, "Model B", full_start, full_end, with_truth_control=False),
-        regression_row(seed_sample, outcome, "Model B early", early_start, early_end, with_truth_control=False),
-        regression_row(seed_sample, outcome, "Model B late", late_start, late_end, with_truth_control=False),
-        regression_row(seed_sample, outcome, "Model C", full_start, full_end, with_truth_control=True),
-        regression_row(seed_sample, outcome, "Model C early", early_start, early_end, with_truth_control=True),
-        regression_row(seed_sample, outcome, "Model C late", late_start, late_end, with_truth_control=True),
+        diff_in_means_row(norm_sample, outcome, "Main sample", full_start, full_end),
+        diff_in_means_row(norm_sample, outcome, "Early positions", early_start, early_end),
+        diff_in_means_row(norm_sample, outcome, "Late positions", late_start, late_end),
+        regression_row(norm_sample, outcome, "Model B", full_start, full_end, with_truth_control=False),
+        regression_row(norm_sample, outcome, "Model B early", early_start, early_end, with_truth_control=False),
+        regression_row(norm_sample, outcome, "Model B late", late_start, late_end, with_truth_control=False),
+        regression_row(norm_sample, outcome, "Model C", full_start, full_end, with_truth_control=True),
+        regression_row(norm_sample, outcome, "Model C early", early_start, early_end, with_truth_control=True),
+        regression_row(norm_sample, outcome, "Model C late", late_start, late_end, with_truth_control=True),
     ]
     result = pd.DataFrame(rows)
     float_cols = ["estimate", "std_error", "ci_lower", "ci_upper", "p_value"]

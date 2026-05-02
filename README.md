@@ -2,15 +2,36 @@
 
 Repositorio principal de la app experimental SONAR 2026.
 
-SONAR 2026 es una infraestructura full-stack para ejecutar, monitorizar y documentar un experimento mobile-first sobre decision, honestidad y normas descriptivas en un contexto cultural real. El proyecto integra:
+SONAR 2026 es una infraestructura full-stack para ejecutar, monitorizar y documentar un experimento mobile-first sobre honestidad y normas descriptivas en un contexto cultural real.
 
-- una app web cuidada para participantes,
-- un backend con logica experimental, pagos y administracion,
-- PostgreSQL y Redis como capa operativa unica,
-- trazabilidad completa de telemetria, QR, invitaciones y notas operativas,
-- un paquete de documentacion pensado para coautores, revisores y despliegue de campo.
+Actualizado: `2026-05-02`
 
-Actualizado: `2026-03-22`
+## Diseno experimental vigente
+
+La unica verdad experimental activa es:
+
+- `control`
+- `norm_0`, `norm_1`, ..., `norm_60`
+- denominador fijo `60`
+- `control` no muestra norma social
+- `norm_X` muestra una norma fija equivalente a `X de 60`
+- la norma visible depende solo del tratamiento asignado
+- la norma visible no se actualiza dinamicamente durante la sesion
+- `prepare-report` congela el snapshot antes del claim
+
+Frase canonica:
+
+> El diseno experimental vigente es `control + norm_0..norm_60`. La norma social es fija por tratamiento y no se actualiza dinamicamente durante la sesion.
+
+## Estado del sistema
+
+- frontend React Router + Vite
+- backend FastAPI + SQLModel
+- PostgreSQL/Redis como capa operativa objetivo
+- gateway QR con redireccion dinamica y tracking
+- dashboard live con metricas de experimento, pagos, QR y referrals
+- doble API con failover manual y automatico
+- telemetria minima no bloqueante
 
 ## Enlaces publicos actuales
 
@@ -20,80 +41,46 @@ Actualizado: `2026-03-22`
 - Health live: [https://api-production-9fe7b.up.railway.app/health/live](https://api-production-9fe7b.up.railway.app/health/live)
 - Health ready: [https://api-production-9fe7b.up.railway.app/health/ready](https://api-production-9fe7b.up.railway.app/health/ready)
 
-## Que es este proyecto
+## Flujo participante
 
-La app presenta una experiencia corta, tactil y mobile-first en la que cada participante:
+1. acceso con pulsera o demo,
+2. consentimiento,
+3. instrucciones,
+4. comprension,
+5. primera tirada privada,
+6. rerolls opcionales,
+7. snapshot congelado de reporte,
+8. claim del numero de la primera tirada,
+9. salida, premio o payout.
 
-1. entra con una pulsera o codigo demo,
-2. recibe instrucciones y una comprobacion de comprension,
-3. ve una tirada privada del dado,
-4. puede hacer tiradas extra de comprobacion,
-5. reporta el numero de su primera tirada,
-6. puede ser elegible para cobro o terminar en la pantalla final,
-7. entra en una capa de engagement final con sorteo VIP, prediccion adicional e invitacion por WhatsApp.
+La logica experimental y el estado visible se resuelven en backend. El frontend solo representa el estado autorizado por backend.
 
-La logica experimental, el estado autoritativo y los datos visibles se resuelven en backend. El frontend no reescribe la logica del experimento: la representa.
+## Codigos demo utiles
 
-## Estado actual del experimento
-
-La configuracion maestra vive en [project_parameters.json](./project_parameters.json).
-
-En la configuracion actual de revision:
-
-- ventana visible: `60`
-- longitud de serie / root: `120`
-- maximo de tiradas visibles por participante: `10`
-- tratamientos fase principal: `control`, `seed_low`, `seed_high`
-- payout esperado: `1/100`
-
-Importante:
-
-- `1/100` es una tasa esperada, no un tope exacto.
-- la configuracion actual es editable y esta pensada como version de trabajo avanzada, no como fijacion metodologica final inmutable.
+- `CTRL1234`: control demo ganador
+- `NORM0000`: `norm_0`
+- `NORM0001`: `norm_1`
 
 ## Mapa del repositorio
 
 - `sorteo-sonar-main/`
-  Frontend React Router de la app experimental.
+  frontend React Router de la app experimental.
 - `api-sonar-main/api-sonar-main/`
-  Backend FastAPI, migraciones, admin, exports y logica experimental.
+  backend FastAPI, migraciones, admin, exports y logica experimental.
 - `codigo/`
-  Codigo analitico, simulaciones y validacion.
+  pipeline analitico, simulaciones y validacion.
 - `ops/`
-  Utilidades operativas.
-- documentacion raiz
-  Arquitectura, despliegue, telemetria, datasets y runbooks.
+  utilidades operativas y de despliegue.
 - `docs/`
-  Paquete nuevo de documentacion para coautores, metodologia, microdecisiones y estructura tipo paper.
+  documentacion de metodologia, operacion y arquitectura.
 
-## Si eres coautor, empieza por aqui
+## Lectura recomendada
 
-Orden recomendado de lectura:
-
-1. [docs/README.md](./docs/README.md)
-2. [docs/COAUTHOR_REVIEW_GUIDE.md](./docs/COAUTHOR_REVIEW_GUIDE.md)
-3. [docs/METHODOLOGY.md](./docs/METHODOLOGY.md)
-4. [docs/MICRODECISIONS.md](./docs/MICRODECISIONS.md)
-5. [docs/PAPER_STRUCTURE.md](./docs/PAPER_STRUCTURE.md)
-6. [docs/BIBLIOGRAPHY.md](./docs/BIBLIOGRAPHY.md)
-
-Si necesitas operar la app en vivo:
-
-- [GUIA_OPERATIVA_RAPIDA_SONAR.md](./GUIA_OPERATIVA_RAPIDA_SONAR.md)
-- [docs/FESTIVAL_DAY_RUNBOOK.md](./docs/FESTIVAL_DAY_RUNBOOK.md)
-
-## Documentacion principal
-
-- [ARCHITECTURE.md](./ARCHITECTURE.md)
-- [GUIA_OPERATIVA_RAPIDA_SONAR.md](./GUIA_OPERATIVA_RAPIDA_SONAR.md)
-- [CONCURRENCY_GUARANTEES.md](./CONCURRENCY_GUARANTEES.md)
-- [DATA_EXPORTS.md](./DATA_EXPORTS.md)
-- [DATASETS_CODEBOOK.md](./DATASETS_CODEBOOK.md)
-- [TELEMETRY_SPEC.md](./TELEMETRY_SPEC.md)
-- [UI_LEXICON.md](./UI_LEXICON.md)
-- [RAILWAY_HOSTALIA_DEPLOY.md](./RAILWAY_HOSTALIA_DEPLOY.md)
-- [LOCAL_TO_PRODUCTION.md](./LOCAL_TO_PRODUCTION.md)
-- [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md)
+1. [docs/REQUIREMENTS_CONSOLIDATED.md](./docs/REQUIREMENTS_CONSOLIDATED.md)
+2. [docs/METHODOLOGY.md](./docs/METHODOLOGY.md)
+3. [docs/COAUTHOR_REVIEW_GUIDE.md](./docs/COAUTHOR_REVIEW_GUIDE.md)
+4. [GUIA_OPERATIVA_RAPIDA_SONAR.md](./GUIA_OPERATIVA_RAPIDA_SONAR.md)
+5. [docs/FESTIVAL_DAY_RUNBOOK.md](./docs/FESTIVAL_DAY_RUNBOOK.md)
 
 ## Arranque rapido local
 
@@ -103,7 +90,7 @@ Si necesitas operar la app en vivo:
 Copy-Item .env.local.example .env.local
 ```
 
-2. Levanta toda la arquitectura:
+2. Levanta la arquitectura:
 
 ```powershell
 docker compose --env-file .env.local up --build
@@ -114,44 +101,3 @@ docker compose --env-file .env.local up --build
 - frontend: [http://localhost:3000](http://localhost:3000)
 - API live: [http://127.0.0.1:8000/health/live](http://127.0.0.1:8000/health/live)
 - API ready: [http://127.0.0.1:8000/health/ready](http://127.0.0.1:8000/health/ready)
-
-## Codigos demo utiles
-
-Estos codigos sirven para revision visual y no deben contaminar las series reales:
-
-- `1234`: ganador demo
-- `12341`: control demo
-- `12342`: `seed_low` demo
-- `12343`: `seed_high` demo
-
-## Principios del proyecto
-
-- una sola arquitectura para local, review y produccion,
-- misma logica experimental en todos los entornos,
-- estado autoritativo en backend,
-- trazabilidad suficiente para auditoria y analisis,
-- i18n y telemetria desde el inicio,
-- UX mobile-first y una sola accion clara por pantalla,
-- documentacion honesta sobre lo ya resuelto y lo todavia pendiente.
-
-## Limitaciones importantes que conviene conocer
-
-- la tasa de payout es probabilistica esperada, no una cuota exacta cerrada,
-- el dominio publico del backend en Railway puede cambiar si se regenera el servicio,
-- los datos de pago y los del experimento comparten hoy la misma infraestructura SQL,
-- el fallback a Qualtrics no es automatico: debe planificarse como operacion externa o via redirect controlado.
-
-## Que no se publica
-
-Este repositorio esta preparado para no subir:
-
-- secretos reales de entorno,
-- bases de datos locales,
-- `node_modules`, builds y caches,
-- logs y artefactos temporales.
-
-Los ejemplos compartibles estan en:
-
-- `.env.local.example`
-- `.env.classroom.example`
-- `.env.production.example`

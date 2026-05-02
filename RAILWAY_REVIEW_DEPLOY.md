@@ -170,10 +170,9 @@ La API esta bien si `ready` devuelve que:
 
 Para revisar pantallas sin contaminar series reales, puedes usar los codigos demo del frontend:
 
-- `1234` -> ganador demo
-- `12341` -> control demo
-- `12342` -> `seed_low` demo
-- `12343` -> `seed_high` demo
+- `CTRL1234` -> control demo ganador
+- `NORM0000` -> `norm_0`
+- `NORM0001` -> `norm_1`
 
 ## Seguridad minima recomendada
 
