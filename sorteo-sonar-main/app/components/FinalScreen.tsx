@@ -1,8 +1,7 @@
-import { useEffect, useMemo } from "react";
+import { memo, useMemo } from "react";
 import { ScreenFrame } from "./ScreenFrame";
 import { useLanguage } from "../utils/LanguageContext";
 import { usePageTelemetry } from "../utils/usePageTelemetry";
-import { useSession } from "../utils/SessionContext";
 
 interface FinalScreenProps {
   eyebrow: string;
@@ -10,27 +9,18 @@ interface FinalScreenProps {
   screenName: "exit_final" | "payout_final";
 }
 
-export function FinalScreen({
+export const FinalScreen = memo(function FinalScreen({
   eyebrow,
   footerText,
   screenName,
 }: FinalScreenProps) {
-  const { copy, language } = useLanguage();
-  const { saveDisplaySnapshot } = useSession();
+  const { copy } = useLanguage();
   const { trackClick } = usePageTelemetry(screenName);
 
   const footerMatch = useMemo(
     () => footerText.match(/^(.*?)(cotec\.es)(.*)$/i),
     [footerText],
   );
-
-  useEffect(() => {
-    void saveDisplaySnapshot({
-      screen_name: screenName,
-      language,
-      final_message_text: `${footerText} ${copy.common.finalClosingMessage}`,
-    });
-  }, [copy.common.finalClosingMessage, footerText, language, saveDisplaySnapshot, screenName]);
 
   return (
     <ScreenFrame>
@@ -78,4 +68,4 @@ export function FinalScreen({
       </div>
     </ScreenFrame>
   );
-}
+});

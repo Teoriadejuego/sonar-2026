@@ -6,19 +6,21 @@ import { FinalScreen } from "../components/FinalScreen";
 import { ScreenFrame } from "../components/ScreenFrame";
 import { useLanguage } from "../utils/LanguageContext";
 import { usePageTelemetry } from "../utils/usePageTelemetry";
-import { useSession } from "../utils/SessionContext";
+import {
+  useSessionActions,
+  useSessionRuntime,
+} from "../utils/SessionContext";
 import {
   formatCopy,
   translateServerError,
-  UI_LEXICON,
 } from "../utils/uiLexicon";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: `${UI_LEXICON.es.common.appTitle} - ${UI_LEXICON.es.paymentPage.eyebrow}` },
+    { title: "SONAR 2026 - Cobro" },
     {
       name: "description",
-      content: UI_LEXICON.es.paymentPage.title.replace(/\n/g, " "),
+      content: "Pantalla de cobro y confirmacion del premio SONAR 2026.",
     },
   ];
 }
@@ -40,13 +42,14 @@ function normalizeBraceletInput(raw: string) {
 
 export default function PayoutRoute() {
   const { copy, language, setLanguage } = useLanguage();
+  const { session } = useSessionRuntime();
   const {
-    session,
+    createReferralInviteLink,
     lookupPaymentCode,
     submitPaymentRequest,
     submitClaimFollowup,
     pushTelemetry,
-  } = useSession();
+  } = useSessionActions();
   const { trackClick } = usePageTelemetry("payout");
   const paymentCopy = copy.paymentPage;
   const bonusCopy = copy.bonusDraw;
@@ -73,17 +76,6 @@ export default function PayoutRoute() {
     null,
   );
   const autoLookupPendingRef = useRef(false);
-
-  const inviteLink =
-    typeof window === "undefined"
-      ? ""
-      : `${window.location.origin}/`;
-  const whatsappText = encodeURIComponent(
-    formatCopy(paymentCopy.successShareMessageTemplate, {
-      link: inviteLink,
-    }),
-  );
-  const whatsappLink = `https://wa.me/?text=${whatsappText}`;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -179,9 +171,6 @@ export default function PayoutRoute() {
   }, [code]);
 
   const isSubmitted = completionMode !== null;
-  const isBraceletMismatch =
-    statusTone === "error" && statusMessage === paymentCopy.braceletMismatch;
-
   const handleSubmit = async (donationRequested: boolean) => {
     const normalizedCode = code.trim().toUpperCase();
     const normalizedBraceletId = braceletId.trim().toUpperCase();
@@ -289,6 +278,52 @@ export default function PayoutRoute() {
     });
   };
 
+  const handleSuccessShare = async () => {
+    trackClick("payment_success_share_whatsapp", {
+      target: "payment_success_share_whatsapp",
+      role: "button",
+      ctaKind: "secondary",
+    });
+    const popup =
+      typeof window === "undefined"
+        ? null
+        : window.open("about:blank", "_blank", "noopener,noreferrer");
+    const fallbackInviteLink =
+      typeof window === "undefined" ? "" : `${window.location.origin}/`;
+    try {
+      const shareUrl = session
+        ? await createReferralInviteLink({
+            channel: "whatsapp",
+            trafficSource: "whatsapp",
+            trafficMedium: "social",
+            campaignCode: "festival_invite_payout",
+            targetPath: "/",
+          })
+        : fallbackInviteLink;
+      const whatsappLink = `https://wa.me/?text=${encodeURIComponent(
+        formatCopy(paymentCopy.successShareMessageTemplate, {
+          link: shareUrl,
+        }),
+      )}`;
+      if (popup) {
+        popup.location.href = whatsappLink;
+      } else if (typeof window !== "undefined") {
+        window.open(whatsappLink, "_blank", "noopener,noreferrer");
+      }
+    } catch {
+      const fallbackWhatsappLink = `https://wa.me/?text=${encodeURIComponent(
+        formatCopy(paymentCopy.successShareMessageTemplate, {
+          link: fallbackInviteLink,
+        }),
+      )}`;
+      if (popup) {
+        popup.location.href = fallbackWhatsappLink;
+      } else if (typeof window !== "undefined") {
+        window.open(fallbackWhatsappLink, "_blank", "noopener,noreferrer");
+      }
+    }
+  };
+
   if (showFinalScreen) {
     return (
       <FinalScreen
@@ -379,21 +414,13 @@ export default function PayoutRoute() {
                 });
               }}
             >
-              <a
-                href={whatsappLink}
-                target="_blank"
-                rel="noreferrer"
-                onClick={() =>
-                  trackClick("payment_success_share_whatsapp", {
-                    target: "payment_success_share_whatsapp",
-                    role: "link",
-                    ctaKind: "secondary",
-                  })
-                }
+              <button
+                type="button"
+                onClick={() => void handleSuccessShare()}
                 className="sonar-share-button w-full"
               >
                 {paymentCopy.successShareLabel}
-              </a>
+              </button>
             </BonusDrawPanel>
 
             <button
@@ -436,7 +463,9 @@ export default function PayoutRoute() {
                 <label className="sonar-field-label">{paymentCopy.codeLabel}</label>
                 <input
                   value={code}
-                  readOnly
+                  onChange={(event) =>
+                    setCode(event.target.value.trim().toUpperCase())
+                  }
                   className="sonar-field sonar-field--code"
                 />
               </div>
@@ -516,17 +545,6 @@ export default function PayoutRoute() {
             </div>
           )}
 
-          {isBraceletMismatch ? (
-            <button
-              type="button"
-              onClick={handleSkipClaim}
-              disabled={isSubmitting}
-              className="sonar-secondary-button w-full"
-            >
-              {paymentCopy.skipMismatchLabel}
-            </button>
-          ) : null}
-
           <div className="mt-auto space-y-3">
             <button
               type="button"
@@ -548,6 +566,15 @@ export default function PayoutRoute() {
                 {paymentCopy.donateLabel}
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={handleSkipClaim}
+              disabled={isSubmitting}
+              className="sonar-secondary-button w-full"
+            >
+              {paymentCopy.skipMismatchLabel}
+            </button>
           </div>
         </div>
 

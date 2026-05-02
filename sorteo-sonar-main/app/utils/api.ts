@@ -1,5 +1,8 @@
 const PUBLIC_REVIEW_API_URL =
   "https://api-production-9fe7b.up.railway.app";
+const INSTALLATION_STORAGE_KEY = "sonar_installation_v1";
+const PUBLIC_CONFIG_STORAGE_KEY = "sonar_public_config_v1";
+const INSTALLATION_HEADER_NAME = "X-Sonar-Installation";
 
 function resolveApiBaseUrl() {
   const envUrl = import.meta.env.API_BASE_URL || import.meta.env.VITE_API_URL;
@@ -22,6 +25,35 @@ function resolveApiBaseUrl() {
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
+
+function readInstallationIdFromStorage() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  return window.localStorage.getItem(INSTALLATION_STORAGE_KEY);
+}
+
+function readStoredJson<T>(key: string): T | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const raw = window.localStorage.getItem(key);
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredJson(key: string, value: unknown) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(key, JSON.stringify(value));
+}
 
 const DEFAULT_TREATMENTS = [
   ...Array.from({ length: 61 }, (_, index) => `norm_${index}`),
@@ -59,7 +91,6 @@ export type PublicConfig = {
   payment_winners_per_deck: number;
   prize_eur: Record<string, number>;
   treatments: string[];
-  seed_initial_counts: Record<string, number>;
   treatment_display_counts: Record<string, number | null>;
   treatment_targets: Record<string, number | null>;
   collapse_consecutive_claims: number;
@@ -76,8 +107,16 @@ export type PublicConfig = {
   };
   experiment_control: {
     status: "active" | "paused";
+    mode: "live" | "closing" | "closed";
     paused: boolean;
     paused_at: string | null;
+    closing: boolean;
+    closed: boolean;
+    accepting_entries: boolean;
+    accepting_inflight_sessions: boolean;
+    mode_changed_at: string | null;
+    mode_changed_by: string | null;
+    mode_reason: string | null;
   };
   support: {
     winner_whatsapp_phone: string;
@@ -181,6 +220,13 @@ export type PublicConfig = {
   };
 };
 
+export class OfflineError extends Error {
+  constructor(message = "Sin conexion") {
+    super(message);
+    this.name = "OfflineError";
+  }
+}
+
 export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
   schema_version: "sonar-2026-v9",
   experiment_version: "sonar-2026-field-v5",
@@ -196,11 +242,6 @@ export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
   payment_winners_per_deck: 1,
   prize_eur: { "1": 10, "2": 20, "3": 30, "4": 40, "5": 50, "6": 60 },
   treatments: DEFAULT_TREATMENTS,
-  seed_initial_counts: Object.fromEntries(
-    Object.entries(DEFAULT_TREATMENT_DISPLAY_COUNTS)
-      .filter(([, value]) => value !== null)
-      .map(([key, value]) => [key, value as number]),
-  ) as Record<string, number>,
   treatment_display_counts: DEFAULT_TREATMENT_DISPLAY_COUNTS,
   treatment_targets: DEFAULT_TREATMENT_TARGETS,
   collapse_consecutive_claims: 0,
@@ -217,8 +258,16 @@ export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
   },
   experiment_control: {
     status: "active",
+    mode: "live",
     paused: false,
     paused_at: null,
+    closing: false,
+    closed: false,
+    accepting_entries: true,
+    accepting_inflight_sessions: true,
+    mode_changed_at: null,
+    mode_changed_by: null,
+    mode_reason: null,
   },
   support: {
     winner_whatsapp_phone: "0034693494561",
@@ -348,6 +397,14 @@ export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
   },
 };
 
+export function readCachedPublicConfig(): PublicConfig | null {
+  return readStoredJson<PublicConfig>(PUBLIC_CONFIG_STORAGE_KEY);
+}
+
+export function writeCachedPublicConfig(config: PublicConfig) {
+  writeStoredJson(PUBLIC_CONFIG_STORAGE_KEY, config);
+}
+
 export type SessionState =
   | "assigned"
   | "in_game"
@@ -430,16 +487,16 @@ export type ClientContextSummary = {
 };
 
 export type SessionMetricsSummary = {
-  resume_count: number;
-  refresh_count: number;
-  blur_count: number;
-  network_error_count: number;
-  retry_count: number;
-  click_count_total: number;
-  screen_changes_count: number;
-  language_change_count: number;
-  telemetry_event_count: number;
   max_event_sequence_number: number;
+  resume_count?: number;
+  refresh_count?: number;
+  blur_count?: number;
+  network_error_count?: number;
+  retry_count?: number;
+  click_count_total?: number;
+  screen_changes_count?: number;
+  language_change_count?: number;
+  telemetry_event_count?: number;
 };
 
 export type ConsentRecordSummary = {
@@ -467,13 +524,14 @@ export type SnapshotRecordSummary = {
 };
 
 export type SessionPayload = {
+  payload_mode: "flow" | "analytics";
   session_id: string;
   state: SessionState;
   screen: ScreenCursor;
   experiment_version: string;
   experiment_phase: string;
   phase_version: string;
-  phase_activation_status: string;
+  phase_activation_status?: string;
   ui_version: string;
   consent_version: string;
   treatment_version: string;
@@ -539,8 +597,8 @@ export type SessionPayload = {
   throws: ThrowSummary[];
   claim: ClaimSummary | null;
   payment: PaymentSummary;
-  quality_flags: string[];
-  antifraud_flags: string[];
+  quality_flags?: string[];
+  antifraud_flags?: string[];
   client_context?: ClientContextSummary | null;
   session_metrics?: SessionMetricsSummary | null;
   consent_record?: ConsentRecordSummary | null;
@@ -569,8 +627,8 @@ export type SessionPayload = {
     completed_count: number;
     visible_count_target: number;
     actual_count_target: number;
-    visible_window_version: number;
-    actual_window_version: number;
+    visible_window_version?: number;
+    actual_window_version?: number;
   };
 };
 
@@ -644,18 +702,6 @@ export type ClientContext = {
   timezone_offset_minutes?: number;
 };
 
-export type DisplaySnapshotRequest = {
-  screen_name: string;
-  language?: string;
-  treatment_message_text?: string;
-  control_message_text?: string;
-  final_message_text?: string;
-  payout_reference_shown?: string;
-  payout_phone_shown?: string;
-  final_amount_eur?: number;
-  rerolls_visible?: number[];
-};
-
 export type PaymentLookupResponse = {
   valid: boolean;
   status: string;
@@ -679,6 +725,19 @@ export type InterestSignupResponse = {
   stored: boolean;
 };
 
+export type ReferralLinkResponse = {
+  ref_id: string;
+  share_url: string;
+  referral_code: string;
+  channel: string;
+  traffic_source?: string | null;
+  traffic_medium?: string | null;
+  campaign_code?: string | null;
+  click_count: number;
+  conversion_count: number;
+  invite_to_entry_ratio: number;
+};
+
 export class UserNotFoundError extends Error {
   constructor(message: string) {
     super(message);
@@ -698,58 +757,42 @@ async function parseError(response: Response, fallback: string) {
 }
 
 type RequestTelemetryReporter = (event: TelemetryEventRequest) => void;
-let apiTelemetryReporter: RequestTelemetryReporter | null = null;
 
 export function setApiTelemetryReporter(
-  reporter: RequestTelemetryReporter | null,
+  _reporter: RequestTelemetryReporter | null,
 ) {
-  apiTelemetryReporter = reporter;
+  return;
 }
 
 async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
-  const startedAt = Date.now();
-  const method = init?.method ?? "GET";
-  const telemetryAllowed = input !== "/v1/telemetry/batch";
   try {
-    const response = await fetch(`${API_BASE_URL}${input}`, init);
-    if (telemetryAllowed && apiTelemetryReporter) {
-      apiTelemetryReporter({
-        event_type: "network",
-        event_name: response.ok ? "api_success" : "api_error",
-        endpoint_name: input,
-        request_method: method,
-        status_code: response.status,
-        latency_ms: Date.now() - startedAt,
-        network_status:
-          typeof navigator !== "undefined" && navigator.onLine
-            ? "online"
-            : "offline",
-      });
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      throw new OfflineError();
     }
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new UserNotFoundError(await parseError(response, "No encontrado"));
+    const nextInit: RequestInit = { ...(init ?? {}) };
+    const headers = new Headers(nextInit.headers ?? undefined);
+    const installationId = readInstallationIdFromStorage();
+    if (installationId && !headers.has(INSTALLATION_HEADER_NAME)) {
+      headers.set(INSTALLATION_HEADER_NAME, installationId);
     }
-    throw new Error(await parseError(response, "Error inesperado"));
-  }
-  return response.json() as Promise<T>;
+    nextInit.headers = headers;
+    const response = await fetch(`${API_BASE_URL}${input}`, nextInit);
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new UserNotFoundError(await parseError(response, "No encontrado"));
+      }
+      throw new Error(await parseError(response, "Error inesperado"));
+    }
+    return response.json() as Promise<T>;
   } catch (error) {
-    if (telemetryAllowed && apiTelemetryReporter) {
-      apiTelemetryReporter({
-        event_type: "network",
-        event_name: "api_exception",
-        endpoint_name: input,
-        request_method: method,
-        latency_ms: Date.now() - startedAt,
-        network_status:
-          typeof navigator !== "undefined" && navigator.onLine
-            ? "online"
-            : "offline",
-        error_name: error instanceof Error ? error.name : "RequestError",
-        payload: {
-          message: error instanceof Error ? error.message : "Unexpected request error",
-        },
-      });
+    if (error instanceof OfflineError) {
+      throw error;
+    }
+    if (
+      error instanceof TypeError &&
+      error.message.toLowerCase().includes("failed to fetch")
+    ) {
+      throw new OfflineError();
     }
     throw error;
   }
@@ -819,12 +862,16 @@ export async function resumeSession(
 export async function updateScreenCursor(
   sessionId: string,
   screen: ScreenCursor,
+  init?: RequestInit,
 ): Promise<{ session: SessionPayload }> {
+  const headers = new Headers(init?.headers ?? undefined);
+  headers.set("Content-Type", "application/json");
   return requestJson<{ session: SessionPayload }>(
     `/v1/session/${sessionId}/screen`,
     {
+      ...(init ?? {}),
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ screen }),
     },
   );
@@ -835,10 +882,15 @@ export async function rollSession(
   attemptIndex: number,
   reactionMs: number | undefined,
   idempotencyKey: string,
+  init?: RequestInit,
 ): Promise<RollResponse> {
   return requestJson<RollResponse>(`/v1/session/${sessionId}/roll`, {
+    ...init,
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
     body: JSON.stringify({
       attempt_index: attemptIndex,
       reaction_ms: reactionMs,
@@ -850,12 +902,17 @@ export async function rollSession(
 export async function prepareReport(
   sessionId: string,
   idempotencyKey: string,
+  init?: RequestInit,
 ): Promise<{ session: SessionPayload }> {
   return requestJson<{ session: SessionPayload }>(
     `/v1/session/${sessionId}/prepare-report`,
     {
+      ...init,
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {}),
+      },
       body: JSON.stringify({ idempotency_key: idempotencyKey }),
     },
   );
@@ -867,12 +924,17 @@ export async function submitReport(
   reactionMs: number | undefined,
   idempotencyKey: string,
   language?: string,
+  init?: RequestInit,
 ): Promise<{ session: SessionPayload }> {
   return requestJson<{ session: SessionPayload }>(
     `/v1/session/${sessionId}/submit-report`,
     {
+      ...init,
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {}),
+      },
       body: JSON.stringify({
         reported_value: reportedValue,
         reaction_ms: reactionMs,
@@ -893,20 +955,6 @@ export async function submitClaimFollowup(
 ): Promise<{ session: SessionPayload }> {
   return requestJson<{ session: SessionPayload }>(
     `/v1/session/${sessionId}/claim-followup`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    },
-  );
-}
-
-export async function captureDisplaySnapshot(
-  sessionId: string,
-  payload: DisplaySnapshotRequest,
-): Promise<{ ok: boolean }> {
-  return requestJson<{ ok: boolean }>(
-    `/v1/session/${sessionId}/display-snapshot`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -961,13 +1009,46 @@ export async function submitInterestSignup(
   });
 }
 
+export async function createReferralLink(
+  sessionId: string,
+  options?: {
+    channel?: string;
+    trafficSource?: string;
+    trafficMedium?: string;
+    campaignCode?: string;
+    targetPath?: string;
+  },
+): Promise<ReferralLinkResponse> {
+  const response = await requestJson<{ ok: boolean; link: ReferralLinkResponse }>(
+    "/v1/referrals/link",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: sessionId,
+        channel: options?.channel ?? "whatsapp",
+        traffic_source: options?.trafficSource ?? null,
+        traffic_medium: options?.trafficMedium ?? null,
+        campaign_code: options?.campaignCode ?? null,
+        target_path: options?.targetPath ?? "/",
+      }),
+    },
+  );
+  return response.link;
+}
+
 export async function postTelemetryBatch(
   sessionId: string,
   events: TelemetryEventRequest[],
+  init?: RequestInit,
 ): Promise<{ accepted_count: number }> {
   return requestJson<{ accepted_count: number }>("/v1/telemetry/batch", {
+    ...init,
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
     body: JSON.stringify({
       session_id: sessionId,
       events,

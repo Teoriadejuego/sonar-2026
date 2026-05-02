@@ -16,14 +16,18 @@ os.environ["REQUIRE_ADMIN_AUTH"] = "false"
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from database import engine
+from main import bootstrap_demo_data
 from migrate import (
+    assert_linear_migration_history,
     alembic_config,
     apply_migrations,
     current_database_revision,
     head_revision,
+    schema_matches_current_models,
     seed_demo,
 )
-from sqlmodel import SQLModel
+from models import PaymentDeck, ResultDeck, SeriesRoot, TreatmentDeck
+from sqlmodel import SQLModel, Session, select
 
 
 class MigrationRecoveryTests(unittest.TestCase):
@@ -51,7 +55,42 @@ class MigrationRecoveryTests(unittest.TestCase):
             head_revision(alembic_config()),
         )
 
-    def test_unknown_alembic_revision_is_not_silently_repaired_when_schema_is_incomplete(self) -> None:
+    def test_apply_migrations_is_idempotent_from_non_repo_cwd(self) -> None:
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(TEST_DB_DIR)
+            migrated = apply_migrations(strict=True)
+        finally:
+            os.chdir(original_cwd)
+
+        self.assertTrue(migrated)
+        schema_matches, summary = schema_matches_current_models()
+        self.assertTrue(schema_matches, summary)
+        self.assertEqual(current_database_revision(), head_revision(alembic_config()))
+
+    def test_migration_history_stays_linear(self) -> None:
+        revisions = assert_linear_migration_history(alembic_config())
+
+        self.assertEqual(revisions[0], head_revision(alembic_config()))
+        self.assertIn("20260319_01", revisions)
+
+    def test_bootstrap_demo_data_is_idempotent_for_roots_and_decks(self) -> None:
+        with Session(engine) as db:
+            bootstrap_demo_data(db)
+            bootstrap_demo_data(db)
+            db.commit()
+
+            root_count = len(db.exec(select(SeriesRoot)).all())
+            treatment_deck_count = len(db.exec(select(TreatmentDeck)).all())
+            payment_deck_count = len(db.exec(select(PaymentDeck)).all())
+            result_deck_count = len(db.exec(select(ResultDeck)).all())
+
+        self.assertEqual(root_count, 4)
+        self.assertEqual(treatment_deck_count, 4)
+        self.assertEqual(payment_deck_count, 4)
+        self.assertEqual(result_deck_count, 3)
+
+    def test_unknown_alembic_revision_is_repaired_when_schema_is_incomplete(self) -> None:
         with engine.begin() as connection:
             connection.execute(text("DROP TABLE result_decks"))
             connection.execute(
@@ -59,10 +98,18 @@ class MigrationRecoveryTests(unittest.TestCase):
                 {"version_num": "missing_revision_2026"},
             )
 
-        with self.assertRaises(RuntimeError) as context:
-            apply_migrations()
+        apply_migrations()
 
-        self.assertIn("automatic repair was refused", str(context.exception))
+        with engine.begin() as connection:
+            tables = {
+                row[0]
+                for row in connection.execute(
+                    text("SELECT name FROM sqlite_master WHERE type = 'table'")
+                )
+            }
+
+        self.assertIn("result_decks", tables)
+        self.assertEqual(current_database_revision(), head_revision(alembic_config()))
 
     def test_head_revision_backfills_missing_experiment_state_columns(self) -> None:
         SQLModel.metadata.drop_all(engine)
@@ -377,7 +424,7 @@ class MigrationRecoveryTests(unittest.TestCase):
         self.assertEqual(current_database_revision(), head_revision(alembic_config()))
 
     def test_seed_demo_failure_does_not_abort_migrate_process(self) -> None:
-        with mock.patch("migrate.bootstrap_demo_data", side_effect=RuntimeError("boom")):
+        with mock.patch("main.bootstrap_demo_data", side_effect=RuntimeError("boom")):
             seed_demo()
 
     def test_head_revision_recovers_missing_tables_from_inconsistent_schema(self) -> None:

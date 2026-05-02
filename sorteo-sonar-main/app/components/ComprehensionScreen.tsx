@@ -1,20 +1,27 @@
+import { memo, useMemo } from "react";
 import { ScreenFrame } from "./ScreenFrame";
 import { useLanguage } from "../utils/LanguageContext";
 import { usePageTelemetry } from "../utils/usePageTelemetry";
-import { useSession } from "../utils/SessionContext";
+import { usePublicConfig } from "../utils/SessionContext";
 
 interface ComprehensionScreenProps {
   onPass: () => Promise<void> | void;
 }
 
-export function ComprehensionScreen({ onPass }: ComprehensionScreenProps) {
+export const ComprehensionScreen = memo(function ComprehensionScreen({
+  onPass,
+}: ComprehensionScreenProps) {
   const { copy } = useLanguage();
-  const { publicConfig } = useSession();
+  const publicConfig = usePublicConfig();
   const { trackClick } = usePageTelemetry("comprehension");
   const comprehensionCopy = copy.comprehension;
-  const prizes = Object.entries(publicConfig.prize_eur)
-    .map(([number, prize]) => ({ number: Number(number), prize }))
-    .sort((left, right) => left.number - right.number);
+  const prizes = useMemo(
+    () =>
+      Object.entries(publicConfig.prize_eur)
+        .map(([number, prize]) => ({ number: Number(number), prize }))
+        .sort((left, right) => left.number - right.number),
+    [publicConfig.prize_eur],
+  );
 
   return (
     <ScreenFrame>
@@ -64,4 +71,4 @@ export function ComprehensionScreen({ onPass }: ComprehensionScreenProps) {
       </div>
     </ScreenFrame>
   );
-}
+});

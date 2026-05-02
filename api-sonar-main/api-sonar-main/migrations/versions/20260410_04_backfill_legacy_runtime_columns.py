@@ -137,7 +137,7 @@ def upgrade() -> None:
         op.execute(
             """
             UPDATE telemetry_events
-            SET is_retry = COALESCE(is_retry, 0)
+            SET is_retry = COALESCE(is_retry, false)
             """
         )
     for index_name, columns in {

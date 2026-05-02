@@ -91,6 +91,53 @@ button:disabled {
   width: 100%;
 }
 
+.sonar-offline-banner {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  width: 100%;
+  padding: 0.75rem 1rem 0;
+  box-sizing: border-box;
+}
+
+.sonar-offline-banner__inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  border: 1px solid #d7b75f;
+  border-radius: 1rem;
+  background: rgba(255, 243, 191, 0.96);
+  color: #5f4406;
+  box-shadow: 0 10px 24px rgba(17, 17, 17, 0.08);
+  padding: 0.85rem 1rem;
+}
+
+.sonar-offline-banner__title,
+.sonar-offline-banner__body,
+.sonar-offline-banner__hint {
+  margin: 0;
+}
+
+.sonar-offline-banner__title {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sonar-offline-banner__body {
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+  line-height: 1.42;
+}
+
+.sonar-offline-banner__hint {
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: rgba(95, 68, 6, 0.78);
+}
+
 .webapp-container {
   width: 100%;
   min-height: 100svh;
@@ -131,6 +178,12 @@ button:disabled {
   .sonar-app-layer {
     display: flex;
     justify-content: center;
+  }
+
+  .sonar-offline-banner {
+    padding-top: 0;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 
   .webapp-container {
@@ -289,7 +342,7 @@ button:disabled {
 .sonar-field-label {
   display: block;
   margin-bottom: 0.6rem;
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -311,14 +364,14 @@ button:disabled {
 }
 
 .sonar-field {
-  min-height: 3.7rem;
-  padding: 0.95rem 1rem;
-  font-size: 1rem;
+  min-height: 4rem;
+  padding: 1rem 1.05rem;
+  font-size: 1.04rem;
   line-height: 1.2;
 }
 
 .sonar-field--code {
-  font-size: 1.1rem;
+  font-size: 1.16rem;
   font-weight: 700;
   letter-spacing: 0.12em;
 }
@@ -362,13 +415,13 @@ button:disabled {
 
 .sonar-primary-button {
   width: 100%;
-  min-height: 3.7rem;
-  padding: 0.95rem 1.35rem;
+  min-height: 4.05rem;
+  padding: 1rem 1.4rem;
   border: 1px solid var(--text);
   border-radius: var(--radius-button);
   background: var(--text);
   color: #fff;
-  font-size: 0.94rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -376,8 +429,8 @@ button:disabled {
 }
 
 .sonar-primary-button--hero {
-  min-height: 4.3rem;
-  font-size: 1rem;
+  min-height: 4.7rem;
+  font-size: 1.05rem;
   letter-spacing: 0.2em;
 }
 
@@ -387,13 +440,13 @@ button:disabled {
 }
 
 .sonar-secondary-button {
-  min-height: 3rem;
-  padding: 0.8rem 1rem;
+  min-height: 3.45rem;
+  padding: 0.92rem 1.1rem;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-button);
   background: transparent;
   color: var(--text);
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -406,15 +459,16 @@ button:disabled {
 
 .sonar-secondary-button--wide {
   width: 100%;
-  min-height: 3.35rem;
+  min-height: 3.7rem;
 }
 
 .sonar-text-button {
-  padding: 0;
+  min-height: 2.75rem;
+  padding: 0.35rem 0.2rem;
   border: none;
   background: transparent;
   color: var(--muted);
-  font-size: 0.74rem;
+  font-size: 0.9rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -470,8 +524,8 @@ button:disabled {
   appearance: none;
   display: grid;
   place-content: center;
-  width: 1.15rem;
-  height: 1.15rem;
+  width: 1.3rem;
+  height: 1.3rem;
   margin-top: 0.1rem;
   flex-shrink: 0;
   border: 1px solid var(--line-strong);
@@ -481,8 +535,8 @@ button:disabled {
 
 .sonar-checkbox::before {
   content: "";
-  width: 0.55rem;
-  height: 0.55rem;
+  width: 0.64rem;
+  height: 0.64rem;
   border-radius: 0.14rem;
   background: var(--text);
   transform: scale(0);
@@ -494,7 +548,7 @@ button:disabled {
 }
 
 .sonar-checkbox-label {
-  font-size: 0.97rem;
+  font-size: 1rem;
   line-height: 1.45;
   color: var(--text);
 }
@@ -510,7 +564,7 @@ button:disabled {
   display: flex;
   gap: 0.85rem;
   align-items: flex-start;
-  padding: 0.95rem 1rem;
+  padding: 1.08rem 1rem;
   border-top: 1px solid var(--line);
   background: transparent;
   transition:
@@ -644,8 +698,8 @@ button:disabled {
 
 .sonar-option-button {
   width: 100%;
-  min-height: 4.4rem;
-  padding: 1rem 1.15rem;
+  min-height: 4.9rem;
+  padding: 1.1rem 1.2rem;
   border: 1px solid var(--line);
   border-radius: 1.2rem;
   background: var(--surface-strong);
@@ -675,12 +729,12 @@ button:disabled {
 }
 
 .sonar-number-button {
-  min-height: 5.4rem;
+  min-height: 5.9rem;
   border: 1px solid var(--line);
   border-radius: 1.15rem;
   background: #fff;
   color: var(--text);
-  font-size: 2rem;
+  font-size: 2.15rem;
   font-weight: 900;
   letter-spacing: -0.05em;
   box-shadow: var(--shadow-soft);
@@ -1095,6 +1149,14 @@ button:disabled {
 }
 
 .dice {
+  --dice-roll-x: 1.25turn;
+  --dice-roll-y: 0.85turn;
+  --dice-roll-z: 0.24turn;
+  --dice-roll-lift: -18px;
+  --dice-roll-squash: 0.92;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   width: clamp(10.5rem, 46vw, 13rem);
   height: clamp(10.5rem, 46vw, 13rem);
   border-radius: 1.5rem;
@@ -1112,7 +1174,57 @@ button:disabled {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 16px 34px rgba(0, 0, 0, 0.18);
+  transform: translateZ(0);
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform, box-shadow;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 220ms ease;
   user-select: none;
+}
+
+.dice::before {
+  content: "";
+  position: absolute;
+  inset: 0.65rem;
+  border-radius: 1.15rem;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 58%);
+  opacity: 0.95;
+  z-index: 0;
+}
+
+.dice::after {
+  content: "";
+  position: absolute;
+  inset: -35%;
+  background:
+    linear-gradient(
+      112deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.04) 34%,
+      rgba(255, 255, 255, 0.34) 50%,
+      rgba(255, 255, 255, 0.04) 66%,
+      transparent 100%
+    );
+  opacity: 0;
+  transform: translate3d(-120%, 0, 0) rotate(12deg);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.dice__glyph {
+  position: relative;
+  z-index: 2;
+  display: inline-block;
+  transition: opacity 160ms ease, transform 220ms ease;
+}
+
+.dice__glyph--hidden {
+  opacity: 0;
+  transform: scale(0.72);
 }
 
 .dice--interactive:hover:not(:disabled) {
@@ -1124,21 +1236,32 @@ button:disabled {
   color: transparent;
 }
 
-.dice--empty::before {
-  content: "";
-  width: 1.2rem;
-  height: 1.2rem;
-  border-radius: 999px;
-  background: rgba(247, 245, 242, 0.18);
-  box-shadow: 0 0 0 0.8rem rgba(247, 245, 242, 0.05);
-}
-
 .dice--resolved {
   text-shadow: 0 12px 18px rgba(0, 0, 0, 0.18);
 }
 
 .dice--rolling {
-  animation: roll 900ms ease-in-out;
+  animation: dice-tumble 760ms cubic-bezier(0.18, 0.76, 0.24, 1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 32px rgba(0, 0, 0, 0.18);
+}
+
+.dice--rolling::after {
+  opacity: 0.72;
+  animation: dice-sheen 760ms linear;
+}
+
+.dice--awaiting {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 16px 28px rgba(0, 0, 0, 0.16);
+  animation: dice-hold 880ms ease-in-out infinite;
+}
+
+.dice--awaiting::after {
+  opacity: 0.42;
+  animation: dice-sheen 1280ms linear infinite;
 }
 
 @media (max-width: 480px) {
@@ -1189,14 +1312,56 @@ button:disabled {
   }
 }
 
-@keyframes roll {
+@keyframes dice-tumble {
   0% {
-    transform: rotate(0deg) scale(1);
+    transform:
+      translate3d(0, 0, 0)
+      rotateX(0turn)
+      rotateY(0turn)
+      rotateZ(0turn)
+      scale(1);
   }
-  50% {
-    transform: rotate(180deg) scale(0.94);
+  22% {
+    transform:
+      translate3d(0, var(--dice-roll-lift), 0)
+      rotateX(calc(var(--dice-roll-x) * 0.22))
+      rotateY(calc(var(--dice-roll-y) * 0.18))
+      rotateZ(calc(var(--dice-roll-z) * 0.12))
+      scale(1.04);
+  }
+  58% {
+    transform:
+      translate3d(0, 8px, 0)
+      rotateX(var(--dice-roll-x))
+      rotateY(var(--dice-roll-y))
+      rotateZ(var(--dice-roll-z))
+      scale(var(--dice-roll-squash));
   }
   100% {
-    transform: rotate(360deg) scale(1);
+    transform:
+      translate3d(0, 0, 0)
+      rotateX(calc(var(--dice-roll-x) + 0.68turn))
+      rotateY(calc(var(--dice-roll-y) + 0.46turn))
+      rotateZ(calc(var(--dice-roll-z) + 0.2turn))
+      scale(1);
+  }
+}
+
+@keyframes dice-sheen {
+  0% {
+    transform: translate3d(-120%, 0, 0) rotate(12deg);
+  }
+  100% {
+    transform: translate3d(120%, 0, 0) rotate(12deg);
+  }
+}
+
+@keyframes dice-hold {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -4px, 0) scale(1.015);
   }
 }

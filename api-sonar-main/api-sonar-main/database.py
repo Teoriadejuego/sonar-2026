@@ -11,6 +11,7 @@ engine_kwargs = {
     "connect_args": connect_args,
 }
 if not settings.database_is_sqlite:
+    connect_args["connect_timeout"] = settings.db_connect_timeout_seconds
     engine_kwargs.update(
         {
             "pool_size": settings.db_pool_size,
@@ -24,7 +25,7 @@ engine = create_engine(settings.database_url, **engine_kwargs)
 
 
 def get_session():
-    with Session(engine) as session:
+    with Session(engine, expire_on_commit=False) as session:
         yield session
 
 

@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from typing import Optional
 from uuid import uuid4
 
-from sqlalchemy import BigInteger, Column, Float, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Column, Float, Index, Text, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -20,6 +20,10 @@ class ExperimentState(SQLModel, table=True):
     id: str = Field(default="global", primary_key=True)
     current_phase: str = Field(default="phase_1_main", index=True)
     experiment_status: str = Field(default="active", index=True)
+    experiment_mode: str = Field(default="live", index=True)
+    experiment_mode_changed_at: Optional[datetime] = None
+    experiment_mode_changed_by: Optional[str] = Field(default=None, index=True)
+    experiment_mode_reason: Optional[str] = Field(default=None, sa_column=Column(Text))
     phase_transition_threshold: int = Field(default=6000)
     valid_completed_count: int = Field(default=0)
     phase_2_activated_at: Optional[datetime] = None
@@ -32,6 +36,28 @@ class ExperimentState(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=utcnow)
 
 
+class ExperimentClosureLog(SQLModel, table=True):
+    __tablename__ = "experiment_closure_logs"
+    __table_args__ = (
+        Index(
+            "ix_experiment_closure_logs_mode_timestamp",
+            "experiment_mode",
+            "timestamp",
+        ),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    experiment_mode: str = Field(index=True)
+    timestamp: datetime = Field(default_factory=utcnow, index=True)
+    actor: Optional[str] = Field(default=None, index=True)
+    reason: Optional[str] = Field(default=None, sa_column=Column(Text))
+    session_count_total: int = Field(default=0)
+    session_state_counts_json: str = Field(default="{}", sa_column=Column(Text, nullable=False))
+    series_count_total: int = Field(default=0)
+    series_count_closed: int = Field(default=0)
+    series_state_json: str = Field(default="[]", sa_column=Column(Text, nullable=False))
+
+
 class OperationalNote(SQLModel, table=True):
     __tablename__ = "operational_notes"
 
@@ -42,6 +68,125 @@ class OperationalNote(SQLModel, table=True):
     cleared_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
+
+
+class GatewayRoute(SQLModel, table=True):
+    __tablename__ = "gateway_routes"
+
+    id: str = Field(default_factory=make_uuid, primary_key=True)
+    qr_code: str = Field(unique=True, index=True)
+    zone_code: Optional[str] = Field(default=None, index=True)
+    primary_target_url: str = Field(sa_column=Column(Text, nullable=False))
+    backup_target_url: Optional[str] = Field(default=None, sa_column=Column(Text))
+    active_target: str = Field(default="primary", index=True)
+    enabled: bool = Field(default=True, index=True)
+    notes: Optional[str] = Field(default=None, sa_column=Column(Text))
+    last_switched_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
+class GatewayAccessLog(SQLModel, table=True):
+    __tablename__ = "gateway_access_logs"
+    __table_args__ = (
+        Index(
+            "ix_gateway_access_logs_qr_code_created_at",
+            "qr_code",
+            "created_at",
+        ),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    route_id: Optional[str] = Field(default=None, foreign_key="gateway_routes.id", index=True)
+    qr_code: str = Field(index=True)
+    zone_code: Optional[str] = Field(default=None, index=True)
+    session_id: Optional[str] = Field(default=None, foreign_key="sessions.id", index=True)
+    gateway_visit_id: str = Field(unique=True, index=True)
+    request_host: Optional[str] = Field(default=None, index=True)
+    request_path: str
+    query_string: Optional[str] = Field(default=None, sa_column=Column(Text))
+    selected_target: str = Field(default="primary", index=True)
+    resolved_target_url: Optional[str] = Field(default=None, sa_column=Column(Text))
+    redirect_status_code: Optional[int] = None
+    status: str = Field(default="redirected", index=True)
+    referer: Optional[str] = Field(default=None, sa_column=Column(Text))
+    traffic_source: Optional[str] = Field(default=None, index=True)
+    traffic_medium: Optional[str] = Field(default=None, index=True)
+    request_user_agent: Optional[str] = Field(default=None, sa_column=Column(Text))
+    ip_hash: Optional[str] = Field(default=None, index=True)
+    user_agent_hash: Optional[str] = Field(default=None, index=True)
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class ReferralLink(SQLModel, table=True):
+    __tablename__ = "referral_links"
+    __table_args__ = (
+        Index(
+            "ix_referral_links_inviter_session_id_created_at",
+            "inviter_session_id",
+            "created_at",
+        ),
+        Index(
+            "ix_referral_links_channel_created_at",
+            "channel",
+            "created_at",
+        ),
+    )
+
+    id: str = Field(default_factory=make_uuid, primary_key=True)
+    inviter_session_id: str = Field(foreign_key="sessions.id", index=True)
+    inviter_user_id: Optional[str] = Field(
+        default=None, foreign_key="users.id", index=True
+    )
+    inviter_referral_code: str = Field(index=True)
+    channel: str = Field(default="whatsapp", index=True)
+    traffic_source: Optional[str] = Field(default=None, index=True)
+    traffic_medium: Optional[str] = Field(default=None, index=True)
+    campaign_code: Optional[str] = Field(default=None, index=True)
+    target_path: str = Field(default="/", sa_column=Column(Text, nullable=False))
+    click_count: int = Field(default=0)
+    conversion_count: int = Field(default=0)
+    first_clicked_at: Optional[datetime] = None
+    last_clicked_at: Optional[datetime] = None
+    first_converted_at: Optional[datetime] = None
+    last_converted_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
+class ReferralClick(SQLModel, table=True):
+    __tablename__ = "referral_clicks"
+    __table_args__ = (
+        Index(
+            "ix_referral_clicks_referral_link_id_created_at",
+            "referral_link_id",
+            "created_at",
+        ),
+        Index(
+            "ix_referral_clicks_traffic_source_created_at",
+            "traffic_source",
+            "created_at",
+        ),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    referral_link_id: str = Field(foreign_key="referral_links.id", index=True)
+    inviter_session_id: Optional[str] = Field(
+        default=None, foreign_key="sessions.id", index=True
+    )
+    session_id: Optional[str] = Field(default=None, foreign_key="sessions.id", index=True)
+    request_host: Optional[str] = Field(default=None, index=True)
+    request_path: str
+    query_string: Optional[str] = Field(default=None, sa_column=Column(Text))
+    referer: Optional[str] = Field(default=None, sa_column=Column(Text))
+    traffic_source: Optional[str] = Field(default=None, index=True)
+    traffic_medium: Optional[str] = Field(default=None, index=True)
+    request_user_agent: Optional[str] = Field(default=None, sa_column=Column(Text))
+    ip_hash: Optional[str] = Field(default=None, index=True)
+    user_agent_hash: Optional[str] = Field(default=None, index=True)
+    redirect_status_code: Optional[int] = None
+    status: str = Field(default="redirected", index=True)
+    created_at: datetime = Field(default_factory=utcnow)
 
 
 class Pulsera(SQLModel, table=True):
@@ -149,6 +294,9 @@ class DeckPosition(SQLModel, table=True):
 
 class TreatmentDeck(SQLModel, table=True):
     __tablename__ = "treatment_decks"
+    __table_args__ = (
+        Index("ix_treatment_decks_status_deck_index", "status", "deck_index"),
+    )
 
     id: str = Field(default_factory=make_uuid, primary_key=True)
     deck_index: int = Field(unique=True, index=True)
@@ -166,6 +314,12 @@ class TreatmentDeckCard(SQLModel, table=True):
     __tablename__ = "treatment_deck_cards"
     __table_args__ = (
         UniqueConstraint("deck_id", "card_position", name="uq_treatment_deck_position"),
+        Index(
+            "ix_treatment_deck_cards_deck_assigned_position",
+            "deck_id",
+            "assigned_session_id",
+            "card_position",
+        ),
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -189,6 +343,12 @@ class ResultDeck(SQLModel, table=True):
             "treatment_cycle_index",
             name="uq_result_decks_treatment_cycle",
         ),
+        Index(
+            "ix_result_decks_status_treatment_deck_index",
+            "status",
+            "treatment_key",
+            "deck_index",
+        ),
     )
 
     id: str = Field(default_factory=make_uuid, primary_key=True)
@@ -206,6 +366,12 @@ class ResultDeckCard(SQLModel, table=True):
     __tablename__ = "result_deck_cards"
     __table_args__ = (
         UniqueConstraint("deck_id", "card_position", name="uq_result_deck_position"),
+        Index(
+            "ix_result_deck_cards_deck_assigned_position",
+            "deck_id",
+            "assigned_session_id",
+            "card_position",
+        ),
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -220,6 +386,9 @@ class ResultDeckCard(SQLModel, table=True):
 
 class PaymentDeck(SQLModel, table=True):
     __tablename__ = "payment_decks"
+    __table_args__ = (
+        Index("ix_payment_decks_status_deck_index", "status", "deck_index"),
+    )
 
     id: str = Field(default_factory=make_uuid, primary_key=True)
     deck_index: int = Field(unique=True, index=True)
@@ -234,6 +403,12 @@ class PaymentDeckCard(SQLModel, table=True):
     __tablename__ = "payment_deck_cards"
     __table_args__ = (
         UniqueConstraint("deck_id", "card_position", name="uq_payment_deck_position"),
+        Index(
+            "ix_payment_deck_cards_deck_assigned_position",
+            "deck_id",
+            "assigned_session_id",
+            "card_position",
+        ),
     )
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -251,6 +426,7 @@ class SessionRecord(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("user_id", name="uq_sessions_user"),
         UniqueConstraint("series_id", "position_index", name="uq_session_series_position"),
+        Index("ix_sessions_device_hash_created_at", "device_hash", "created_at"),
     )
 
     id: str = Field(default_factory=make_uuid, primary_key=True)
@@ -616,6 +792,18 @@ class InterestSignup(SQLModel, table=True):
     operational_note_text: Optional[str] = Field(default=None, sa_column=Column(Text))
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
+
+
+class EmailInterest(SQLModel, table=True):
+    __tablename__ = "emails_interest"
+    __table_args__ = (
+        UniqueConstraint("email", "source", name="uq_emails_interest_email_source"),
+    )
+
+    id: str = Field(default_factory=make_uuid, primary_key=True)
+    email: str = Field(index=True)
+    timestamp: datetime = Field(default_factory=utcnow, index=True)
+    source: str = Field(default="panic_screen", index=True)
 
 
 class TelemetryEvent(SQLModel, table=True):

@@ -141,12 +141,14 @@ export function BonusDrawPanel({
       return;
     }
 
+    const previousValue = savedRecallValue;
     setError(null);
+    setSavedRecallValue(value);
     setIsSavingRecall(true);
     try {
       await onSaveRecall?.(value);
-      setSavedRecallValue(value);
     } catch {
+      setSavedRecallValue(previousValue);
       setError(copy.saveError);
     } finally {
       setIsSavingRecall(false);

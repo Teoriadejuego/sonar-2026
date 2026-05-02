@@ -1,10 +1,13 @@
-import { useEffect } from "react";
+import { memo, useEffect } from "react";
 import { Link } from "react-router";
 import { BonusDrawPanel } from "./BonusDrawPanel";
 import { ScreenFrame } from "./ScreenFrame";
 import { useLanguage } from "../utils/LanguageContext";
 import { usePageTelemetry } from "../utils/usePageTelemetry";
-import { useSession } from "../utils/SessionContext";
+import {
+  useSessionActions,
+  useSessionRuntime,
+} from "../utils/SessionContext";
 import { formatCopy } from "../utils/uiLexicon";
 
 interface ExitScreenProps {
@@ -19,69 +22,75 @@ function sanitizeWhatsappPhone(rawPhone: string) {
   return digitsOnly;
 }
 
-export function ExitScreen({ onContinueToFinal }: ExitScreenProps) {
+export const ExitScreen = memo(function ExitScreen({
+  onContinueToFinal,
+}: ExitScreenProps) {
+  const { session } = useSessionRuntime();
   const {
-    session,
-    publicConfig,
-    saveDisplaySnapshot,
+    createReferralInviteLink,
     pushTelemetry,
     submitClaimFollowup,
-  } = useSession();
+  } = useSessionActions();
   const { copy, language } = useLanguage();
   const { trackClick } = usePageTelemetry("exit");
+  const winnerCopy = copy.winner;
+  const bonusCopy = copy.bonusDraw;
+  const loserCopy = copy.loser;
+  const winnerCode = session?.payment.reference_code ?? "-";
+  const winnerAmount = session?.payment.amount_eur.toFixed(0) ?? "0";
+  const payoutPageLink = `/payout?code=${encodeURIComponent(winnerCode)}&lang=${encodeURIComponent(language)}`;
 
   if (!session) {
     return null;
   }
 
-  const inviteLink =
+  const fallbackInviteLink =
     typeof window === "undefined"
       ? ""
       : `${window.location.origin}${window.location.pathname}?ref=${encodeURIComponent(session.referral_code)}&src=whatsapp`;
-  const loserCopy = copy.loser;
-  const whatsappText = encodeURIComponent(
-    formatCopy(loserCopy.shareMessageTemplate, { link: inviteLink }),
-  );
-  const whatsappLink = `https://wa.me/?text=${whatsappText}`;
 
-  const winnerCopy = copy.winner;
-  const bonusCopy = copy.bonusDraw;
-  const winnerCode = session.payment.reference_code ?? "-";
-  const winnerAmount = session.payment.amount_eur.toFixed(0);
-  const payoutPageLink = `/payout?code=${encodeURIComponent(winnerCode)}&lang=${encodeURIComponent(language)}`;
-  useEffect(() => {
-    const finalMessageText = session.payment.eligible
-      ? `${winnerCopy.eyebrow}. ${winnerCopy.title}. ${formatCopy(
-          winnerCopy.codeLabelTemplate,
-          { code: winnerCode },
-        )}`
-      : `${loserCopy.body} ${bonusCopy.title}`;
-    void saveDisplaySnapshot({
-      screen_name: "exit",
-      language,
-      final_message_text: finalMessageText,
-      final_amount_eur: session.payment.eligible
-        ? Math.round(session.payment.amount_eur)
-        : 0,
-      payout_reference_shown: session.payment.eligible ? winnerCode : undefined,
-      payout_phone_shown: session.payment.eligible
-        ? sanitizeWhatsappPhone(publicConfig.support.winner_whatsapp_phone)
-        : undefined,
+  const handleWhatsappShare = async () => {
+    trackClick("share_whatsapp", {
+      target: "share_whatsapp",
+      role: "button",
+      ctaKind: "secondary",
+      payload: {
+        referralCode: session.referral_code,
+        referralSource: "whatsapp",
+        bonusPredictionStored: true,
+      },
     });
-  }, [
-    language,
-    loserCopy.body,
-    loserCopy.bodyFooter,
-    loserCopy.bodySecondary,
-    publicConfig.support.winner_whatsapp_phone,
-    saveDisplaySnapshot,
-    session.payment.amount_eur,
-    session.payment.eligible,
-    winnerCode,
-    winnerCopy.codeLabelTemplate,
-    winnerCopy.eyebrow,
-    winnerCopy.title,
-  ]);
+    const popup =
+      typeof window === "undefined"
+        ? null
+        : window.open("about:blank", "_blank", "noopener,noreferrer");
+    try {
+      const shareUrl = await createReferralInviteLink({
+        channel: "whatsapp",
+        trafficSource: "whatsapp",
+        trafficMedium: "social",
+        campaignCode: "festival_invite_exit",
+        targetPath: window.location.pathname,
+      });
+      const whatsappLink = `https://wa.me/?text=${encodeURIComponent(
+        formatCopy(loserCopy.shareMessageTemplate, { link: shareUrl }),
+      )}`;
+      if (popup) {
+        popup.location.href = whatsappLink;
+      } else if (typeof window !== "undefined") {
+        window.open(whatsappLink, "_blank", "noopener,noreferrer");
+      }
+    } catch {
+      const fallbackWhatsappLink = `https://wa.me/?text=${encodeURIComponent(
+        formatCopy(loserCopy.shareMessageTemplate, { link: fallbackInviteLink }),
+      )}`;
+      if (popup) {
+        popup.location.href = fallbackWhatsappLink;
+      } else if (typeof window !== "undefined") {
+        window.open(fallbackWhatsappLink, "_blank", "noopener,noreferrer");
+      }
+    }
+  };
 
   return (
     <ScreenFrame>
@@ -193,26 +202,13 @@ export function ExitScreen({ onContinueToFinal }: ExitScreenProps) {
                   });
                 }}
               >
-                <a
-                  href={whatsappLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() =>
-                    trackClick("share_whatsapp", {
-                      target: "share_whatsapp",
-                      role: "link",
-                      ctaKind: "secondary",
-                      payload: {
-                        referralCode: session.referral_code,
-                        referralSource: "whatsapp",
-                        bonusPredictionStored: true,
-                      },
-                    })
-                  }
+                <button
+                  type="button"
+                  onClick={() => void handleWhatsappShare()}
                   className="sonar-share-button w-full"
                 >
                   {loserCopy.shareLabel}
-                </a>
+                </button>
               </BonusDrawPanel>
 
               <button
@@ -235,4 +231,4 @@ export function ExitScreen({ onContinueToFinal }: ExitScreenProps) {
       </div>
     </ScreenFrame>
   );
-}
+});

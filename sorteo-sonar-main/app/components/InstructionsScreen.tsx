@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ScreenFrame } from "./ScreenFrame";
 import { useLanguage } from "../utils/LanguageContext";
 import { usePageTelemetry } from "../utils/usePageTelemetry";
@@ -6,7 +7,9 @@ interface InstructionsScreenProps {
   onContinue: () => Promise<void> | void;
 }
 
-export function InstructionsScreen({ onContinue }: InstructionsScreenProps) {
+export const InstructionsScreen = memo(function InstructionsScreen({
+  onContinue,
+}: InstructionsScreenProps) {
   const { copy } = useLanguage();
   const { trackClick } = usePageTelemetry("instructions");
   const instructionsCopy = copy.instructions;
@@ -56,4 +59,4 @@ export function InstructionsScreen({ onContinue }: InstructionsScreenProps) {
       </div>
     </ScreenFrame>
   );
-}
+});

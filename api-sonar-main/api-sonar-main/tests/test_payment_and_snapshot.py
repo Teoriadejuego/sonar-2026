@@ -149,7 +149,7 @@ class PaymentAndSnapshotTests(unittest.TestCase):
             self.assertEqual(claim.social_recall_count, expected_bucket)
             self.assertTrue(claim.social_recall_correct)
 
-    def test_display_snapshot_persists_exact_visible_copy(self) -> None:
+    def test_submit_report_persists_backend_snapshot_without_auxiliary_endpoint(self) -> None:
         session = self.access_non_control_session(10)
         session_id = session["session_id"]
         self.make_winner(session_id)
@@ -167,21 +167,6 @@ class PaymentAndSnapshotTests(unittest.TestCase):
         )
         self.assertEqual(prepare_response.status_code, 200, prepare_response.text)
         prepared_snapshot = prepare_response.json()["session"]["report_snapshot"]
-        expected_message = (
-            f"{prepared_snapshot['count_target']} out of "
-            f"{prepared_snapshot['denominator']} previous participants "
-            f"reported a {prepared_snapshot['target_value']}."
-        )
-
-        self.client.post(
-            f"/v1/session/{session_id}/display-snapshot",
-            json={
-                "screen_name": "report",
-                "language": "en",
-                "treatment_message_text": expected_message,
-                "rerolls_visible": [],
-            },
-        )
 
         submit_response = self.client.post(
             f"/v1/session/{session_id}/submit-report",
@@ -194,17 +179,11 @@ class PaymentAndSnapshotTests(unittest.TestCase):
         )
         self.assertEqual(submit_response.status_code, 200, submit_response.text)
         completed = submit_response.json()["session"]
-
-        self.client.post(
+        legacy_snapshot_response = self.client.post(
             f"/v1/session/{session_id}/display-snapshot",
-            json={
-                "screen_name": "exit",
-                "language": "en",
-                "final_message_text": "Your response has been recorded and you were selected for payment.",
-                "final_amount_eur": int(completed["payment"]["amount_eur"]),
-                "payout_reference_shown": completed["payment"]["reference_code"],
-            },
+            json={"screen_name": "report", "language": "en"},
         )
+        self.assertEqual(legacy_snapshot_response.status_code, 404)
 
         with Session(engine) as db:
             snapshot = db.exec(
@@ -212,11 +191,12 @@ class PaymentAndSnapshotTests(unittest.TestCase):
             ).first()
             self.assertIsNotNone(snapshot)
             self.assertEqual(snapshot.language_used, "en")
-            self.assertEqual(snapshot.displayed_message_text, expected_message)
-            self.assertEqual(
-                snapshot.final_message_text,
-                "Your response has been recorded and you were selected for payment.",
-            )
+            self.assertEqual(snapshot.displayed_message_text, prepared_snapshot["message"])
+            self.assertEqual(snapshot.displayed_count_target, prepared_snapshot["count_target"])
+            self.assertEqual(snapshot.displayed_denominator, prepared_snapshot["denominator"])
+            self.assertEqual(snapshot.first_result_value, first_value)
+            self.assertEqual(snapshot.final_state_shown, completed["state"])
+            self.assertEqual(snapshot.final_amount_eur, int(completed["payment"]["amount_eur"]))
             self.assertEqual(
                 snapshot.payout_reference_shown,
                 completed["payment"]["reference_code"],

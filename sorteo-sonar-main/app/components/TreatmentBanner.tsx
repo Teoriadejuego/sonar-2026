@@ -1,8 +1,13 @@
+import { memo } from "react";
 import type { ReportSnapshot } from "../utils/api";
 import { useLanguage } from "../utils/LanguageContext";
 import { formatCopy } from "../utils/uiLexicon";
 
-export function TreatmentBanner({ snapshot }: { snapshot: ReportSnapshot }) {
+export const TreatmentBanner = memo(function TreatmentBanner({
+  snapshot,
+}: {
+  snapshot: ReportSnapshot;
+}) {
   const { copy } = useLanguage();
 
   if (snapshot.is_control) {
@@ -29,4 +34,4 @@ export function TreatmentBanner({ snapshot }: { snapshot: ReportSnapshot }) {
       </p>
     </div>
   );
-}
+});

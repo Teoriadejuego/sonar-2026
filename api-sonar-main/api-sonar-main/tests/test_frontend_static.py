@@ -19,17 +19,29 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn('route("payout"', routes)
         self.assertIn('index("routes/home.tsx")', routes)
 
-    def test_session_context_propagates_language_and_display_snapshots(self) -> None:
+    def test_session_context_keeps_backend_as_source_of_truth(self) -> None:
         session_context = self.read("utils", "SessionContext.tsx")
-        self.assertIn("captureDisplaySnapshot", session_context)
-        self.assertIn("saveDisplaySnapshot", session_context)
         self.assertIn("language,", session_context)
         self.assertIn("submitPaymentRequest", session_context)
-        self.assertIn("setApiTelemetryReporter", session_context)
         self.assertIn("collectClientContext", session_context)
+        self.assertIn("MINIMAL_TELEMETRY_EVENT_NAMES", session_context)
+        self.assertIn(
+            'enqueueMinimalTelemetry(response.session.session_id, "session_start")',
+            session_context,
+        )
+        self.assertIn("initializeTelemetryQueue", session_context)
+        self.assertIn("requestTelemetryFlush", session_context)
+        self.assertIn("queueTelemetryEvent", session_context)
+        self.assertIn("submitClaimFollowupRequest", session_context)
+        self.assertNotIn("buildDemoSession", session_context)
+        self.assertNotIn("getDemoScenario", session_context)
+        self.assertNotIn("saveDisplaySnapshot", session_context)
+        self.assertNotIn("captureDisplaySnapshot", session_context)
 
     def test_primary_flow_screens_use_lexicon_and_no_external_navigation(self) -> None:
         for filename in [
+            ("components", "ClosedScreen.tsx"),
+            ("components", "ExperimentStatusEmailScreen.tsx"),
             ("components", "ExperimentPausedScreen.tsx"),
             ("components", "WelcomeScreen.tsx"),
             ("components", "InstructionsScreen.tsx"),
@@ -44,9 +56,11 @@ class FrontendStaticTests(unittest.TestCase):
             self.assertNotIn("wa.me", content)
             self.assertNotIn('target="_blank"', content)
 
-    def test_welcome_route_switches_to_paused_screen_from_public_config(self) -> None:
+    def test_welcome_route_switches_to_closed_or_paused_screen_from_public_config(self) -> None:
         welcome_route = self.read("welcome", "welcome.tsx")
+        self.assertIn("ClosedScreen", welcome_route)
         self.assertIn("ExperimentPausedScreen", welcome_route)
+        self.assertIn("publicConfig.experiment_control.closed", welcome_route)
         self.assertIn("publicConfig.experiment_control.paused", welcome_route)
 
     def test_winner_flow_uses_separate_payout_page_after_finish(self) -> None:
@@ -67,6 +81,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertGreaterEqual(lexicon.count("notAchievedLabel:"), 6)
         self.assertGreaterEqual(lexicon.count("saveError:"), 6)
         self.assertGreaterEqual(lexicon.count("finalClosingMessage:"), 6)
+        self.assertGreaterEqual(lexicon.count("closed:"), 6)
         self.assertGreaterEqual(lexicon.count("braceletMismatch:"), 6)
         self.assertIn("languageNames: Record<AppLanguage, string>", lexicon)
         self.assertIn('export type AppLanguage = "es" | "ca" | "en" | "fr" | "pt" | "it";', lexicon)
@@ -82,17 +97,17 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("design_62_treatments_v1", api_text)
         self.assertIn("{count} out of {denominator} earlier participants said they got a {target}.", lexicon)
         self.assertIn("¡Gracias por participar!", lexicon)
-        self.assertIn("Tabla de premios:", lexicon)
+        self.assertIn("Premios", lexicon)
         self.assertIn("Lanza el dado", lexicon)
-        self.assertIn("¿Qué te salió en la primera tirada?", lexicon)
+        self.assertIn("Marca tu primer número", lexicon)
         self.assertIn("¿Qué número crees que nos dirá más veces la gente?", lexicon)
         self.assertIn(
             "¿Cuánta gente te dijimos que había elegido el 6 de 60 participantes anteriores?",
             lexicon,
         )
-        self.assertIn("CTRL1234", session_context)
-        self.assertIn("NORM0000", session_context)
-        self.assertIn("NORM0001", session_context)
+        self.assertNotIn("CTRL1234", session_context)
+        self.assertNotIn("NORM0000", session_context)
+        self.assertNotIn("NORM0001", session_context)
 
     def test_first_roll_capture_and_followup_wiring_are_present(self) -> None:
         game_screen = self.read("components", "GameScreen.tsx")
@@ -103,7 +118,6 @@ class FrontendStaticTests(unittest.TestCase):
         session_context = self.read("utils", "SessionContext.tsx")
         api_text = self.read("utils", "api.ts")
 
-        self.assertIn("const firstResultValue = current.first_result_value ?? resultValue;", session_context)
         self.assertIn("crowd_prediction_value", api_text)
         self.assertIn("social_recall_count", api_text)
         self.assertIn("`/v1/session/${sessionId}/claim-followup`", api_text)
@@ -119,9 +133,23 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("onSelectPrediction={async (value) => {", payout_page)
         self.assertIn("onSaveRecall={async (value) => {", payout_page)
         self.assertIn("recallCorrect={session.claim?.social_recall_correct ?? null}", exit_screen)
-        self.assertIn("useState<number | null>(value ?? null)", dice)
-        self.assertIn("Math.floor(Math.random() * 6) + 1", dice)
-        self.assertIn("{isRolling ? copy.game.loading : copy.game.firstRollCta}", game_screen)
+        self.assertIn("ROLL_VISUAL_DURATION_MS = 760", dice)
+        self.assertIn('setRollPhase("awaiting")', dice)
+        self.assertIn("onRollStart?.(source)", dice)
+        self.assertNotIn("Math.random()", dice)
+        self.assertNotIn("setInterval", dice)
+        self.assertIn('useState<"first_roll" | "reroll">', game_screen)
+        self.assertIn('triggerRollFromButton("reroll")', game_screen)
+        self.assertIn("copy.game.rerollCta", game_screen)
+        self.assertIn(
+            "const canReroll = session.throws.length > 0 && session.throws.length < session.max_attempts;",
+            game_screen,
+        )
+        self.assertIn(
+            "{isRollPending ? copy.game.loading : copy.game.firstRollCta}",
+            game_screen,
+        )
+        self.assertIn("const hasSettledFirstRoll = hasCommittedFirstRoll && !isRolling;", game_screen)
 
     def test_visible_exit_and_payout_copy_comes_from_lexicon(self) -> None:
         exit_screen = self.read("components", "ExitScreen.tsx")
@@ -139,11 +167,25 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("paymentCopy.braceletRequired", payout_page)
         self.assertIn("paymentCopy.braceletMismatch", payout_page)
 
-    def test_frontend_has_client_context_and_spell_telemetry_utils(self) -> None:
+    def test_frontend_has_client_context_and_minimal_telemetry_utils(self) -> None:
         use_page_telemetry = self.read("utils", "usePageTelemetry.ts")
+        telemetry_queue = self.read("utils", "telemetryQueue.ts")
         client_context = self.read("utils", "clientContext.ts")
-        self.assertIn("screen_exit", use_page_telemetry)
         self.assertIn("spellId", use_page_telemetry)
+        self.assertIn("trackClick", use_page_telemetry)
+        self.assertIn("initializeTelemetryQueue", use_page_telemetry)
+        self.assertIn("return { trackClick, spellId: null };", use_page_telemetry)
+        self.assertNotIn("screen_enter", use_page_telemetry)
+        self.assertNotIn("screen_exit", use_page_telemetry)
+        self.assertNotIn('event_name: "focus"', use_page_telemetry)
+        self.assertNotIn('event_name: "blur"', use_page_telemetry)
+        self.assertNotIn("queueTelemetryEvent", use_page_telemetry)
+        self.assertIn("TELEMETRY_FLUSH_INTERVAL_MS = 5000", telemetry_queue)
+        self.assertIn("TELEMETRY_BATCH_SIZE = 12", telemetry_queue)
+        self.assertIn("upsertSessionEvent", telemetry_queue)
+        self.assertIn("window.addEventListener(\"pagehide\"", telemetry_queue)
+        self.assertIn("window.addEventListener(\"online\"", telemetry_queue)
+        self.assertIn("requestTelemetryFlush", telemetry_queue)
         self.assertIn("collectClientContext", client_context)
         self.assertIn("navigationEntryType", client_context)
 

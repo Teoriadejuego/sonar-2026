@@ -112,15 +112,11 @@ class OperationalNotesAndQrTests(unittest.TestCase):
                 "session_id": session["session_id"],
                 "events": [
                     {
-                        "event_type": "network",
-                        "event_name": "api_success",
+                        "event_type": "custom",
+                        "event_name": "session_end",
                         "screen_name": "exit",
                         "client_ts": 1234,
                         "event_sequence_number": 1,
-                        "endpoint_name": "/v1/session/access",
-                        "request_method": "POST",
-                        "status_code": 200,
-                        "latency_ms": 120,
                     }
                 ],
             },

@@ -92,15 +92,6 @@ class ResearchExportsTests(unittest.TestCase):
         self.assertEqual(prepare_response.status_code, 200, prepare_response.text)
 
         snapshot = prepare_response.json()["session"]["report_snapshot"]
-        self.client.post(
-            f"/v1/session/{session_id}/display-snapshot",
-            json={
-                "screen_name": "report",
-                "language": "es",
-                "treatment_message_text": snapshot["message"],
-                "rerolls_visible": [],
-            },
-        )
 
         submit_response = self.client.post(
             f"/v1/session/{session_id}/submit-report",

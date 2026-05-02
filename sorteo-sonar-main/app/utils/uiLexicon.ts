@@ -5,12 +5,31 @@ export type InfoSection = {
   body: string;
 };
 
+type InterestCaptureCopy = {
+  eyebrow: string;
+  title: string;
+  body: string;
+  bodySecondary: string;
+  emailLabel: string;
+  emailPlaceholder: string;
+  cta: string;
+  legalHint: string;
+  success: string;
+  errorEmail: string;
+  errorDefault: string;
+};
+
 export type UiCopy = {
   common: {
     appTitle: string;
     languageSelectorAria: string;
     loadingResume: string;
     loadingPrepare: string;
+    reconnecting: string;
+    offlineTitle: string;
+    offlineBody: string;
+    offlineHint: string;
+    offlineStartError: string;
     close: string;
     continueLabel: string;
     finalClosingMessage: string;
@@ -137,19 +156,8 @@ export type UiCopy = {
     shareLabel: string;
     shareMessageTemplate: string;
   };
-  paused: {
-    eyebrow: string;
-    title: string;
-    body: string;
-    bodySecondary: string;
-    emailLabel: string;
-    emailPlaceholder: string;
-    cta: string;
-    legalHint: string;
-    success: string;
-    errorEmail: string;
-    errorDefault: string;
-  };
+  paused: InterestCaptureCopy;
+  closed: InterestCaptureCopy;
   paymentPage: {
     eyebrow: string;
     title: string;
@@ -196,7 +204,16 @@ export type UiCopy = {
 };
 
 type TranslationSeed = Omit<UiCopy, "serverErrors" | "common"> & {
-  common: Omit<UiCopy["common"], "welcomeWords" | "languageNames">;
+  common: Omit<
+    UiCopy["common"],
+    | "welcomeWords"
+    | "languageNames"
+    | "reconnecting"
+    | "offlineTitle"
+    | "offlineBody"
+    | "offlineHint"
+    | "offlineStartError"
+  >;
   errors: {
     braceletNotFound: string;
     accessInvalid: string;
@@ -224,6 +241,69 @@ const SHARED_WELCOME_WORDS: Record<AppLanguage, string> = {
   fr: "Bienvenue",
   pt: "Bem-vindo",
   it: "Benvenuto",
+};
+
+const RECONNECTING_BY_PREPARE_LABEL: Record<string, string> = {
+  "Preparando experiencia": "Reconectando...",
+  "Preparant experiÃ¨ncia": "Reconnectant...",
+  "Preparing experience": "Reconnecting...",
+  "PrÃ©paration de l'expÃ©rience": "Reconnexion...",
+  "A preparar experiÃªncia": "A reconectar...",
+  "Preparazione esperienza": "Riconnessione...",
+};
+
+const OFFLINE_TITLE_BY_RESUME_LABEL: Record<string, string> = {
+  "Recuperando sesiÃ³n": "Sin conexiÃ³n",
+  "Recuperant sessiÃ³": "Sense connexiÃ³",
+  "Restoring session": "Offline",
+  "RÃ©cupÃ©ration de la session": "Hors ligne",
+  "A recuperar sessÃ£o": "Sem ligaÃ§Ã£o",
+  "Recupero sessione": "Offline",
+};
+
+const OFFLINE_BODY_BY_RESUME_LABEL: Record<string, string> = {
+  "Recuperando sesiÃ³n":
+    "Puedes seguir viendo la pantalla cargada. La tirada y el envÃ­o del reporte se reanudarÃ¡n cuando vuelva la red.",
+  "Recuperant sessiÃ³":
+    "Pots continuar veient la pantalla carregada. La tirada i l'enviament del report es reprendran quan torni la xarxa.",
+  "Restoring session":
+    "You can keep viewing the loaded screen. The roll and report submission will resume when the network comes back.",
+  "RÃ©cupÃ©ration de la session":
+    "Vous pouvez continuer Ã  voir l'Ã©cran dÃ©jÃ  chargÃ©. Le lancer et l'envoi du rapport reprendront quand la connexion reviendra.",
+  "A recuperar sessÃ£o":
+    "Podes continuar a ver o ecrÃ£ jÃ¡ carregado. O lanÃ§amento e o envio do relatÃ³rio serÃ£o retomados quando a rede voltar.",
+  "Recupero sessione":
+    "Puoi continuare a vedere la schermata giÃ  caricata. Il lancio e l'invio del report riprenderanno quando tornerÃ  la rete.",
+};
+
+const OFFLINE_HINT_BY_RESUME_LABEL: Record<string, string> = {
+  "Recuperando sesiÃ³n":
+    "Tu sesiÃ³n y tus eventos siguen guardados en este dispositivo.",
+  "Recuperant sessiÃ³":
+    "La teva sessiÃ³ i els teus esdeveniments continuen guardats en aquest dispositiu.",
+  "Restoring session":
+    "Your session and queued events remain saved on this device.",
+  "RÃ©cupÃ©ration de la session":
+    "Votre session et les Ã©vÃ©nements en attente restent enregistrÃ©s sur cet appareil.",
+  "A recuperar sessÃ£o":
+    "A tua sessÃ£o e os eventos em fila continuam guardados neste dispositivo.",
+  "Recupero sessione":
+    "La tua sessione e gli eventi in coda restano salvati su questo dispositivo.",
+};
+
+const OFFLINE_START_ERROR_BY_RESUME_LABEL: Record<string, string> = {
+  "Recuperando sesiÃ³n":
+    "Necesitas conexiÃ³n para comenzar. Cuando vuelva la red podrÃ¡s iniciar la sesiÃ³n al momento.",
+  "Recuperant sessiÃ³":
+    "Necessites connexiÃ³ per comenÃ§ar. Quan torni la xarxa podrÃ s iniciar la sessiÃ³ al moment.",
+  "Restoring session":
+    "You need a connection to start. As soon as the network returns you can begin immediately.",
+  "RÃ©cupÃ©ration de la session":
+    "Une connexion est nÃ©cessaire pour commencer. DÃ¨s que le rÃ©seau revient, vous pourrez dÃ©marrer immÃ©diatement.",
+  "A recuperar sessÃ£o":
+    "Precisas de ligaÃ§Ã£o para comeÃ§ar. Assim que a rede voltar poderÃ¡s iniciar de imediato.",
+  "Recupero sessione":
+    "Ti serve una connessione per iniziare. Appena torna la rete potrai avviare subito la sessione.",
 };
 
 const PAYMENT_PRIVACY_SECTIONS_ES: InfoSection[] = [
@@ -371,6 +451,20 @@ function withServerErrors(seed: TranslationSeed): UiCopy {
     ...seed,
     common: {
       ...seed.common,
+      reconnecting:
+        RECONNECTING_BY_PREPARE_LABEL[seed.common.loadingPrepare] ??
+        "Reconnecting...",
+      offlineTitle:
+        OFFLINE_TITLE_BY_RESUME_LABEL[seed.common.loadingResume] ?? "Offline",
+      offlineBody:
+        OFFLINE_BODY_BY_RESUME_LABEL[seed.common.loadingResume] ??
+        "You can keep reading the loaded screen while the app reconnects.",
+      offlineHint:
+        OFFLINE_HINT_BY_RESUME_LABEL[seed.common.loadingResume] ??
+        "Your session remains stored on this device.",
+      offlineStartError:
+        OFFLINE_START_ERROR_BY_RESUME_LABEL[seed.common.loadingResume] ??
+        "You need a connection to begin.",
       languageNames: SHARED_LANGUAGE_NAMES,
       welcomeWords: SHARED_WELCOME_WORDS,
     },
@@ -414,18 +508,18 @@ const es = withServerErrors({
     subtitle: "Select your language",
   },
   landing: {
-    eyebrow: "Participa, 60 seg, y sorteamos:",
+    eyebrow: "1 minuto. Entras en el sorteo:",
     title:
-      "2 entradas VIP para SONAR 2027\ny cientos de premios de hasta 60 euros",
+      "2 entradas VIP SONAR 2027\ny premios de hasta 60 €",
     subtitle: "",
     intro: "",
-    braceletLabel: "ID de la pulsera",
+    braceletLabel: "Pulsera",
     braceletPlaceholder: "Ej: AB12CD34",
-    moreInfoButton: "Más información",
-    ageCheckbox: "Confirmo que tengo 18 años o más",
-    participationCheckbox: "He leído la información y acepto participar",
+    moreInfoButton: "Info legal",
+    ageCheckbox: "Confirmo que tengo 18+",
+    participationCheckbox: "He leído la info y acepto participar",
     dataCheckbox: "He leído y acepto el tratamiento de datos",
-    cta: "Comenzar",
+    cta: "Empezar",
     footer: "",
     errors: {
       braceletRequired: "Introduce el ID de tu pulsera.",
@@ -439,7 +533,7 @@ const es = withServerErrors({
       {
         title: "Qué es esta actividad",
         body:
-          "Esta actividad forma parte de un estudio académico sobre toma de decisiones en contextos digitales y culturales. Se realiza en colaboración con un laboratorio de economía del comportamiento.",
+          "Esta actividad forma parte de un estudio académico sobre toma de decisiones en contextos digitales y culturales.",
       },
       {
         title: "Qué tendrás que hacer",
@@ -449,22 +543,22 @@ const es = withServerErrors({
       {
         title: "Pago e incentivos",
         body:
-          "La asignación del pago se realiza automáticamente. Si resultas seleccionado, el importe depende del número que indiques y se gestiona al final de la actividad.",
+          "La asignación del pago se realiza automáticamente. Si resultas seleccionado, el importe depende del número que indiques.\n\nSi decides cobrar, accederás a una plataforma separada donde se te solicitará un número de teléfono únicamente para gestionar el pago o la donación. Estos datos no se utilizan para el análisis del estudio.",
       },
       {
         title: "Privacidad y datos",
         body:
-          "La pulsera se usa solo para evitar participaciones duplicadas. El análisis se realiza sin publicar identidades personales y los resultados se estudian de forma agregada.",
+          "La pulsera se utiliza exclusivamente para evitar participaciones duplicadas.\n\nDurante la actividad se registran las decisiones, el tiempo de interacción y datos técnicos básicos del dispositivo, únicamente para asegurar el correcto funcionamiento del estudio y la calidad de los datos.\n\nLos resultados se analizan de forma agregada y no se publican datos que permitan identificar a las personas participantes.",
       },
       {
         title: "Participación voluntaria",
         body:
-          "Participar es voluntario. Puedes dejar la actividad en cualquier momento antes de enviar tu respuesta final. Una vez anonimizados, los datos podrán usarse con fines científicos y de publicación académica.",
+          "Participar es voluntario. Puedes dejar la actividad en cualquier momento antes de enviar tu respuesta final.",
       },
       {
         title: "Contacto",
         body:
-          "Si tienes dudas sobre el estudio o sobre el cobro, puedes consultarlo con el equipo del stand o escribir a lbl@uloyola.es.",
+          "Si tienes dudas sobre el estudio o sobre el cobro, puedes consultarlo con el equipo del stand o escribir a aalfonso@us.es",
       },
     ],
   },
@@ -490,9 +584,9 @@ const es = withServerErrors({
   },
   comprehension: {
     eyebrow: "",
-    title: "Tabla de premios:",
-    body: "Cada número se asocia con un premio.",
-    odds: "Uno de cada cien ganará el dinero de verdad (bizum).",
+    title: "Premios",
+    body: "Cada número tiene un premio.",
+    odds: "1 de cada 100 cobra el premio real.",
     options: [
       "Indicar qué número salió",
       "Elegir el premio que prefieres",
@@ -500,20 +594,20 @@ const es = withServerErrors({
     ],
     errorEmpty: "",
     errorWrong: "",
-    cta: "Continuar",
+    cta: "Entendido",
   },
   game: {
     title: "Lanza el dado",
-      initialIntro: "Dale a “Lanzar” y recuerda el número obtenido.",
+    initialIntro: "Lanza y recuerda tu primer número.",
     intro:
       "Cuando tengas claro el número, continúa.",
     visibleResultLabel: "",
-    firstResultTemplate: "Número obtenido: {value}",
-    continueCta: "Continuar",
-    firstRollCta: "Lanzar",
-    rerollCta: "Lanzar",
+    firstResultTemplate: "Primer número: {value}",
+    continueCta: "Seguir",
+    firstRollCta: "Lanzar dado",
+    rerollCta: "Volver a lanzar",
     loading: "Cargando...",
-    attemptsTemplate: "Tirada registrada: {count}",
+    attemptsTemplate: "Tiradas: {count}",
     errors: {
       noSession: "No hay una sesión activa.",
       loadRoll: "No se pudo cargar la tirada.",
@@ -521,8 +615,8 @@ const es = withServerErrors({
     },
   },
   report: {
-    title: "¿Qué te salió en la primera tirada?",
-    body: "Selecciona el número que te salió en la primera tirada.",
+    title: "Marca tu primer número",
+    body: "Elige el número de la primera tirada.",
     errorSave: "No se pudo guardar tu respuesta.",
   },
   prizeReveal: {
@@ -590,6 +684,21 @@ const es = withServerErrors({
     cta: "Avisarme",
     legalHint: "Solo usaremos tu email para futuros avisos del proyecto.",
     success: "Email guardado",
+    errorEmail: "Introduce un email válido",
+    errorDefault: "Error inesperado",
+  },
+  closed: {
+    eyebrow: "Gracias por acercarte",
+    title: "Esta actividad ya está cerrada",
+    body: "Ahora mismo no aceptamos nuevas participaciones.",
+    bodySecondary:
+      "Tu interés también nos ayuda a medir el alcance del estudio. Si quieres, deja tu email y te avisaremos cuando abramos la próxima.",
+    emailLabel: "Tu email",
+    emailPlaceholder: "nombre@correo.com",
+    cta: "Avisarme",
+    legalHint:
+      "Solo usaremos tu email para avisarte cuando abramos una nueva actividad del proyecto.",
+    success: "Perfecto. Te avisaremos cuando volvamos a abrir.",
     errorEmail: "Introduce un email válido",
     errorDefault: "Error inesperado",
   },
@@ -667,18 +776,18 @@ const ca = withServerErrors({
     subtitle: "Select your language",
   },
   landing: {
-    eyebrow: "Participa, 60 s, i sortegem:",
+    eyebrow: "1 minut. Entres al sorteig:",
     title:
-      "2 entrades VIP per a SONAR 2027\ni centenars de premis de fins a 60 euros",
+      "2 entrades VIP SONAR 2027\ni premis de fins a 60 €",
     subtitle: "",
     intro: "",
-    braceletLabel: "ID de la polsera",
+    braceletLabel: "Polsera",
     braceletPlaceholder: "Ex: AB12CD34",
-    moreInfoButton: "Més informació",
-    ageCheckbox: "Confirmo que tinc 18 anys o més",
-    participationCheckbox: "He llegit la informació i accepto participar",
+    moreInfoButton: "Info legal",
+    ageCheckbox: "Confirmo que tinc 18+",
+    participationCheckbox: "He llegit la info i accepto participar",
     dataCheckbox: "He llegit i accepto el tractament de dades",
-    cta: "Començar",
+    cta: "Comença",
     footer: "",
     errors: {
       braceletRequired: "Introdueix l'ID de la polsera.",
@@ -744,9 +853,9 @@ const ca = withServerErrors({
   },
   comprehension: {
     eyebrow: "",
-    title: "Taula de premis:",
-    body: "Cada número s’associa amb un premi.",
-    odds: "Una de cada cent persones guanyarà els diners de veritat (Bizum).",
+    title: "Premis",
+    body: "Cada número té un premi.",
+    odds: "1 de cada 100 cobra el premi real.",
     options: [
       "Indicar quin número ha sortit",
       "Triar el premi que prefereixes",
@@ -754,20 +863,20 @@ const ca = withServerErrors({
     ],
     errorEmpty: "",
     errorWrong: "",
-    cta: "Continuar",
+    cta: "Entesos",
   },
   game: {
     title: "Llança el dau",
-      initialIntro: "Prem “Llançar” i recorda el número obtingut.",
+    initialIntro: "Llança i recorda el primer número.",
     intro:
       "Quan tinguis clar el número, continua.",
     visibleResultLabel: "",
-    firstResultTemplate: "Número obtingut: {value}",
-    continueCta: "Continuar",
-    firstRollCta: "Llançar",
-    rerollCta: "Llançar",
+    firstResultTemplate: "Primer número: {value}",
+    continueCta: "Continua",
+    firstRollCta: "Llança el dau",
+    rerollCta: "Torna a llançar",
     loading: "Carregant...",
-    attemptsTemplate: "Tirada registrada: {count}",
+    attemptsTemplate: "Tirades: {count}",
     errors: {
       noSession: "No hi ha cap sessió activa.",
       loadRoll: "No s'ha pogut carregar la tirada.",
@@ -775,8 +884,8 @@ const ca = withServerErrors({
     },
   },
   report: {
-    title: "Què t’ha sortit a la primera tirada?",
-    body: "Selecciona el número que t’ha sortit a la primera tirada.",
+    title: "Marca el primer número",
+    body: "Tria el número de la primera tirada.",
     errorSave: "No s'ha pogut desar la teva resposta.",
   },
   prizeReveal: {
@@ -844,6 +953,21 @@ const ca = withServerErrors({
     cta: "Avisa'm",
     legalHint: "Només farem servir el teu correu per a futurs avisos del projecte.",
     success: "Correu desat",
+    errorEmail: "Introdueix un correu vàlid",
+    errorDefault: "Error inesperat",
+  },
+  closed: {
+    eyebrow: "Gràcies per acostar-t'hi",
+    title: "Aquesta activitat ja està tancada",
+    body: "Ara mateix no acceptem noves participacions.",
+    bodySecondary:
+      "El teu interès també ens ajuda a mesurar l'abast de l'estudi. Si vols, deixa el teu correu i t'avisarem quan obrim la propera.",
+    emailLabel: "El teu correu",
+    emailPlaceholder: "nom@correu.com",
+    cta: "Avisa'm",
+    legalHint:
+      "Només farem servir el teu correu per avisar-te quan obrim una nova activitat del projecte.",
+    success: "Perfecte. T'avisarem quan tornem a obrir.",
     errorEmail: "Introdueix un correu vàlid",
     errorDefault: "Error inesperat",
   },
@@ -921,17 +1045,17 @@ const en = withServerErrors({
     subtitle: "Select your language",
   },
   landing: {
-    eyebrow: "Join in, 60 sec, and we raffle:",
+    eyebrow: "1 minute. Enter the raffle:",
     title:
-      "2 VIP tickets for SONAR 2027\nand hundreds of prizes up to 60 euros",
+      "2 VIP tickets for SONAR 2027\nand prizes up to €60",
     subtitle: "",
     intro: "",
-    braceletLabel: "Bracelet ID",
+    braceletLabel: "Bracelet",
     braceletPlaceholder: "Eg: AB12CD34",
-    moreInfoButton: "More information",
-    ageCheckbox: "I confirm that I am 18 or over",
-    participationCheckbox: "I have read the information and agree to take part",
-    dataCheckbox: "I have read and agree to the data processing",
+    moreInfoButton: "Legal info",
+    ageCheckbox: "I confirm I am 18+",
+    participationCheckbox: "I have read the info and agree to take part",
+    dataCheckbox: "I have read and agree to data processing",
     cta: "Start",
     footer: "",
     errors: {
@@ -998,9 +1122,9 @@ const en = withServerErrors({
   },
   comprehension: {
     eyebrow: "",
-    title: "Prize table:",
-    body: "Each number is linked to a prize.",
-    odds: "One in every hundred people will receive the real payment (Bizum).",
+    title: "Prizes",
+    body: "Each number has a prize.",
+    odds: "1 in 100 gets the real payment.",
     options: [
       "Report which number came up",
       "Choose the prize you prefer",
@@ -1008,20 +1132,20 @@ const en = withServerErrors({
     ],
     errorEmpty: "",
     errorWrong: "",
-    cta: "Continue",
+    cta: "Got it",
   },
   game: {
     title: "Roll the die",
-      initialIntro: "Tap “Roll” and remember the number obtained.",
+    initialIntro: "Roll and remember your first number.",
     intro:
       "When you have the number clear, continue.",
     visibleResultLabel: "",
-    firstResultTemplate: "Number obtained: {value}",
+    firstResultTemplate: "First number: {value}",
     continueCta: "Continue",
-    firstRollCta: "Roll",
-    rerollCta: "Roll",
+    firstRollCta: "Roll die",
+    rerollCta: "Roll again",
     loading: "Loading...",
-    attemptsTemplate: "Recorded roll: {count}",
+    attemptsTemplate: "Rolls: {count}",
     errors: {
       noSession: "There is no active session.",
       loadRoll: "Could not load the roll.",
@@ -1029,8 +1153,8 @@ const en = withServerErrors({
     },
   },
   report: {
-    title: "What came up on the first roll?",
-    body: "Select the number that came up on the first roll.",
+    title: "Pick your first number",
+    body: "Choose the number from the first roll.",
     errorSave: "Could not save your response.",
   },
   prizeReveal: {
@@ -1098,6 +1222,21 @@ const en = withServerErrors({
     cta: "Notify me",
     legalHint: "We will only use your email for future project updates.",
     success: "Email saved",
+    errorEmail: "Enter a valid email",
+    errorDefault: "Unexpected error",
+  },
+  closed: {
+    eyebrow: "Thanks for stopping by",
+    title: "This activity is now closed",
+    body: "We are not accepting new participants right now.",
+    bodySecondary:
+      "Your interest still helps us understand the reach of the study. If you want, leave your email and we will let you know when the next one opens.",
+    emailLabel: "Your email",
+    emailPlaceholder: "name@email.com",
+    cta: "Notify me",
+    legalHint:
+      "We will only use your email to let you know when a new project activity opens.",
+    success: "Thanks. We will let you know when the next study opens.",
     errorEmail: "Enter a valid email",
     errorDefault: "Unexpected error",
   },
@@ -1175,16 +1314,16 @@ const fr = withServerErrors({
     subtitle: "Select your language",
   },
   landing: {
-    eyebrow: "Participez, 60 sec, et nous tirons au sort :",
+    eyebrow: "1 minute. Tentez le tirage :",
     title:
-      "2 billets VIP pour SONAR 2027\net des centaines de prix jusqu'a 60 euros",
+      "2 billets VIP SONAR 2027\net des prix jusqu'à 60 €",
     subtitle: "",
     intro: "",
-    braceletLabel: "ID du bracelet",
+    braceletLabel: "Bracelet",
     braceletPlaceholder: "Ex : AB12CD34",
-    moreInfoButton: "Plus d'information",
-    ageCheckbox: "Je confirme avoir 18 ans ou plus",
-    participationCheckbox: "J'ai lu les informations et j'accepte de participer",
+    moreInfoButton: "Infos légales",
+    ageCheckbox: "Je confirme avoir 18+",
+    participationCheckbox: "J'ai lu les infos et j'accepte de participer",
     dataCheckbox: "J'ai lu et j'accepte le traitement des données",
     cta: "Commencer",
     footer: "",
@@ -1252,9 +1391,9 @@ const fr = withServerErrors({
   },
   comprehension: {
     eyebrow: "",
-    title: "Table des prix :",
-    body: "Chaque nombre correspond à un prix.",
-    odds: "Une personne sur cent recevra le paiement réel (Bizum).",
+    title: "Prix",
+    body: "Chaque nombre donne un prix.",
+    odds: "1 personne sur 100 reçoit le paiement réel.",
     options: [
       "Indiquer quel nombre est sorti",
       "Choisir le prix que vous préférez",
@@ -1262,20 +1401,20 @@ const fr = withServerErrors({
     ],
     errorEmpty: "",
     errorWrong: "",
-    cta: "Continuer",
+    cta: "Compris",
   },
   game: {
     title: "Lancez le dé",
-      initialIntro: "Appuyez sur « Lancer » et retenez le nombre obtenu.",
+    initialIntro: "Lancez et retenez le premier nombre.",
     intro:
       "Quand vous avez bien le nombre en tête, continuez.",
     visibleResultLabel: "",
-    firstResultTemplate: "Nombre obtenu : {value}",
+    firstResultTemplate: "Premier nombre : {value}",
     continueCta: "Continuer",
-    firstRollCta: "Lancer",
-    rerollCta: "Lancer",
+    firstRollCta: "Lancer le dé",
+    rerollCta: "Relancer",
     loading: "Chargement...",
-    attemptsTemplate: "Lancer enregistré : {count}",
+    attemptsTemplate: "Lancers : {count}",
     errors: {
       noSession: "Aucune session active.",
       loadRoll: "Impossible de charger le lancer.",
@@ -1283,8 +1422,8 @@ const fr = withServerErrors({
     },
   },
   report: {
-    title: "Quel nombre est sorti au premier lancer ?",
-    body: "Sélectionnez le nombre qui est sorti au premier lancer.",
+    title: "Choisissez le premier nombre",
+    body: "Sélectionnez le nombre du premier lancer.",
     errorSave: "Impossible d'enregistrer votre réponse.",
   },
   prizeReveal: {
@@ -1352,6 +1491,21 @@ const fr = withServerErrors({
     cta: "M'avertir",
     legalHint: "Nous utiliserons votre email uniquement pour de futurs messages du projet.",
     success: "Email enregistré",
+    errorEmail: "Entrez un email valide",
+    errorDefault: "Erreur inattendue",
+  },
+  closed: {
+    eyebrow: "Merci d'être là",
+    title: "Cette activité est maintenant fermée",
+    body: "Nous n'acceptons plus de nouvelles participations pour le moment.",
+    bodySecondary:
+      "Votre intérêt nous aide aussi à mesurer la portée de l'étude. Si vous le souhaitez, laissez votre email et nous vous préviendrons à la prochaine ouverture.",
+    emailLabel: "Votre email",
+    emailPlaceholder: "nom@email.com",
+    cta: "M'avertir",
+    legalHint:
+      "Nous utiliserons votre email uniquement pour vous prévenir lorsqu'une nouvelle activité du projet ouvrira.",
+    success: "Merci. Nous vous préviendrons à la prochaine ouverture.",
     errorEmail: "Entrez un email valide",
     errorDefault: "Erreur inattendue",
   },
@@ -1429,16 +1583,16 @@ const pt = withServerErrors({
     subtitle: "Select your language",
   },
   landing: {
-    eyebrow: "Participa, 60 seg, e sorteamos:",
+    eyebrow: "1 minuto. Entras no sorteio:",
     title:
-      "2 entradas VIP para o SONAR 2027\ne centenas de premios ate 60 euros",
+      "2 entradas VIP SONAR 2027\ne prémios até 60 €",
     subtitle: "",
     intro: "",
-    braceletLabel: "ID da pulseira",
+    braceletLabel: "Pulseira",
     braceletPlaceholder: "Ex: AB12CD34",
-    moreInfoButton: "Mais informação",
-    ageCheckbox: "Confirmo que tenho 18 anos ou mais",
-    participationCheckbox: "Li a informação e aceito participar",
+    moreInfoButton: "Info legal",
+    ageCheckbox: "Confirmo que tenho 18+",
+    participationCheckbox: "Li a info e aceito participar",
     dataCheckbox: "Li e aceito o tratamento de dados",
     cta: "Começar",
     footer: "",
@@ -1506,9 +1660,9 @@ const pt = withServerErrors({
   },
   comprehension: {
     eyebrow: "",
-    title: "Tabela de prémios:",
-    body: "Cada número está associado a um prémio.",
-    odds: "Uma em cada cem pessoas receberá o dinheiro real (Bizum).",
+    title: "Prémios",
+    body: "Cada número tem um prémio.",
+    odds: "1 em 100 recebe o pagamento real.",
     options: [
       "Indicar que número saiu",
       "Escolher o prémio que preferes",
@@ -1516,20 +1670,20 @@ const pt = withServerErrors({
     ],
     errorEmpty: "",
     errorWrong: "",
-    cta: "Continuar",
+    cta: "Percebi",
   },
   game: {
     title: "Lança o dado",
-      initialIntro: "Carrega em “Lançar” e lembra-te do número obtido.",
+    initialIntro: "Lança e lembra-te do primeiro número.",
     intro:
       "Quando tiveres claro o número, continua.",
     visibleResultLabel: "",
-    firstResultTemplate: "Número obtido: {value}",
-    continueCta: "Continuar",
-    firstRollCta: "Lançar",
-    rerollCta: "Lançar",
+    firstResultTemplate: "Primeiro número: {value}",
+    continueCta: "Seguir",
+    firstRollCta: "Lançar dado",
+    rerollCta: "Voltar a lançar",
     loading: "A carregar...",
-    attemptsTemplate: "Tirada registada: {count}",
+    attemptsTemplate: "Tiradas: {count}",
     errors: {
       noSession: "Não há nenhuma sessão ativa.",
       loadRoll: "Não foi possível carregar a tirada.",
@@ -1537,8 +1691,8 @@ const pt = withServerErrors({
     },
   },
   report: {
-    title: "Que número te saiu na primeira tirada?",
-    body: "Seleciona o número que te saiu na primeira tirada.",
+    title: "Marca o primeiro número",
+    body: "Escolhe o número da primeira tirada.",
     errorSave: "Não foi possível guardar a tua resposta.",
   },
   prizeReveal: {
@@ -1606,6 +1760,21 @@ const pt = withServerErrors({
     cta: "Avisar-me",
     legalHint: "Só vamos usar o teu email para futuros avisos do projeto.",
     success: "Email guardado",
+    errorEmail: "Introduz um email válido",
+    errorDefault: "Erro inesperado",
+  },
+  closed: {
+    eyebrow: "Obrigado por passares por aqui",
+    title: "Esta atividade já está encerrada",
+    body: "Neste momento não estamos a aceitar novas participações.",
+    bodySecondary:
+      "O teu interesse também nos ajuda a medir o alcance do estudo. Se quiseres, deixa o teu email e avisamos-te quando abrirmos a próxima.",
+    emailLabel: "O teu email",
+    emailPlaceholder: "nome@email.com",
+    cta: "Avisar-me",
+    legalHint:
+      "Só vamos usar o teu email para te avisar quando abrir uma nova atividade do projeto.",
+    success: "Perfeito. Avisamos-te quando voltarmos a abrir.",
     errorEmail: "Introduz um email válido",
     errorDefault: "Erro inesperado",
   },
@@ -1685,14 +1854,14 @@ const it = withServerErrors({
   },
   landing: {
     ...en.landing,
-    eyebrow: "Partecipa, 60 sec, e sorteggiamo:",
+    eyebrow: "1 minuto. Entri nel sorteggio:",
     title:
-      "2 biglietti VIP per SONAR 2027\ne centinaia di premi fino a 60 euro",
-    braceletLabel: "ID del braccialetto",
+      "2 biglietti VIP SONAR 2027\ne premi fino a 60 €",
+    braceletLabel: "Braccialetto",
     braceletPlaceholder: "Es: AB12CD34",
-    moreInfoButton: "Piu informazioni",
-    ageCheckbox: "Confermo di avere 18 anni o più",
-    participationCheckbox: "Ho letto le informazioni e accetto di partecipare",
+    moreInfoButton: "Info legali",
+    ageCheckbox: "Confermo di avere 18+",
+    participationCheckbox: "Ho letto le info e accetto di partecipare",
     dataCheckbox: "Ho letto e accetto il trattamento dei dati",
     cta: "Inizia",
     errors: {
@@ -1761,9 +1930,9 @@ const it = withServerErrors({
   comprehension: {
     ...en.comprehension,
     eyebrow: "",
-    title: "Tabella dei premi:",
-    body: "Ogni numero corrisponde a un premio.",
-    odds: "Una persona su cento riceverà il pagamento reale (Bizum).",
+    title: "Premi",
+    body: "Ogni numero ha un premio.",
+    odds: "1 su 100 riceve il pagamento reale.",
     options: [
       "Indicare quale numero è uscito",
       "Scegliere il premio che preferisci",
@@ -1771,19 +1940,20 @@ const it = withServerErrors({
     ],
     errorEmpty: "",
     errorWrong: "",
-    cta: "Continua",
+    cta: "Capito",
   },
   game: {
     ...en.game,
     title: "Lancia il dado",
-      initialIntro: "Premi “Lancia” e ricorda il numero ottenuto.",
+    initialIntro: "Lancia e ricorda il primo numero.",
     intro:
       "Quando hai chiaro il numero, continua.",
-    firstResultTemplate: "Numero ottenuto: {value}",
+    firstResultTemplate: "Primo numero: {value}",
     continueCta: "Continua",
-    firstRollCta: "Lancia",
-    rerollCta: "Lancia",
+    firstRollCta: "Lancia il dado",
+    rerollCta: "Rilancia",
     loading: "Caricamento...",
+    attemptsTemplate: "Lanci: {count}",
     errors: {
       ...en.game.errors,
       noSession: "Non c'è una sessione attiva.",
@@ -1793,8 +1963,8 @@ const it = withServerErrors({
   },
   report: {
     ...en.report,
-    title: "Che cosa ti è uscito al primo lancio?",
-    body: "Seleziona il numero che ti è uscito al primo lancio.",
+    title: "Scegli il primo numero",
+    body: "Seleziona il numero del primo lancio.",
     errorSave: "Impossibile salvare la tua risposta.",
   },
   treatment: {
@@ -1865,6 +2035,20 @@ const it = withServerErrors({
     emailPlaceholder: "nome@email.com",
     cta: "Avvisami",
     success: "Ti avviseremo se apriremo un nuovo studio.",
+  },
+  closed: {
+    ...en.closed,
+    eyebrow: "Grazie di essere passato",
+    title: "Questa attività è ora chiusa",
+    body: "In questo momento non accettiamo nuove partecipazioni.",
+    bodySecondary:
+      "Anche il tuo interesse ci aiuta a misurare la portata dello studio. Se vuoi, lascia la tua email e ti avviseremo quando apriremo il prossimo studio.",
+    emailLabel: "La tua email",
+    emailPlaceholder: "nome@email.com",
+    cta: "Avvisami",
+    legalHint:
+      "Useremo la tua email solo per avvisarti quando aprirà una nuova attività del progetto.",
+    success: "Perfetto. Ti avviseremo quando riapriremo.",
   },
   paymentPage: {
     ...en.paymentPage,

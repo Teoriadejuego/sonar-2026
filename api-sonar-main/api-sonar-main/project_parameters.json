@@ -1,0 +1,206 @@
+{
+  "metadata": {
+    "schema_version": "sonar-2026-v9",
+    "experiment_version": "sonar-2026-field-v5",
+    "ui_version": "ui-v7",
+    "consent_version": "consent-v2",
+    "deck_version": "balanced-decks-v1",
+    "payment_version": "payment-deck-v3",
+    "telemetry_version": "telemetry-v3",
+    "lexicon_version": "lexicon-v5",
+    "deployment_context": "main_event",
+    "site_code": "SONAR2026",
+    "campaign_code": "festival_main",
+    "environment_label": "local"
+  },
+  "experiment": {
+    "design_key": "design_62_treatments_v1",
+    "phase_version": "design_62_treatments_v1",
+    "treatment_version": "treatment_deck_62_v1",
+    "allocation_version": "balanced_assignment_v1",
+    "displayed_message_version": "social_message_60_results_v1",
+    "window_size": 60,
+    "displayed_denominator": 60,
+    "norm_target_value": 6,
+    "max_attempts": 10,
+    "participant_limit": 120,
+    "demo_pulsera_count": 12000,
+    "bracelet_pattern": "^(?=(?:.*[A-Z]){4})(?=(?:.*\\d){4})[A-Z0-9]{8}$",
+    "treatment_deck_size": 62,
+    "result_deck_size": 24,
+    "payment_deck_size": 100,
+    "payment_winners_per_deck": 1,
+    "collapse_consecutive_claims": 0,
+    "phase_transition_valid_completed_threshold": 6000,
+    "prize_eur": {
+      "1": 10,
+      "2": 20,
+      "3": 30,
+      "4": 40,
+      "5": 50,
+      "6": 60
+    },
+    "demo_ids": {
+      "CTRL1234": {
+        "treatment_key": "control",
+        "result_value": 6,
+        "payout_eligible": true
+      },
+      "NORM0000": {
+        "treatment_key": "norm_0",
+        "result_value": 4,
+        "payout_eligible": false
+      },
+      "NORM0001": {
+        "treatment_key": "norm_1",
+        "result_value": 5,
+        "payout_eligible": false
+      }
+    },
+    "quality_thresholds": {
+      "landing_fast_ms": 1500,
+      "instructions_fast_ms": 3000,
+      "report_fast_ms": 800
+    }
+  },
+  "support": {
+    "winner_whatsapp_phone": "0034693494561"
+  },
+  "copy": {
+    "landing": {
+      "eyebrow": "Sorteo express",
+      "title": "Sonar 2026",
+      "subtitle": "Participa en 1 minuto y gana hasta 60 EUR.",
+      "intro": "Investigacion universitaria, participacion voluntaria, menos de 90 segundos y solo para mayores de 18 anos.",
+      "bracelet_label": "ID de tu pulsera",
+      "bracelet_placeholder": "Ej: AB12CD34",
+      "panel_links": {
+        "study": "Informacion del estudio",
+        "data_protection": "Proteccion de datos",
+        "withdrawal": "Retirada",
+        "contact": "Contacto"
+      },
+      "age_checkbox": "Confirmo que tengo 18 anos o mas",
+      "participation_checkbox": "He leido la informacion y acepto participar",
+      "data_checkbox": "He leido y acepto el tratamiento de datos",
+      "cta": "Comenzar",
+      "footer": "1 de cada 100 participantes recibe el pago."
+    },
+    "info_panels": {
+      "close_label": "Cerrar",
+      "study": {
+        "title": "Informacion del estudio",
+        "sections": [
+          {
+            "title": "Finalidad",
+            "body": "Esta actividad forma parte de una investigacion universitaria sobre toma de decisiones en entornos digitales y culturales, disenada para su analisis cientifico posterior."
+          },
+          {
+            "title": "Que haras",
+            "body": "Introduciras el codigo de tu pulsera, veras una tirada de dado y despues indicaras que numero salio. Si quieres, podras volver a lanzar antes de responder."
+          },
+          {
+            "title": "Duracion e incentivo",
+            "body": "La participacion dura aproximadamente entre 60 y 90 segundos. La asignacion del pago se realiza automaticamente: 1 de cada 100 participantes queda elegible para cobrar, y el importe depende del numero que indique."
+          }
+        ]
+      },
+      "data_protection": {
+        "title": "Proteccion de datos",
+        "sections": [
+          {
+            "title": "Datos utilizados",
+            "body": "El codigo de pulsera se utiliza para evitar participaciones duplicadas y para gestionar el incentivo. La informacion se analiza sin publicar identidades personales."
+          },
+          {
+            "title": "Uso cientifico",
+            "body": "Los resultados se trataran de forma agregada y podran usarse en informes, presentaciones y publicaciones academicas relacionadas con el experimento."
+          },
+          {
+            "title": "Minimizacion",
+            "body": "Solo se recogen los datos necesarios para operar el experimento, prevenir duplicidades y reconstruir la secuencia de participacion."
+          }
+        ]
+      },
+      "withdrawal": {
+        "title": "Retirada",
+        "sections": [
+          {
+            "title": "Antes de terminar",
+            "body": "Puedes dejar la actividad en cualquier momento antes de enviar tu respuesta final sin ninguna consecuencia."
+          },
+          {
+            "title": "Despues de enviar",
+            "body": "Si ya has enviado tu respuesta y deseas retirar tu participacion, pide ayuda al equipo del experimento lo antes posible indicando tu pulsera, siempre que los datos sigan siendo localizables en el sistema operativo del estudio."
+          }
+        ]
+      },
+      "contact": {
+        "title": "Contacto",
+        "sections": [
+          {
+            "title": "Equipo",
+            "body": "Puedes consultar cualquier duda con el equipo del experimento presente en el recinto o escribir a lbl@uloyola.es."
+          },
+          {
+            "title": "Incidencias",
+            "body": "Si detectas un problema tecnico o tienes una duda sobre el incentivo o el tratamiento de datos, comunicalo al personal del stand para que quede registrado."
+          }
+        ]
+      }
+    },
+    "consent": {
+      "modal_title": "Hoja informativa y consentimiento",
+      "close_label": "Cerrar",
+      "sections": [
+        {
+          "title": "Que es esta actividad",
+          "body": "Esta actividad forma parte de un estudio academico sobre toma de decisiones en contextos digitales y culturales. Se realiza en colaboracion con un laboratorio de economia del comportamiento."
+        },
+        {
+          "title": "Que tendras que hacer",
+          "body": "Introduciras el codigo de tu pulsera, veras una tirada de dado y despues indicaras que numero salio. Si quieres, podras volver a lanzar antes de responder. El proceso dura alrededor de un minuto."
+        },
+        {
+          "title": "Pago e incentivos",
+          "body": "La elegibilidad para el pago se asigna automaticamente de forma balanceada: exactamente una persona elegible por cada bloque de 100 participantes. Si eres elegible, el importe depende del numero que indiques."
+        },
+        {
+          "title": "Privacidad y datos",
+          "body": "La pulsera se usa solo para evitar participaciones duplicadas. El analisis se realiza sin publicar identidades personales y los resultados se estudian de forma agregada."
+        },
+        {
+          "title": "Participacion voluntaria",
+          "body": "Participar es voluntario. Puedes dejar la actividad en cualquier momento antes de enviar tu respuesta final. Una vez anonimizados, los datos podran usarse con fines cientificos y de publicacion academica."
+        },
+        {
+          "title": "Contacto",
+          "body": "Si tienes dudas sobre el estudio o sobre el cobro, puedes consultarlo con el equipo del stand o con el personal autorizado del proyecto."
+        }
+      ]
+    },
+    "instructions": {
+      "eyebrow": "Como funciona",
+      "title": "Como funciona",
+      "intro": "En las siguientes pantallas veras una tirada de dado y despues te preguntaremos que numero salio.",
+      "body": "Segun el numero que indiques, podras ganar el premio que aparece en la tabla.",
+      "cta": "Continuar"
+    },
+    "comprehension": {
+      "eyebrow": "Antes de seguir",
+      "title": "Despues de ver la tirada, que te pediremos?",
+      "options": [
+        "Indicar que numero salio",
+        "Elegir el premio que prefieres",
+        "Volver a tirar"
+      ],
+      "error_empty": "Elige una opcion.",
+      "error_wrong": "Recuerda: despues de la tirada te pediremos indicar que numero salio.",
+      "cta": "Seguir"
+    },
+    "messages": {
+      "control": "Tu respuesta se registrara de forma anonima. Indica que numero salio.",
+      "social_template": "En un grupo de {denominator} resultados anteriores al tuyo, {count} personas dijeron que les salio un {target}."
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import { ConsentModal } from "./ConsentModal";
 import { ScreenFrame } from "./ScreenFrame";
 import { useLanguage } from "../utils/LanguageContext";
@@ -25,7 +25,10 @@ type WelcomeScreenProps = {
   isLoading: boolean;
 };
 
-export function WelcomeScreen({ onStart, isLoading }: WelcomeScreenProps) {
+export const WelcomeScreen = memo(function WelcomeScreen({
+  onStart,
+  isLoading,
+}: WelcomeScreenProps) {
   const { copy } = useLanguage();
   const sanitizeBraceletInput = (raw: string) =>
     raw.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8);
@@ -294,4 +297,4 @@ export function WelcomeScreen({ onStart, isLoading }: WelcomeScreenProps) {
       />
     </ScreenFrame>
   );
-}
+});

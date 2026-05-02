@@ -19,7 +19,6 @@ type PrizeRevealState = {
 
 const PRIZE_REVEAL_STORAGE_KEY = "sonar_prize_reveal_v1";
 const PRIZE_REVEAL_TOTAL_TILES = 100;
-const DEMO_SESSION_PREFIX = "demo-session-";
 const PRIZE_REVEAL_COUNTS: Array<{
   category: PrizeIconCategory;
   count: number;
@@ -52,10 +51,6 @@ function writeRevealMap(value: Record<string, PrizeRevealState>) {
     return;
   }
   window.localStorage.setItem(PRIZE_REVEAL_STORAGE_KEY, JSON.stringify(value));
-}
-
-function isDemoPrizeRevealSession(sessionId: string) {
-  return sessionId.startsWith(DEMO_SESSION_PREFIX);
 }
 
 function hashString(value: string) {
@@ -101,9 +96,6 @@ export function buildPrizeRevealBoard(sessionId: string): PrizeRevealTile[] {
 }
 
 export function getStoredPrizeRevealState(sessionId: string) {
-  if (isDemoPrizeRevealSession(sessionId)) {
-    return null;
-  }
   return readRevealMap()[sessionId] ?? null;
 }
 
@@ -111,9 +103,6 @@ export function markPrizeRevealCompleted(
   sessionId: string,
   state: PrizeRevealState,
 ) {
-  if (isDemoPrizeRevealSession(sessionId)) {
-    return;
-  }
   const next = readRevealMap();
   next[sessionId] = state;
   writeRevealMap(next);

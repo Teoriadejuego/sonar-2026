@@ -1,0 +1,135 @@
+:root {
+  --bg: #f7f5f2;
+  --surface: rgba(255, 255, 255, 0.78);
+  --text: #111111;
+  --muted: #5a5752;
+  --line: #ddd7cf;
+  --shadow-panel: 0 18px 48px rgba(17, 17, 17, 0.08);
+  --content-max: 42rem;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body.sonar-body {
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.62), transparent 38%),
+    linear-gradient(180deg, #faf8f4 0%, var(--bg) 100%);
+}
+
+.sonar-app-shell {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+}
+
+.sonar-app-layer,
+.webapp-container {
+  width: 100%;
+}
+
+.webapp-container {
+  min-height: 100svh;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding:
+    max(env(safe-area-inset-top), 1rem)
+    1.25rem
+    max(env(safe-area-inset-bottom), 1.5rem);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen-frame-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.editorial-eyebrow {
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.editorial-title {
+  margin: 0;
+  font-size: clamp(2.4rem, 9vw, 4.5rem);
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+  color: var(--text);
+}
+
+.editorial-title--landing {
+  font-size: clamp(1.85rem, 6.3vw, 2.75rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+}
+
+.sonar-panel {
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.sonar-primary-button {
+  display: inline-flex;
+  min-height: 3.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 1rem;
+  background: #111111;
+  color: #fffdfa;
+  padding: 0.9rem 1.2rem;
+  font: inherit;
+  font-weight: 700;
+}
+
+.sonar-primary-button:disabled {
+  opacity: 0.7;
+}
+
+@media (min-width: 640px) {
+  body.sonar-body {
+    padding: 1.5rem;
+    box-sizing: border-box;
+  }
+
+  .sonar-app-shell {
+    align-items: center;
+  }
+
+  .sonar-app-layer {
+    display: flex;
+    justify-content: center;
+  }
+
+  .webapp-container {
+    min-height: min(calc(100vh - 3rem), 58rem);
+    padding: 2rem;
+    border: 1px solid var(--line);
+    border-radius: 2rem;
+    background: var(--surface);
+    backdrop-filter: blur(14px);
+    box-shadow: var(--shadow-panel);
+  }
+}

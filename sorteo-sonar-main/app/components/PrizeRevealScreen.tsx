@@ -1,8 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { ScreenFrame } from "./ScreenFrame";
 import { useLanguage } from "../utils/LanguageContext";
 import { usePageTelemetry } from "../utils/usePageTelemetry";
-import { useSession } from "../utils/SessionContext";
+import {
+  usePublicConfig,
+  useSessionActions,
+  useSessionRuntime,
+} from "../utils/SessionContext";
 import {
   buildPrizeRevealBoard,
   getPrizeRevealWinnerIndex,
@@ -59,8 +63,12 @@ type PrizeRevealScreenProps = {
   onComplete: () => void;
 };
 
-export function PrizeRevealScreen({ onComplete }: PrizeRevealScreenProps) {
-  const { session, publicConfig, pushTelemetry } = useSession();
+export const PrizeRevealScreen = memo(function PrizeRevealScreen({
+  onComplete,
+}: PrizeRevealScreenProps) {
+  const publicConfig = usePublicConfig();
+  const { session } = useSessionRuntime();
+  const { pushTelemetry } = useSessionActions();
   const { copy } = useLanguage();
   const { trackClick } = usePageTelemetry("prize_reveal");
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -212,4 +220,4 @@ export function PrizeRevealScreen({ onComplete }: PrizeRevealScreenProps) {
       </div>
     </ScreenFrame>
   );
-}
+});

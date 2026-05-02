@@ -6,11 +6,31 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
+import { useEffect } from "react";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import criticalCss from "./critical.css?inline";
+import { OfflineBanner } from "./components/OfflineBanner";
 import { LanguageProvider } from "./utils/LanguageContext";
 import { SessionProvider } from "./utils/SessionContext";
+
+function ServiceWorkerRegistrar() {
+  useEffect(() => {
+    if (
+      import.meta.env.DEV ||
+      typeof window === "undefined" ||
+      !("serviceWorker" in navigator)
+    ) {
+      return;
+    }
+    void navigator.serviceWorker.register("/sw.js").catch(() => {
+      // The app can continue without background caching support.
+    });
+  }, []);
+
+  return null;
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -18,6 +38,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#f7f5f2" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
         <Meta />
         <Links />
       </head>
@@ -36,6 +59,8 @@ export default function App() {
   return (
     <LanguageProvider>
       <SessionProvider>
+        <ServiceWorkerRegistrar />
+        <OfflineBanner />
         <Outlet />
       </SessionProvider>
     </LanguageProvider>

@@ -1,9 +1,21 @@
-import { Component, type ErrorInfo, type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  Component,
+  memo,
+  type ErrorInfo,
+  type ReactNode,
+  useCallback,
+  useRef,
+  useState,
+} from "react";
 import { ScreenFrame } from "./ScreenFrame";
 import { TreatmentBanner } from "./TreatmentBanner";
 import { useLanguage } from "../utils/LanguageContext";
 import { usePageTelemetry } from "../utils/usePageTelemetry";
-import { useSession } from "../utils/SessionContext";
+import {
+  DeferredRecoveryError,
+  useSessionActions,
+  useSessionRuntime,
+} from "../utils/SessionContext";
 import { formatCopy, translateServerError, type UiCopy } from "../utils/uiLexicon";
 import type { ReportSnapshot } from "../utils/api";
 
@@ -15,7 +27,9 @@ type ReportDecisionContentProps = {
   copy: UiCopy;
   snapshot: ReportSnapshot;
   error: string | null;
+  recoveryMessage: string | null;
   isSubmitting: boolean;
+  isBusy: boolean;
   selectedValue: number | null;
   onReport: (value: number) => Promise<void>;
 };
@@ -65,11 +79,13 @@ function buildTreatmentMessage(snapshot: ReportSnapshot, copy: UiCopy) {
   });
 }
 
-function ReportDecisionContent({
+const ReportDecisionContent = memo(function ReportDecisionContent({
   copy,
   snapshot,
   error,
+  recoveryMessage,
   isSubmitting,
+  isBusy,
   selectedValue,
   onReport,
 }: ReportDecisionContentProps) {
@@ -89,9 +105,15 @@ function ReportDecisionContent({
         </p>
       </div>
 
-      {error ? (
+      {error && !recoveryMessage ? (
         <div className="sonar-status sonar-panel-danger">
           {error}
+        </div>
+      ) : null}
+
+      {recoveryMessage ? (
+        <div className="sonar-status" aria-live="polite">
+          {recoveryMessage}
         </div>
       ) : null}
 
@@ -100,7 +122,7 @@ function ReportDecisionContent({
           <button
             key={value}
             onClick={() => void onReport(value)}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isBusy}
             className={`sonar-number-button ${
               selectedValue === value ? "sonar-number-button--selected" : ""
             }`}
@@ -111,13 +133,15 @@ function ReportDecisionContent({
       </div>
     </div>
   );
-}
+});
 
-function ReportDecisionFallback({
+const ReportDecisionFallback = memo(function ReportDecisionFallback({
   copy,
   snapshot,
   error,
+  recoveryMessage,
   isSubmitting,
+  isBusy,
   selectedValue,
   onReport,
 }: ReportDecisionContentProps) {
@@ -141,9 +165,15 @@ function ReportDecisionFallback({
         </p>
       </div>
 
-      {error ? (
+      {error && !recoveryMessage ? (
         <div className="sonar-status sonar-panel-danger">
           {error}
+        </div>
+      ) : null}
+
+      {recoveryMessage ? (
+        <div className="sonar-status" aria-live="polite">
+          {recoveryMessage}
         </div>
       ) : null}
 
@@ -152,7 +182,7 @@ function ReportDecisionFallback({
           <button
             key={value}
             onClick={() => void onReport(value)}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isBusy}
             className={`sonar-number-button ${
               selectedValue === value ? "sonar-number-button--selected" : ""
             }`}
@@ -163,83 +193,35 @@ function ReportDecisionFallback({
       </div>
     </div>
   );
-}
+});
 
-export function ReportScreen({ onSubmitReport }: ReportScreenProps) {
+export const ReportScreen = memo(function ReportScreen({
+  onSubmitReport,
+}: ReportScreenProps) {
+  const { session, networkRecovery, visualTransition } = useSessionRuntime();
   const {
-    session,
     submitClaim,
     pushTelemetry,
-    saveDisplaySnapshot,
-    prepareForReport,
-  } =
-    useSession();
+  } = useSessionActions();
   const { copy, language } = useLanguage();
   const { trackClick } = usePageTelemetry("report");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isRecovering, setIsRecovering] = useState(false);
   const [selectedValue, setSelectedValue] = useState<number | null>(null);
   const shownAtRef = useRef(Date.now());
+  const reportSnapshot = session?.report_snapshot ?? null;
+  const isPrepareRecovering =
+    networkRecovery.phase === "retrying" &&
+    networkRecovery.action === "prepare_report";
+  const isSubmitRecovering =
+    networkRecovery.phase === "retrying" &&
+    networkRecovery.action === "submit_claim";
+  const isPreparingView =
+    visualTransition.phase === "preparing_report" || session?.screen !== "report";
+  const recoveryMessage =
+    isPrepareRecovering || isSubmitRecovering ? networkRecovery.message : null;
 
-  useEffect(() => {
-    if (!session || session.report_snapshot || isRecovering) {
-      return;
-    }
-
-    let cancelled = false;
-    setIsRecovering(true);
-    setError(null);
-
-    void prepareForReport()
-      .catch((err) => {
-        if (cancelled) {
-          return;
-        }
-        setError(
-          err instanceof Error
-            ? translateServerError(err.message, copy)
-            : copy.game.errors.loadReport,
-        );
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsRecovering(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [copy, isRecovering, prepareForReport, session]);
-
-  useEffect(() => {
-    if (!session) {
-      return;
-    }
-    const snapshot = session.report_snapshot;
-    if (!snapshot) {
-      return;
-    }
-    const treatmentMessageText = buildTreatmentMessage(snapshot, copy);
-    void saveDisplaySnapshot({
-      screen_name: "report",
-      language,
-      treatment_message_text: treatmentMessageText,
-      control_message_text: snapshot.is_control
-        ? `${copy.treatment.controlTitle}. ${copy.treatment.controlBody}`
-        : undefined,
-      rerolls_visible: session.throws.slice(1).map((item) => item.result_value),
-    }).catch(() => {
-      // The report UI should stay usable even if snapshot persistence fails.
-    });
-  }, [copy, language, saveDisplaySnapshot, session]);
-
-  if (!session) {
-    return null;
-  }
-
-  const handleReport = async (value: number) => {
+  const handleReport = useCallback(async (value: number) => {
     if (isSubmitting) {
       trackClick("report_click_ignored_while_submitting", {
         target: `report_${value}`,
@@ -272,10 +254,13 @@ export function ReportScreen({ onSubmitReport }: ReportScreenProps) {
         duration_ms: reactionMs,
         value,
       });
-      window.setTimeout(() => {
-        onSubmitReport();
-      }, Math.max(0, 1000 - (Date.now() - submittedAt)));
+      onSubmitReport();
     } catch (err) {
+      if (err instanceof DeferredRecoveryError) {
+        setError(null);
+        setIsSubmitting(false);
+        return;
+      }
       setError(
         err instanceof Error
           ? translateServerError(err.message, copy)
@@ -284,17 +269,45 @@ export function ReportScreen({ onSubmitReport }: ReportScreenProps) {
       setSelectedValue(null);
       setIsSubmitting(false);
     }
-  };
+  }, [copy, isSubmitting, onSubmitReport, pushTelemetry, submitClaim, trackClick]);
 
-  if (!session.report_snapshot) {
+  const handleRenderError = useCallback(
+    (renderError: Error, componentStack?: string | null) => {
+      pushTelemetry({
+        event_type: "error",
+        event_name: "report_render_error",
+        screen_name: "report",
+        payload: {
+          message: renderError.message,
+          component_stack: componentStack,
+        },
+      });
+    },
+    [pushTelemetry],
+  );
+
+  if (!session) {
+    return null;
+  }
+
+  if (!reportSnapshot) {
     return (
       <ScreenFrame>
         <div className="flex min-h-full flex-col items-center justify-center gap-4 text-center">
-          <div className="h-14 w-14 animate-spin rounded-full border-4 border-slate-200 border-t-slate-950" />
-          <p className="editorial-small">
-            {isRecovering ? copy.common.loadingPrepare : copy.game.errors.loadReport}
-          </p>
-          {error ? (
+          <h2 className="editorial-title editorial-title--compact">
+            {copy.report.title}
+          </h2>
+          <div className="sonar-status" aria-live="polite">
+            {recoveryMessage ??
+              (isPreparingView
+                ? copy.common.loadingPrepare
+                : copy.game.errors.loadReport)}
+          </div>
+          {isPreparingView || recoveryMessage ? (
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-slate-950" />
+          ) : null}
+          <p className="editorial-small">{copy.report.body}</p>
+          {error && !recoveryMessage ? (
             <div className="sonar-status sonar-panel-danger w-full max-w-[28rem]">
               {error}
             </div>
@@ -307,23 +320,15 @@ export function ReportScreen({ onSubmitReport }: ReportScreenProps) {
   return (
     <ScreenFrame>
       <ReportDecisionBoundary
-        onRenderError={(renderError, componentStack) => {
-          pushTelemetry({
-            event_type: "error",
-            event_name: "report_render_error",
-            screen_name: "report",
-            payload: {
-              message: renderError.message,
-              component_stack: componentStack,
-            },
-          });
-        }}
+        onRenderError={handleRenderError}
         fallback={
           <ReportDecisionFallback
             copy={copy}
-            snapshot={session.report_snapshot}
+            snapshot={reportSnapshot}
             error={error}
+            recoveryMessage={recoveryMessage}
             isSubmitting={isSubmitting}
+            isBusy={isPrepareRecovering || isSubmitRecovering}
             selectedValue={selectedValue}
             onReport={handleReport}
           />
@@ -331,13 +336,15 @@ export function ReportScreen({ onSubmitReport }: ReportScreenProps) {
       >
         <ReportDecisionContent
           copy={copy}
-          snapshot={session.report_snapshot}
+          snapshot={reportSnapshot}
           error={error}
+          recoveryMessage={recoveryMessage}
           isSubmitting={isSubmitting}
+          isBusy={isPrepareRecovering || isSubmitRecovering}
           selectedValue={selectedValue}
           onReport={handleReport}
         />
       </ReportDecisionBoundary>
     </ScreenFrame>
   );
-}
+});
