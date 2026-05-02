@@ -2444,6 +2444,40 @@ def close_treatment_deck(db: Session, deck: TreatmentDeck) -> None:
     close_legacy_root(db, deck.legacy_root_id, "treatment_deck_exhausted")
 
 
+def retire_invalid_treatment_deck(
+    db: Session,
+    *,
+    deck: TreatmentDeck,
+    reason: str,
+    card: Optional[TreatmentDeckCard] = None,
+) -> None:
+    if card is not None:
+        card.assigned_session_id = None
+        card.assigned_at = None
+        db.add(card)
+    if deck.status == "active":
+        deck.status = "closed"
+        deck.closed_at = utcnow()
+        db.add(deck)
+    legacy_root = db.get(SeriesRoot, deck.legacy_root_id) if deck.legacy_root_id else None
+    if legacy_root and legacy_root.status == "active":
+        maybe_close_root(db, root=legacy_root, reason=reason)
+    create_audit(
+        db,
+        entity_type="treatment_deck",
+        entity_id=deck.id,
+        action="treatment_deck_retired_invalid",
+        payload={
+            "reason": reason,
+            "deck_index": deck.deck_index,
+            "legacy_root_id": deck.legacy_root_id,
+            "card_id": card.id if card else None,
+            "card_position": card.card_position if card else None,
+            "treatment_key": card.treatment_key if card else None,
+        },
+    )
+
+
 def close_result_deck(db: Session, deck: ResultDeck) -> None:
     if deck.status != "active":
         return
@@ -2511,12 +2545,27 @@ def assign_next_treatment_card(
                 close_treatment_deck(db, deck)
                 db.flush()
             continue
+        legacy_series = db.get(Series, card.legacy_series_id) if card.legacy_series_id else None
+        if (
+            card.treatment_key not in TREATMENT_KEYS
+            or not legacy_series
+            or legacy_series.treatment_key != card.treatment_key
+        ):
+            with distributed_lock(f"treatment-deck-close:{deck.id}"):
+                current_deck = db.get(TreatmentDeck, deck.id)
+                current_card = db.get(TreatmentDeckCard, card.id)
+                if current_deck and current_deck.status == "active":
+                    retire_invalid_treatment_deck(
+                        db,
+                        deck=current_deck,
+                        reason="legacy_or_invalid_treatment_card",
+                        card=current_card,
+                    )
+                    db.flush()
+            continue
         card.assigned_session_id = session_id
         card.assigned_at = utcnow()
         db.add(card)
-        legacy_series = db.get(Series, card.legacy_series_id) if card.legacy_series_id else None
-        if not legacy_series:
-            raise HTTPException(status_code=500, detail="Carta de tratamiento sin serie legacy")
         if legacy_series.position_counter != 1:
             legacy_series.position_counter = 1
             db.add(legacy_series)

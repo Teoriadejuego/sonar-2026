@@ -16,7 +16,7 @@ from sqlmodel import Session, SQLModel, select
 
 from database import engine
 from main import app, bootstrap_demo_data
-from models import Series, SeriesWindowEntry, SessionRecord
+from models import Series, SeriesWindowEntry, SessionRecord, TreatmentDeck, TreatmentDeckCard
 
 
 def bracelet_code(seed: int) -> str:
@@ -173,6 +173,48 @@ class RuntimeHardeningTests(unittest.TestCase):
             self.assertEqual(len(entries), 0)
             self.assertEqual(series.actual_window_version, 0)
             self.assertEqual(series.actual_count_target, 0)
+
+    def test_access_self_heals_legacy_treatment_deck(self) -> None:
+        with Session(engine) as db:
+            active_decks = db.exec(select(TreatmentDeck).where(TreatmentDeck.status == "active")).all()
+            for deck in active_decks:
+                deck.status = "closed"
+                db.add(deck)
+
+            stale_deck = TreatmentDeck(
+                deck_index=999,
+                deck_seed="legacy-seed",
+                legacy_root_id=None,
+                card_count=1,
+                status="active",
+            )
+            db.add(stale_deck)
+            db.flush()
+            db.add(
+                TreatmentDeckCard(
+                    deck_id=stale_deck.id,
+                    legacy_series_id=None,
+                    card_position=1,
+                    treatment_key="seed_17",
+                )
+            )
+            db.commit()
+            stale_deck_id = stale_deck.id
+
+        session = self.access_session(bracelet_code(50), "install-self-heal")
+        self.assertIn(session["treatment_key"], {"control"} | {f"norm_{count}" for count in range(61)})
+
+        with Session(engine) as db:
+            retired = db.get(TreatmentDeck, stale_deck_id)
+            self.assertIsNotNone(retired)
+            self.assertEqual(retired.status, "closed")
+            replacement = db.exec(
+                select(TreatmentDeck)
+                .where(TreatmentDeck.status == "active")
+                .order_by(TreatmentDeck.deck_index)
+            ).first()
+            self.assertIsNotNone(replacement)
+            self.assertNotEqual(replacement.id, stale_deck_id)
 
 
 if __name__ == "__main__":
