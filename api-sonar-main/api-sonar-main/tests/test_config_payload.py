@@ -19,6 +19,7 @@ from sqlmodel import Session, SQLModel, select
 from database import engine
 from main import app, build_config_payload
 from models import ExperimentState
+from settings import settings
 
 
 class ConfigPayloadTests(unittest.TestCase):
@@ -106,6 +107,11 @@ class ConfigPayloadTests(unittest.TestCase):
         self.assertEqual(session_payload["treatment_deck_index"], 1)
         self.assertEqual(session_payload["payment_deck_index"], 1)
         self.assertIsNotNone(session_payload["result_deck_index"])
+
+    def test_sqlite_engine_uses_configured_pool_size(self) -> None:
+        pool = engine.pool
+        self.assertTrue(hasattr(pool, "size"))
+        self.assertEqual(pool.size(), settings.db_pool_size)
 
     def test_access_uses_flow_payload_and_admin_session_uses_analytics_payload(self) -> None:
         client = TestClient(app)

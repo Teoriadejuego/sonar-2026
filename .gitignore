@@ -53,6 +53,10 @@ ops/__pycache__/
 coverage/
 htmlcov/
 .coverage
+outputs/
+simulation/
+ethical doc/
+qa_project_parameters.json
 
 # Docker override files
 docker-compose.override.yml

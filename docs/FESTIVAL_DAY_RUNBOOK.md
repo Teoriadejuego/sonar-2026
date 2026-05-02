@@ -2,7 +2,13 @@
 
 Runbook operativo para el dia de despliegue real.
 
-Actualizado: `2026-03-22`
+Actualizado: `2026-05-02`
+
+Nota:
+
+- para scripts de staff, errores humanos y fallback en pista, usar `docs/FIELD_OPERATIONS_PROTOCOL.md`
+- para warmup tecnico antes del primer pico, usar `docs/PRE_EVENT_WARMUP_CHECKLIST.md` y `ops/pre_event_warmup.py`
+- para recuperacion tras caida parcial de API o DB, usar `docs/PARTIAL_FAILURE_RECOVERY.md`
 
 ## 1. Antes de abrir
 
@@ -104,4 +110,3 @@ Plan recomendado:
 - descargar `operational_notes.csv`,
 - documentar incidencias del dia,
 - anotar cualquier cambio de configuracion o decision metodologica tomada en caliente.
-

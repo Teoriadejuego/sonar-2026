@@ -1,16 +1,43 @@
 from sqlalchemy import text
+from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, create_engine
 
 from settings import settings
 
 
-connect_args = {"check_same_thread": False} if settings.database_is_sqlite else {}
+def sqlite_uses_inmemory_database(database_url: str) -> bool:
+    normalized = database_url.lower()
+    return (
+        normalized in {"sqlite://", "sqlite:///:memory:"}
+        or ":memory:" in normalized
+        or "mode=memory" in normalized
+    )
+
+
+connect_args = {}
 engine_kwargs = {
     "pool_pre_ping": True,
     "echo": settings.sql_echo,
-    "connect_args": connect_args,
 }
-if not settings.database_is_sqlite:
+if settings.database_is_sqlite:
+    connect_args.update(
+        {
+            "check_same_thread": False,
+            "timeout": settings.db_sqlite_busy_timeout_seconds,
+        }
+    )
+    if sqlite_uses_inmemory_database(settings.database_url):
+        engine_kwargs["poolclass"] = StaticPool
+    else:
+        engine_kwargs.update(
+            {
+                "pool_size": settings.db_pool_size,
+                "max_overflow": settings.db_max_overflow,
+                "pool_timeout": settings.db_pool_timeout_seconds,
+                "pool_recycle": settings.db_pool_recycle_seconds,
+            }
+        )
+else:
     connect_args["connect_timeout"] = settings.db_connect_timeout_seconds
     engine_kwargs.update(
         {
@@ -20,6 +47,7 @@ if not settings.database_is_sqlite:
             "pool_recycle": settings.db_pool_recycle_seconds,
         }
     )
+engine_kwargs["connect_args"] = connect_args
 
 engine = create_engine(settings.database_url, **engine_kwargs)
 

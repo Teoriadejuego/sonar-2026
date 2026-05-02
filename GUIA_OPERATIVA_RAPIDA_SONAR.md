@@ -2,7 +2,11 @@
 
 Documento rapido para operar, revisar y actualizar SONAR sin reconstruir el contexto desde cero.
 
-Actualizado: `2026-03-22`
+Actualizado: `2026-05-02`
+
+Nota:
+
+- para operativa de staff y reduccion de errores humanos, usar como referencia principal `docs/FIELD_OPERATIONS_PROTOCOL.md`
 
 ## 1. Direcciones importantes
 
@@ -65,10 +69,9 @@ Inspeccion de una pulsera concreta:
 
 Para revision visual o de copy:
 
-- `1234`: ganador demo
-- `12341`: control demo
-- `12342`: `seed_low` demo
-- `12343`: `seed_high` demo
+- `CTRL1234`: control demo
+- `NORM0000`: norma demo `0/60`
+- `NORM0001`: norma demo `1/60`
 
 Estos codigos no deben contaminar las series reales.
 

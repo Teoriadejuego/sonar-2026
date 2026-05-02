@@ -34,7 +34,15 @@ Secciones:
 - `Contacto`
 
 Texto clave:
-- `Introduciras el codigo de tu pulsera, veras una tirada de dado y despues indicaras que numero salio. Si quieres, podras volver a lanzar antes de responder. El proceso dura alrededor de un minuto.`
+- `Esta actividad forma parte de un estudio academico sobre toma de decisiones en contextos digitales y culturales.`
+- `Introduciras el codigo de tu pulsera, veras una tirada de dado y despues indicaras que numero salio. El proceso dura alrededor de un minuto.`
+- `La asignacion del pago se realiza automaticamente. Si resultas seleccionado, el importe depende del numero que indiques.`
+- `Si decides cobrar, accederas a una plataforma separada donde se te solicitara un numero de telefono unicamente para gestionar el pago o la donacion. Estos datos no se utilizan para el analisis del estudio.`
+- `La pulsera se utiliza exclusivamente para evitar participaciones duplicadas.`
+- `Durante la actividad se registran las decisiones, el tiempo de interaccion y datos tecnicos basicos del dispositivo, unicamente para asegurar el correcto funcionamiento del estudio y la calidad de los datos.`
+- `Los resultados se analizan de forma agregada y no se publican datos que permitan identificar a las personas participantes.`
+- `Participar es voluntario. Puedes dejar la actividad en cualquier momento antes de enviar tu respuesta final.`
+- `Si tienes dudas sobre el estudio o sobre el cobro, puedes consultarlo con el equipo del stand o escribir a aalfonso@us.es`
 
 ## Pantalla 3. Instrucciones
 - `Como funciona`
