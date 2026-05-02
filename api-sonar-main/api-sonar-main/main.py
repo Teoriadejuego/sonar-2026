@@ -3563,180 +3563,198 @@ def ensure_user_and_session(
     client_context: Optional[dict[str, Any]],
     request: Request,
 ) -> tuple[User, SessionRecord, bool]:
-    now = utcnow()
-    bracelet_hash = stable_hash(bracelet_id)
-    device_basis = client_installation_id or request.headers.get(
-        "user-agent", "unknown-device"
-    )
-    device_hash = stable_hash(device_basis)
-    ip_hash = stable_hash(get_client_ip(request))
-    user_agent_hash = stable_hash(request.headers.get("user-agent", "unknown-agent"))
-    active_operational_note = get_active_operational_note(db)
-    referral_metadata = resolve_referral_metadata(
-        db,
-        incoming_referral_code=incoming_referral_code,
-        referral_source=referral_source,
-        referral_medium=referral_medium,
-        referral_campaign=referral_campaign,
-        referral_link_id=referral_link_id,
-    )
-    resolved_referral_code = referral_metadata["referral_code"]
-    resolved_referral_source = referral_metadata["referral_source"]
-    resolved_referral_medium = referral_metadata["referral_medium"]
-    resolved_referral_campaign = referral_metadata["referral_campaign"]
-    resolved_inviter_session_id = referral_metadata["inviter_session_id"]
-
-    user = db.exec(select(User).where(User.bracelet_id == bracelet_id)).first()
-    created_now = False
-    if not user:
-        user = User(
-            bracelet_id=bracelet_id,
-            bracelet_hash=bracelet_hash,
-            first_seen_at=now,
-            last_seen_at=now,
+    stage = "bootstrap_inputs"
+    try:
+        now = utcnow()
+        bracelet_hash = stable_hash(bracelet_id)
+        device_basis = client_installation_id or request.headers.get(
+            "user-agent", "unknown-device"
         )
-        db.add(user)
-        db.flush()
-
-    if user.is_blocked:
-        raise HTTPException(status_code=423, detail="Pulsera bloqueada")
-
-    session_record = db.exec(
-        select(SessionRecord).where(SessionRecord.user_id == user.id)
-    ).first()
-    if session_record:
-        expected_installation_id = session_record.client_installation_id
-        if expected_installation_id and client_installation_id != expected_installation_id:
-            create_fraud_flag(
-                db,
-                session_id=session_record.id,
-                user_id=user.id,
-                flag_key="session_takeover_attempt",
-                severity="high",
-                payload={
-                    "expected_installation_id": expected_installation_id,
-                    "presented_installation_id": client_installation_id,
-                },
-            )
-            db.commit()
-            raise HTTPException(
-                status_code=409,
-                detail="La pulsera ya tiene una sesion activa en otro dispositivo",
-            )
-        if client_installation_id and not expected_installation_id:
-            session_record.client_installation_id = client_installation_id
-        user.last_seen_at = now
-        session_record.last_seen_at = now
-        if language:
-            if session_record.language_at_access is None:
-                session_record.language_at_access = language
-            if (
-                session_record.language_at_access
-                and session_record.language_at_access != language
-            ):
-                session_record.language_changed_during_session = True
-        referral_attached = False
-        if (
-            resolved_referral_code
-            and not session_record.invited_by_session_id
-            and resolved_referral_code != session_record.referral_code
-        ):
-            session_record.invited_by_referral_code = resolved_referral_code
-            session_record.referral_source = resolved_referral_source
-            session_record.referral_medium = resolved_referral_medium
-            session_record.referral_campaign = resolved_referral_campaign
-            session_record.referral_link_id = referral_link_id
-            session_record.referral_landing_path = referral_path
-            session_record.referral_arrived_at = now
-            if resolved_inviter_session_id:
-                session_record.invited_by_session_id = resolved_inviter_session_id
-            referral_attached = True
-        if qr_entry_code and not session_record.qr_entry_code:
-            session_record.qr_entry_code = qr_entry_code
-        if active_operational_note and not session_record.operational_note_id:
-            session_record.operational_note_id = active_operational_note.id
-            session_record.operational_note_text = active_operational_note.note_text
-        db.add(user)
-        db.add(session_record)
-        upsert_session_client_context(
+        device_hash = stable_hash(device_basis)
+        ip_hash = stable_hash(get_client_ip(request))
+        user_agent_hash = stable_hash(request.headers.get("user-agent", "unknown-agent"))
+        active_operational_note = get_active_operational_note(db)
+        stage = "resolve_referral_metadata"
+        referral_metadata = resolve_referral_metadata(
             db,
-            session_id=session_record.id,
-            raw_context=client_context,
-            request=request,
-            app_language=language,
-        )
-        link_gateway_visit_to_session(
-            db,
-            gateway_visit_id=gateway_visit_id or referral_link_id,
-            session_id=session_record.id,
-            qr_entry_code=qr_entry_code,
-        )
-        link_referral_click_to_session(
-            db,
+            incoming_referral_code=incoming_referral_code,
+            referral_source=referral_source,
+            referral_medium=referral_medium,
+            referral_campaign=referral_campaign,
             referral_link_id=referral_link_id,
-            session_id=session_record.id,
         )
-        register_referral_conversion(
-            db,
-            session_record=session_record,
-            just_attached=referral_attached,
-        )
-        if referral_attached:
-            create_audit(
-                db,
-                entity_type="session",
-                entity_id=session_record.id,
-                action="referral_attached_on_resume",
-                session_id=session_record.id,
-                old_state=session_record.state,
-                new_state=session_record.state,
-                payload={
-                    "invited_by_referral_code": session_record.invited_by_referral_code,
-                    "invited_by_session_id": session_record.invited_by_session_id,
-                    "referral_source": session_record.referral_source,
-                    "referral_medium": session_record.referral_medium,
-                    "referral_campaign": session_record.referral_campaign,
-                },
+        resolved_referral_code = referral_metadata["referral_code"]
+        resolved_referral_source = referral_metadata["referral_source"]
+        resolved_referral_medium = referral_metadata["referral_medium"]
+        resolved_referral_campaign = referral_metadata["referral_campaign"]
+        resolved_inviter_session_id = referral_metadata["inviter_session_id"]
+
+        stage = "load_user"
+        user = db.exec(select(User).where(User.bracelet_id == bracelet_id)).first()
+        created_now = False
+        if not user:
+            stage = "create_user"
+            user = User(
+                bracelet_id=bracelet_id,
+                bracelet_hash=bracelet_hash,
+                first_seen_at=now,
+                last_seen_at=now,
             )
-        db.commit()
-        return user, session_record, created_now
+            db.add(user)
+            db.flush()
 
-    experiment_state = get_or_create_experiment_state(db, for_update=True)
-    phase_key = experiment_state.current_phase
-    session_id = make_uuid()
-    override = demo_override(bracelet_id)
-    if override:
-        (
-            treatment_deck,
-            treatment_card,
-            legacy_series,
-            result_deck,
-            result_card,
-            payment_deck,
-            payment_card,
-        ) = assign_demo_cards(db, bracelet_id=bracelet_id, session_id=session_id)
-        phase_activation_status = "demo_override"
-    else:
-        (
-            treatment_deck,
-            treatment_card,
-            legacy_series,
-        ) = assign_next_treatment_card(db, session_id=session_id)
-        result_deck, result_card = assign_next_result_card(
-            db,
-            session_id=session_id,
-            treatment_key=treatment_card.treatment_key,
-        )
-        payment_deck, payment_card = assign_next_payment_card(
-            db, session_id=session_id
-        )
-        phase_activation_status = current_phase_activation_status(phase_key)
+        if user.is_blocked:
+            raise HTTPException(status_code=423, detail="Pulsera bloqueada")
 
-    root = db.get(SeriesRoot, treatment_deck.legacy_root_id) if treatment_deck.legacy_root_id else None
-    treatment = treatment_config(phase_key, treatment_card.treatment_key)
-    position_index = treatment_card.card_position
-    root_id = root.id if root else legacy_series.root_id
-    session_record = SessionRecord(
+        stage = "load_existing_session"
+        session_record = db.exec(
+            select(SessionRecord).where(SessionRecord.user_id == user.id)
+        ).first()
+        if session_record:
+            expected_installation_id = session_record.client_installation_id
+            if expected_installation_id and client_installation_id != expected_installation_id:
+                create_fraud_flag(
+                    db,
+                    session_id=session_record.id,
+                    user_id=user.id,
+                    flag_key="session_takeover_attempt",
+                    severity="high",
+                    payload={
+                        "expected_installation_id": expected_installation_id,
+                        "presented_installation_id": client_installation_id,
+                    },
+                )
+                db.commit()
+                raise HTTPException(
+                    status_code=409,
+                    detail="La pulsera ya tiene una sesion activa en otro dispositivo",
+                )
+            if client_installation_id and not expected_installation_id:
+                session_record.client_installation_id = client_installation_id
+            user.last_seen_at = now
+            session_record.last_seen_at = now
+            if language:
+                if session_record.language_at_access is None:
+                    session_record.language_at_access = language
+                if (
+                    session_record.language_at_access
+                    and session_record.language_at_access != language
+                ):
+                    session_record.language_changed_during_session = True
+            referral_attached = False
+            if (
+                resolved_referral_code
+                and not session_record.invited_by_session_id
+                and resolved_referral_code != session_record.referral_code
+            ):
+                session_record.invited_by_referral_code = resolved_referral_code
+                session_record.referral_source = resolved_referral_source
+                session_record.referral_medium = resolved_referral_medium
+                session_record.referral_campaign = resolved_referral_campaign
+                session_record.referral_link_id = referral_link_id
+                session_record.referral_landing_path = referral_path
+                session_record.referral_arrived_at = now
+                if resolved_inviter_session_id:
+                    session_record.invited_by_session_id = resolved_inviter_session_id
+                referral_attached = True
+            if qr_entry_code and not session_record.qr_entry_code:
+                session_record.qr_entry_code = qr_entry_code
+            if active_operational_note and not session_record.operational_note_id:
+                session_record.operational_note_id = active_operational_note.id
+                session_record.operational_note_text = active_operational_note.note_text
+            db.add(user)
+            db.add(session_record)
+            stage = "update_existing_client_context"
+            upsert_session_client_context(
+                db,
+                session_id=session_record.id,
+                raw_context=client_context,
+                request=request,
+                app_language=language,
+            )
+            stage = "update_existing_gateway_link"
+            link_gateway_visit_to_session(
+                db,
+                gateway_visit_id=gateway_visit_id or referral_link_id,
+                session_id=session_record.id,
+                qr_entry_code=qr_entry_code,
+            )
+            stage = "update_existing_referral_link"
+            link_referral_click_to_session(
+                db,
+                referral_link_id=referral_link_id,
+                session_id=session_record.id,
+            )
+            stage = "update_existing_referral_conversion"
+            register_referral_conversion(
+                db,
+                session_record=session_record,
+                just_attached=referral_attached,
+            )
+            if referral_attached:
+                stage = "audit_existing_referral_attach"
+                create_audit(
+                    db,
+                    entity_type="session",
+                    entity_id=session_record.id,
+                    action="referral_attached_on_resume",
+                    session_id=session_record.id,
+                    old_state=session_record.state,
+                    new_state=session_record.state,
+                    payload={
+                        "invited_by_referral_code": session_record.invited_by_referral_code,
+                        "invited_by_session_id": session_record.invited_by_session_id,
+                        "referral_source": session_record.referral_source,
+                        "referral_medium": session_record.referral_medium,
+                        "referral_campaign": session_record.referral_campaign,
+                    },
+                )
+            stage = "commit_existing_session"
+            db.commit()
+            return user, session_record, created_now
+
+        stage = "load_experiment_state"
+        experiment_state = get_or_create_experiment_state(db, for_update=True)
+        phase_key = experiment_state.current_phase
+        session_id = make_uuid()
+        override = demo_override(bracelet_id)
+        if override:
+            stage = "assign_demo_cards"
+            (
+                treatment_deck,
+                treatment_card,
+                legacy_series,
+                result_deck,
+                result_card,
+                payment_deck,
+                payment_card,
+            ) = assign_demo_cards(db, bracelet_id=bracelet_id, session_id=session_id)
+            phase_activation_status = "demo_override"
+        else:
+            stage = "assign_treatment_card"
+            (
+                treatment_deck,
+                treatment_card,
+                legacy_series,
+            ) = assign_next_treatment_card(db, session_id=session_id)
+            stage = "assign_result_card"
+            result_deck, result_card = assign_next_result_card(
+                db,
+                session_id=session_id,
+                treatment_key=treatment_card.treatment_key,
+            )
+            stage = "assign_payment_card"
+            payment_deck, payment_card = assign_next_payment_card(
+                db, session_id=session_id
+            )
+            phase_activation_status = current_phase_activation_status(phase_key)
+
+        stage = "build_session_record"
+        root = db.get(SeriesRoot, treatment_deck.legacy_root_id) if treatment_deck.legacy_root_id else None
+        treatment = treatment_config(phase_key, treatment_card.treatment_key)
+        position_index = treatment_card.card_position
+        root_id = root.id if root else legacy_series.root_id
+        session_record = SessionRecord(
         id=session_id,
         user_id=user.id,
         root_id=legacy_series.root_id,
@@ -3800,119 +3818,134 @@ def ensure_user_and_session(
         user_agent_hash=user_agent_hash,
         created_at=now,
         last_seen_at=now,
-    )
-    created_now = True
-    referral_attached = False
-    if resolved_referral_code and resolved_referral_code != session_record.referral_code:
-        session_record.invited_by_session_id = resolved_inviter_session_id
-        referral_attached = bool(resolved_inviter_session_id or referral_link_id)
-
-    user.last_seen_at = now
-    db.add(user)
-    db.add(legacy_series)
-    db.add(session_record)
-    db.flush()
-    db.add(
-        ConsentRecord(
-            session_id=session_record.id,
-            bracelet_id=bracelet_id,
-            consent_version=CONSENT_VERSION,
-            language_at_access=language,
-            age_confirmed=consent_age_confirmed,
-            participation_accepted=consent_info_accepted,
-            data_accepted=consent_data_accepted,
-            accepted_at=now,
-            landing_visible_ms=landing_visible_ms,
-            info_panels_opened_json=stable_json(info_panels_opened or []),
-            info_panel_durations_json=stable_json(info_panel_durations_ms or {}),
-            info_panel_open_count=len(info_panels_opened or []),
-            checkbox_order_json=stable_json(consent_checkbox_order or []),
-            checkbox_timestamps_json=stable_json(consent_checkbox_timestamps_ms or {}),
-            continue_blocked_count=int(consent_continue_blocked_count or 0),
         )
-    )
-    upsert_session_client_context(
-        db,
-        session_id=session_record.id,
-        raw_context=client_context,
-        request=request,
-        app_language=language,
-    )
-    link_gateway_visit_to_session(
-        db,
-        gateway_visit_id=gateway_visit_id or referral_link_id,
-        session_id=session_record.id,
-        qr_entry_code=qr_entry_code,
-    )
-    link_referral_click_to_session(
-        db,
-        referral_link_id=referral_link_id,
-        session_id=session_record.id,
-    )
-    register_referral_conversion(
-        db,
-        session_record=session_record,
-        just_attached=referral_attached,
-    )
-    create_audit(
-        db,
-        entity_type="session",
-        entity_id=session_record.id,
-        action="session_assigned",
-        session_id=session_record.id,
-        new_state="assigned",
-        payload={
-                "root_id": legacy_series.root_id,
-                "series_id": legacy_series.id,
-                "experiment_phase": phase_key,
-                "treatment_key": treatment_card.treatment_key,
-                "treatment_type": treatment["treatment_type"],
-                "treatment_family": treatment["treatment_family"],
-                "norm_target_value": treatment["norm_target_value"],
-                "displayed_count_target": treatment["displayed_count_target"],
-                "displayed_denominator": treatment["displayed_denominator"],
-                "position_index": position_index,
-                "treatment_deck_index": treatment_deck.deck_index,
-                "treatment_card_position": treatment_card.card_position,
-                "result_deck_index": result_deck.deck_index,
-                "result_card_position": result_card.card_position,
-                "payment_deck_index": payment_deck.deck_index,
-                "payment_card_position": payment_card.card_position,
-                "selected_for_payment": payment_card.payout_eligible,
-                "referral_code": session_record.referral_code,
-                "invited_by_referral_code": session_record.invited_by_referral_code,
-                "invited_by_session_id": session_record.invited_by_session_id,
-                "referral_source": session_record.referral_source,
-                "referral_medium": session_record.referral_medium,
-                "referral_campaign": session_record.referral_campaign,
-                "referral_link_id": session_record.referral_link_id,
-                "language_at_access": language,
-                "demo_override": bool(override),
-            },
-        )
+        created_now = True
+        referral_attached = False
+        if resolved_referral_code and resolved_referral_code != session_record.referral_code:
+            session_record.invited_by_session_id = resolved_inviter_session_id
+            referral_attached = bool(resolved_inviter_session_id or referral_link_id)
 
-    recent_same_device_user_count = int(
-        db.exec(
-            select(func.count(func.distinct(SessionRecord.user_id))).where(
-                SessionRecord.device_hash == device_hash,
-                SessionRecord.created_at >= now - timedelta(minutes=15),
-                SessionRecord.user_id != user.id,
+        user.last_seen_at = now
+        db.add(user)
+        db.add(legacy_series)
+        db.add(session_record)
+        stage = "flush_session_record"
+        db.flush()
+        stage = "create_consent_record"
+        db.add(
+            ConsentRecord(
+                session_id=session_record.id,
+                bracelet_id=bracelet_id,
+                consent_version=CONSENT_VERSION,
+                language_at_access=language,
+                age_confirmed=consent_age_confirmed,
+                participation_accepted=consent_info_accepted,
+                data_accepted=consent_data_accepted,
+                accepted_at=now,
+                landing_visible_ms=landing_visible_ms,
+                info_panels_opened_json=stable_json(info_panels_opened or []),
+                info_panel_durations_json=stable_json(info_panel_durations_ms or {}),
+                info_panel_open_count=len(info_panels_opened or []),
+                checkbox_order_json=stable_json(consent_checkbox_order or []),
+                checkbox_timestamps_json=stable_json(consent_checkbox_timestamps_ms or {}),
+                continue_blocked_count=int(consent_continue_blocked_count or 0),
             )
-        ).one()
-        or 0
-    )
-    if recent_same_device_user_count:
-        create_fraud_flag(
-            db,
-            flag_key="same_device_multiple_bracelets",
-            severity="medium",
-            session_id=session_record.id,
-            user_id=user.id,
-            payload={"other_users_in_15m": recent_same_device_user_count},
         )
+        stage = "upsert_client_context"
+        upsert_session_client_context(
+            db,
+            session_id=session_record.id,
+            raw_context=client_context,
+            request=request,
+            app_language=language,
+        )
+        stage = "link_gateway_visit"
+        link_gateway_visit_to_session(
+            db,
+            gateway_visit_id=gateway_visit_id or referral_link_id,
+            session_id=session_record.id,
+            qr_entry_code=qr_entry_code,
+        )
+        stage = "link_referral_click"
+        link_referral_click_to_session(
+            db,
+            referral_link_id=referral_link_id,
+            session_id=session_record.id,
+        )
+        stage = "register_referral_conversion"
+        register_referral_conversion(
+            db,
+            session_record=session_record,
+            just_attached=referral_attached,
+        )
+        stage = "audit_session_assigned"
+        create_audit(
+            db,
+            entity_type="session",
+            entity_id=session_record.id,
+            action="session_assigned",
+            session_id=session_record.id,
+            new_state="assigned",
+            payload={
+                    "root_id": legacy_series.root_id,
+                    "series_id": legacy_series.id,
+                    "experiment_phase": phase_key,
+                    "treatment_key": treatment_card.treatment_key,
+                    "treatment_type": treatment["treatment_type"],
+                    "treatment_family": treatment["treatment_family"],
+                    "norm_target_value": treatment["norm_target_value"],
+                    "displayed_count_target": treatment["displayed_count_target"],
+                    "displayed_denominator": treatment["displayed_denominator"],
+                    "position_index": position_index,
+                    "treatment_deck_index": treatment_deck.deck_index,
+                    "treatment_card_position": treatment_card.card_position,
+                    "result_deck_index": result_deck.deck_index,
+                    "result_card_position": result_card.card_position,
+                    "payment_deck_index": payment_deck.deck_index,
+                    "payment_card_position": payment_card.card_position,
+                    "selected_for_payment": payment_card.payout_eligible,
+                    "referral_code": session_record.referral_code,
+                    "invited_by_referral_code": session_record.invited_by_referral_code,
+                    "invited_by_session_id": session_record.invited_by_session_id,
+                    "referral_source": session_record.referral_source,
+                    "referral_medium": session_record.referral_medium,
+                    "referral_campaign": session_record.referral_campaign,
+                    "referral_link_id": session_record.referral_link_id,
+                    "language_at_access": language,
+                    "demo_override": bool(override),
+                },
+            )
 
-    db.commit()
-    return user, session_record, created_now
+        stage = "check_same_device_recent_sessions"
+        recent_same_device_user_count = int(
+            db.exec(
+                select(func.count(func.distinct(SessionRecord.user_id))).where(
+                    SessionRecord.device_hash == device_hash,
+                    SessionRecord.created_at >= now - timedelta(minutes=15),
+                    SessionRecord.user_id != user.id,
+                )
+            ).one()
+            or 0
+        )
+        if recent_same_device_user_count:
+            stage = "create_same_device_flag"
+            create_fraud_flag(
+                db,
+                flag_key="same_device_multiple_bracelets",
+                severity="medium",
+                session_id=session_record.id,
+                user_id=user.id,
+                payload={"other_users_in_15m": recent_same_device_user_count},
+            )
+
+        stage = "commit_new_session"
+        db.commit()
+        return user, session_record, created_now
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        setattr(exc, "sonar_stage", stage)
+        raise
 
 
 def startup_dependency_status() -> dict[str, bool]:
@@ -4860,32 +4893,48 @@ def access_session(
             pulsera = Pulsera(id=bracelet_id)
             db.add(pulsera)
             db.flush()
-        _, session_record, created_now = ensure_user_and_session(
-            db,
-            bracelet_id=bracelet_id,
-            consent_accepted=consent_ok,
-            consent_age_confirmed=payload.consent_age_confirmed,
-            consent_info_accepted=payload.consent_info_accepted,
-            consent_data_accepted=payload.consent_data_accepted,
-            language=payload.language,
-            landing_visible_ms=payload.landing_visible_ms,
-            info_panels_opened=payload.info_panels_opened,
-            info_panel_durations_ms=payload.info_panel_durations_ms,
-            client_installation_id=payload.client_installation_id,
-            incoming_referral_code=payload.referral_code,
-            referral_source=payload.referral_source,
-            referral_medium=payload.referral_medium,
-            referral_campaign=payload.referral_campaign,
-            referral_link_id=payload.referral_link_id,
-            gateway_visit_id=payload.gateway_visit_id,
-            qr_entry_code=payload.qr_entry_code,
-            referral_path=payload.referral_path,
-            consent_checkbox_order=payload.consent_checkbox_order,
-            consent_checkbox_timestamps_ms=payload.consent_checkbox_timestamps_ms,
-            consent_continue_blocked_count=payload.consent_continue_blocked_count,
-            client_context=payload.client_context,
-            request=request,
-        )
+        try:
+            _, session_record, created_now = ensure_user_and_session(
+                db,
+                bracelet_id=bracelet_id,
+                consent_accepted=consent_ok,
+                consent_age_confirmed=payload.consent_age_confirmed,
+                consent_info_accepted=payload.consent_info_accepted,
+                consent_data_accepted=payload.consent_data_accepted,
+                language=payload.language,
+                landing_visible_ms=payload.landing_visible_ms,
+                info_panels_opened=payload.info_panels_opened,
+                info_panel_durations_ms=payload.info_panel_durations_ms,
+                client_installation_id=payload.client_installation_id,
+                incoming_referral_code=payload.referral_code,
+                referral_source=payload.referral_source,
+                referral_medium=payload.referral_medium,
+                referral_campaign=payload.referral_campaign,
+                referral_link_id=payload.referral_link_id,
+                gateway_visit_id=payload.gateway_visit_id,
+                qr_entry_code=payload.qr_entry_code,
+                referral_path=payload.referral_path,
+                consent_checkbox_order=payload.consent_checkbox_order,
+                consent_checkbox_timestamps_ms=payload.consent_checkbox_timestamps_ms,
+                consent_continue_blocked_count=payload.consent_continue_blocked_count,
+                client_context=payload.client_context,
+                request=request,
+            )
+        except HTTPException:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            failure_stage = getattr(exc, "sonar_stage", "unknown")
+            logger.exception(
+                "session_access_failed",
+                extra={"bracelet_id": bracelet_id, "stage": failure_stage},
+            )
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "message": "No se pudo inicializar la sesion",
+                    "stage": failure_stage,
+                },
+            ) from exc
         if created_now:
             record_session_started("instructions")
         relations = load_session_payload_relations(db, session_record)
