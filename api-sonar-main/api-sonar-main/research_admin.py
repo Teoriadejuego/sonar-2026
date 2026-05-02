@@ -3,6 +3,7 @@ import hashlib
 from html import escape
 import io
 import json
+import logging
 import zipfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -10,6 +11,7 @@ from typing import Any, Optional
 
 from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, select
 
 from experiment import (
@@ -61,6 +63,19 @@ from models import (
 )
 from runtime import get_counter_group_snapshot, get_http_metrics_snapshot
 from settings import settings
+
+logger = logging.getLogger("sonar")
+
+OPTIONAL_EXPORT_MODEL_TABLES = frozenset(
+    {
+        getattr(ScreenSpell, "__tablename__", "screen_spells"),
+        getattr(SessionClientContext, "__tablename__", "session_client_contexts"),
+        getattr(TelemetryEvent, "__tablename__", "telemetry_events"),
+        getattr(FraudFlag, "__tablename__", "fraud_flags"),
+        getattr(OperationalNote, "__tablename__", "operational_notes"),
+        getattr(InterestSignup, "__tablename__", "interest_signups"),
+    }
+)
 
 
 DATASET_DESCRIPTIONS: dict[str, dict[str, str]] = {
@@ -224,8 +239,79 @@ def parse_json_dict(raw_value: Optional[str]) -> dict[str, Any]:
         return {}
 
 
-def load_lookup_table(db: Session, model: Any, key_field: str) -> dict[Any, Any]:
-    rows = db.exec(select(model)).all()
+def is_missing_relation_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return any(
+        marker in message
+        for marker in (
+            "no such table",
+            "no such column",
+            "does not exist",
+            "undefined table",
+            "undefined column",
+            "unknown table",
+            "unknown column",
+        )
+    )
+
+
+def export_error_summary(exc: Exception) -> str:
+    if is_missing_relation_error(exc):
+        return "Tabla legacy no disponible en este despliegue."
+    return str(exc).splitlines()[0].strip() or exc.__class__.__name__
+
+
+def load_model_rows(
+    db: Session,
+    model: Any,
+    *,
+    order_by: Any = None,
+    missing_ok: bool = False,
+    export_name: Optional[str] = None,
+) -> list[Any]:
+    statement = select(model)
+    if order_by is not None:
+        if isinstance(order_by, (list, tuple)):
+            statement = statement.order_by(*order_by)
+        else:
+            statement = statement.order_by(order_by)
+    try:
+        return db.exec(statement).all()
+    except SQLAlchemyError as exc:
+        table_name = getattr(model, "__tablename__", model.__name__)
+        if (
+            missing_ok
+            and table_name in OPTIONAL_EXPORT_MODEL_TABLES
+            and is_missing_relation_error(exc)
+        ):
+            logger.warning(
+                "admin_export_optional_table_missing",
+                extra={
+                    "structured_payload": {
+                        "dataset": export_name,
+                        "table_name": table_name,
+                        "error": export_error_summary(exc),
+                    }
+                },
+            )
+            return []
+        raise
+
+
+def load_lookup_table(
+    db: Session,
+    model: Any,
+    key_field: str,
+    *,
+    missing_ok: bool = False,
+    export_name: Optional[str] = None,
+) -> dict[Any, Any]:
+    rows = load_model_rows(
+        db,
+        model,
+        missing_ok=missing_ok,
+        export_name=export_name,
+    )
     return {getattr(item, key_field): item for item in rows}
 
 
@@ -286,13 +372,23 @@ def analytic_sessions_rows(db: Session) -> list[dict[str, Any]]:
     payments_by_session = load_lookup_table(db, Payment, "session_id")
     consent_by_session = load_lookup_table(db, ConsentRecord, "session_id")
     snapshot_by_session = load_lookup_table(db, SnapshotRecord, "session_id")
-    client_context_by_session = load_lookup_table(db, SessionClientContext, "session_id")
+    client_context_by_session = load_lookup_table(
+        db,
+        SessionClientContext,
+        "session_id",
+        missing_ok=True,
+        export_name="sessions",
+    )
     treatment_decks = load_lookup_table(db, TreatmentDeck, "id")
     result_decks = load_lookup_table(db, ResultDeck, "id")
     payment_decks = load_lookup_table(db, PaymentDeck, "id")
-    screen_spells = db.exec(
-        select(ScreenSpell).order_by(ScreenSpell.session_id, ScreenSpell.entered_server_ts)
-    ).all()
+    screen_spells = load_model_rows(
+        db,
+        ScreenSpell,
+        order_by=(ScreenSpell.session_id, ScreenSpell.entered_server_ts),
+        missing_ok=True,
+        export_name="sessions",
+    )
 
     seen_by_session: dict[str, list[int]] = {}
     screen_metrics_by_session: dict[str, dict[str, int]] = {}
@@ -617,7 +713,13 @@ def payments_admin_rows(db: Session) -> list[dict[str, Any]]:
 
 
 def telemetry_rows(db: Session) -> list[dict[str, Any]]:
-    events = db.exec(select(TelemetryEvent).order_by(TelemetryEvent.server_ts)).all()
+    events = load_model_rows(
+        db,
+        TelemetryEvent,
+        order_by=TelemetryEvent.server_ts,
+        missing_ok=True,
+        export_name="telemetry",
+    )
     session_map = load_lookup_table(db, SessionRecord, "id")
     return [
         {
@@ -663,7 +765,13 @@ def telemetry_rows(db: Session) -> list[dict[str, Any]]:
 
 
 def technical_events_rows(db: Session) -> list[dict[str, Any]]:
-    events = db.exec(select(TelemetryEvent).order_by(TelemetryEvent.server_ts)).all()
+    events = load_model_rows(
+        db,
+        TelemetryEvent,
+        order_by=TelemetryEvent.server_ts,
+        missing_ok=True,
+        export_name="technical_events",
+    )
     session_map = load_lookup_table(db, SessionRecord, "id")
     technical_events = [
         event
@@ -701,7 +809,13 @@ def technical_events_rows(db: Session) -> list[dict[str, Any]]:
 
 
 def screen_events_rows(db: Session) -> list[dict[str, Any]]:
-    spells = db.exec(select(ScreenSpell).order_by(ScreenSpell.entered_server_ts)).all()
+    spells = load_model_rows(
+        db,
+        ScreenSpell,
+        order_by=ScreenSpell.entered_server_ts,
+        missing_ok=True,
+        export_name="screen_events",
+    )
     session_map = load_lookup_table(db, SessionRecord, "id")
     return [
         {
@@ -745,7 +859,13 @@ def screen_events_rows(db: Session) -> list[dict[str, Any]]:
 
 
 def client_contexts_rows(db: Session) -> list[dict[str, Any]]:
-    contexts = db.exec(select(SessionClientContext).order_by(SessionClientContext.captured_at)).all()
+    contexts = load_model_rows(
+        db,
+        SessionClientContext,
+        order_by=SessionClientContext.captured_at,
+        missing_ok=True,
+        export_name="client_contexts",
+    )
     return [
         {
             "client_context_id": context.id,
@@ -894,7 +1014,13 @@ def payment_deck_cards_rows(db: Session) -> list[dict[str, Any]]:
 
 
 def interest_signups_rows(db: Session) -> list[dict[str, Any]]:
-    signups = db.exec(select(InterestSignup).order_by(InterestSignup.created_at)).all()
+    signups = load_model_rows(
+        db,
+        InterestSignup,
+        order_by=InterestSignup.created_at,
+        missing_ok=True,
+        export_name="interest_signups",
+    )
     return [
         {
             "interest_signup_id": signup.id,
@@ -917,7 +1043,13 @@ def interest_signups_rows(db: Session) -> list[dict[str, Any]]:
 
 
 def operational_notes_rows(db: Session) -> list[dict[str, Any]]:
-    notes = db.exec(select(OperationalNote).order_by(OperationalNote.effective_from)).all()
+    notes = load_model_rows(
+        db,
+        OperationalNote,
+        order_by=OperationalNote.effective_from,
+        missing_ok=True,
+        export_name="operational_notes",
+    )
     return [
         {
             "operational_note_id": note.id,
@@ -950,7 +1082,13 @@ def quality_flags_rows(db: Session) -> list[dict[str, Any]]:
 
 
 def fraud_flags_rows(db: Session) -> list[dict[str, Any]]:
-    flags = db.exec(select(FraudFlag).order_by(FraudFlag.created_at)).all()
+    flags = load_model_rows(
+        db,
+        FraudFlag,
+        order_by=FraudFlag.created_at,
+        missing_ok=True,
+        export_name="fraud_flags",
+    )
     return [
         {
             "fraud_flag_id": flag.id,
@@ -1254,17 +1392,28 @@ def exports_page_html(
     rows_html = []
     for dataset_name, meta in DATASET_DESCRIPTIONS.items():
         stats = dataset_stats.get(dataset_name, {})
+        error_message = stats.get("error")
+        description_html = escape(meta["description"])
+        if error_message:
+            description_html += (
+                f"<br /><span class=\"warn\">No disponible: {escape(str(error_message))}</span>"
+            )
+        export_html = (
+            "<span class=\"warn\">No disponible</span>"
+            if error_message
+            else f'<a href="/admin/export/{dataset_name}.csv">CSV</a>'
+        )
         rows_html.append(
             f"""
             <tr>
               <td><strong>{dataset_name}</strong></td>
               <td>{meta['category']}</td>
               <td>{meta['sensitivity']}</td>
-              <td>{stats.get('records', 0)}</td>
-              <td>{stats.get('size_label', '0 B')}</td>
+              <td>{stats.get('records', '-')}</td>
+              <td>{stats.get('size_label', '0 B' if not error_message else 'Error')}</td>
               <td>{stats.get('generated_at', '-')}</td>
-              <td>{meta['description']}</td>
-              <td><a href="/admin/export/{dataset_name}.csv">CSV</a></td>
+              <td>{description_html}</td>
+              <td>{export_html}</td>
             </tr>
             """
         )
@@ -3085,19 +3234,37 @@ def dataset_export_stats(db: Session) -> dict[str, dict[str, Any]]:
     generated_at = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     stats: dict[str, dict[str, Any]] = {}
     for dataset_name in DATASET_DESCRIPTIONS:
-        rows = dataset_rows(db, dataset_name)
-        csv_bytes = rows_to_csv_bytes(rows)
-        size_bytes = len(csv_bytes)
-        if size_bytes < 1024:
-            size_label = f"{size_bytes} B"
-        elif size_bytes < 1024 * 1024:
-            size_label = f"{round(size_bytes / 1024, 1)} KB"
-        else:
-            size_label = f"{round(size_bytes / (1024 * 1024), 2)} MB"
-        stats[dataset_name] = {
-            "records": len(rows),
-            "size_bytes": size_bytes,
-            "size_label": size_label,
-            "generated_at": generated_at,
-        }
+        try:
+            rows = dataset_rows(db, dataset_name)
+            csv_bytes = rows_to_csv_bytes(rows)
+            size_bytes = len(csv_bytes)
+            if size_bytes < 1024:
+                size_label = f"{size_bytes} B"
+            elif size_bytes < 1024 * 1024:
+                size_label = f"{round(size_bytes / 1024, 1)} KB"
+            else:
+                size_label = f"{round(size_bytes / (1024 * 1024), 2)} MB"
+            stats[dataset_name] = {
+                "records": len(rows),
+                "size_bytes": size_bytes,
+                "size_label": size_label,
+                "generated_at": generated_at,
+            }
+        except Exception as exc:
+            logger.exception(
+                "admin_export_dataset_stats_failed",
+                extra={
+                    "structured_payload": {
+                        "dataset": dataset_name,
+                        "error": export_error_summary(exc),
+                    }
+                },
+            )
+            stats[dataset_name] = {
+                "records": "-",
+                "size_bytes": 0,
+                "size_label": "Error",
+                "generated_at": generated_at,
+                "error": export_error_summary(exc),
+            }
     return stats

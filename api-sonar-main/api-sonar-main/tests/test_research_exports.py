@@ -16,6 +16,7 @@ os.environ["REQUIRE_ADMIN_AUTH"] = "false"
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlmodel import Session, SQLModel
 
 from database import engine
@@ -122,6 +123,11 @@ class ResearchExportsTests(unittest.TestCase):
         reader = csv.DictReader(io.StringIO(content.decode("utf-8")))
         return list(reader)
 
+    def drop_table(self, table_name: str) -> None:
+        with Session(engine) as db:
+            db.exec(text(f"DROP TABLE {table_name}"))
+            db.commit()
+
     def test_exports_page_and_dashboard_are_available(self) -> None:
         completed = self.complete_session(bracelet_code(1))
 
@@ -221,6 +227,42 @@ class ResearchExportsTests(unittest.TestCase):
         claims_rows = self.parse_csv(self.client.get("/admin/export/claims.csv").content)
         self.assertEqual(claims_rows[0]["crowd_prediction_value"], "3")
         self.assertEqual(claims_rows[0]["social_recall_correct"], "True")
+
+    def test_exports_page_survives_missing_legacy_tables(self) -> None:
+        self.complete_session(bracelet_code(5))
+        self.drop_table("screen_spells")
+
+        response = self.client.get("/admin/exports")
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertIn("Data Exports", response.text)
+        self.assertIn("Exportar dataset analitico completo", response.text)
+
+    def test_sessions_export_survives_missing_screen_spells(self) -> None:
+        self.complete_session(bracelet_code(6))
+        self.drop_table("screen_spells")
+
+        response = self.client.get("/admin/export/sessions.csv")
+        self.assertEqual(response.status_code, 200, response.text)
+        rows = self.parse_csv(response.content)
+        self.assertEqual(len(rows), 1)
+
+    def test_operational_bundle_survives_missing_optional_tables(self) -> None:
+        self.complete_session(bracelet_code(7))
+        self.drop_table("screen_spells")
+        self.drop_table("session_client_contexts")
+        self.drop_table("fraud_flags")
+        self.drop_table("operational_notes")
+
+        response = self.client.get("/admin/export/bundle/operational.zip")
+        self.assertEqual(response.status_code, 200, response.text)
+        archive = zipfile.ZipFile(io.BytesIO(response.content))
+        names = set(archive.namelist())
+        self.assertIn("screen_events.csv", names)
+        self.assertIn("client_contexts.csv", names)
+        self.assertIn("fraud_flags.csv", names)
+        self.assertIn("operational_notes.csv", names)
+        self.assertEqual(archive.read("screen_events.csv"), b"")
+        self.assertEqual(archive.read("client_contexts.csv"), b"")
 
 
 if __name__ == "__main__":
