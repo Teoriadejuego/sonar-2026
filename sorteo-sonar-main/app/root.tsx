@@ -15,18 +15,34 @@ import { OfflineBanner } from "./components/OfflineBanner";
 import { LanguageProvider } from "./utils/LanguageContext";
 import { SessionProvider } from "./utils/SessionContext";
 
-function ServiceWorkerRegistrar() {
+function ServiceWorkerResetter() {
   useEffect(() => {
-    if (
-      import.meta.env.DEV ||
-      typeof window === "undefined" ||
-      !("serviceWorker" in navigator)
-    ) {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
       return;
     }
-    void navigator.serviceWorker.register("/sw.js").catch(() => {
-      // The app can continue without background caching support.
-    });
+    void navigator.serviceWorker
+      .getRegistrations()
+      .then((registrations) =>
+        Promise.all(registrations.map((registration) => registration.unregister())),
+      )
+      .catch(() => {
+        // The app can continue without persistent offline support.
+      });
+    if (!("caches" in window)) {
+      return;
+    }
+    void caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key.startsWith("sonar-shell-"))
+            .map((key) => caches.delete(key)),
+        ),
+      )
+      .catch(() => {
+        // Clearing stale shell caches is best-effort only.
+      });
   }, []);
 
   return null;
@@ -39,7 +55,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#f7f5f2" />
-        <link rel="manifest" href="/manifest.webmanifest" />
         <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
         <Meta />
         <Links />
@@ -59,7 +74,7 @@ export default function App() {
   return (
     <LanguageProvider>
       <SessionProvider>
-        <ServiceWorkerRegistrar />
+        <ServiceWorkerResetter />
         <OfflineBanner />
         <Outlet />
       </SessionProvider>

@@ -34,7 +34,7 @@ export const FinalScreen = memo(function FinalScreen({
             <p className="editorial-eyebrow">{eyebrow}</p>
           )}
           <div className="sonar-panel p-5">
-            <p className="editorial-small">
+            <p className="editorial-body">
               {footerMatch ? (
                 <>
                   {footerMatch[1]}

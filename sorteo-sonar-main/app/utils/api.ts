@@ -1,5 +1,5 @@
 const PUBLIC_REVIEW_API_URL =
-  "https://api-production-9fe7b.up.railway.app";
+  "https://api-production-9151.up.railway.app";
 const INSTALLATION_STORAGE_KEY = "sonar_installation_v1";
 const PUBLIC_CONFIG_STORAGE_KEY = "sonar_public_config_v1";
 const INSTALLATION_HEADER_NAME = "X-Sonar-Installation";
@@ -25,6 +25,29 @@ function resolveApiBaseUrl() {
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
+
+function resolveFallbackApiBaseUrl(primaryBaseUrl: string) {
+  const normalizedPrimary = primaryBaseUrl.replace(/\/$/, "");
+  if (normalizedPrimary === PUBLIC_REVIEW_API_URL) {
+    return null;
+  }
+
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const hostname = window.location.hostname;
+  const isLocalMachine =
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "[::1]";
+
+  if (!isLocalMachine) {
+    return null;
+  }
+
+  return PUBLIC_REVIEW_API_URL;
+}
 
 function readInstallationIdFromStorage() {
   if (typeof window === "undefined") {
@@ -764,19 +787,37 @@ export function setApiTelemetryReporter(
   return;
 }
 
+async function fetchJsonWithBaseUrl(
+  baseUrl: string,
+  input: string,
+  init?: RequestInit,
+) {
+  const nextInit: RequestInit = { ...(init ?? {}) };
+  const headers = new Headers(nextInit.headers ?? undefined);
+  const installationId = readInstallationIdFromStorage();
+  if (installationId && !headers.has(INSTALLATION_HEADER_NAME)) {
+    headers.set(INSTALLATION_HEADER_NAME, installationId);
+  }
+  nextInit.headers = headers;
+  return fetch(`${baseUrl}${input}`, nextInit);
+}
+
 async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
+  const fallbackApiBaseUrl = resolveFallbackApiBaseUrl(API_BASE_URL);
   try {
-    if (typeof navigator !== "undefined" && navigator.onLine === false) {
-      throw new OfflineError();
+    let response: Response;
+    try {
+      response = await fetchJsonWithBaseUrl(API_BASE_URL, input, init);
+    } catch (error) {
+      const canRetryWithFallback =
+        fallbackApiBaseUrl &&
+        error instanceof TypeError &&
+        error.message.toLowerCase().includes("failed to fetch");
+      if (!canRetryWithFallback) {
+        throw error;
+      }
+      response = await fetchJsonWithBaseUrl(fallbackApiBaseUrl, input, init);
     }
-    const nextInit: RequestInit = { ...(init ?? {}) };
-    const headers = new Headers(nextInit.headers ?? undefined);
-    const installationId = readInstallationIdFromStorage();
-    if (installationId && !headers.has(INSTALLATION_HEADER_NAME)) {
-      headers.set(INSTALLATION_HEADER_NAME, installationId);
-    }
-    nextInit.headers = headers;
-    const response = await fetch(`${API_BASE_URL}${input}`, nextInit);
     if (!response.ok) {
       if (response.status === 404) {
         throw new UserNotFoundError(await parseError(response, "No encontrado"));
