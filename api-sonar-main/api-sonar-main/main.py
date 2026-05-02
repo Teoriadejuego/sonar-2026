@@ -23,7 +23,7 @@ from fastapi.responses import (
     StreamingResponse,
 )
 from pydantic import BaseModel, Field as PydanticField
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect, or_, text
 from sqlmodel import Session, SQLModel, func, select
 
 from database import database_ready, engine, get_session
@@ -2345,15 +2345,7 @@ def ensure_demo_payment_deck(
 
 
 def get_active_treatment_deck(db: Session) -> TreatmentDeck:
-    deck = db.exec(
-        select(TreatmentDeck)
-        .where(TreatmentDeck.status == "active")
-        .order_by(TreatmentDeck.deck_index)
-        .limit(1)
-    ).first()
-    if deck:
-        return deck
-    with distributed_lock("treatment-deck-create"):
+    while True:
         deck = db.exec(
             select(TreatmentDeck)
             .where(TreatmentDeck.status == "active")
@@ -2361,12 +2353,71 @@ def get_active_treatment_deck(db: Session) -> TreatmentDeck:
             .limit(1)
         ).first()
         if deck:
-            return deck
-        next_deck_index = max(
-            max_positive_deck_index(db, TreatmentDeck),
-            max_positive_root_sequence(db),
-        ) + 1
-        return create_treatment_deck(db, next_deck_index)
+            if treatment_deck_is_runtime_compatible(db, deck):
+                return deck
+            with distributed_lock(f"treatment-deck-close:{deck.id}"):
+                current_deck = db.get(TreatmentDeck, deck.id)
+                if current_deck and current_deck.status == "active" and not treatment_deck_is_runtime_compatible(db, current_deck):
+                    retire_invalid_treatment_deck(
+                        db,
+                        deck=current_deck,
+                        reason="legacy_treatment_deck_shape",
+                    )
+                    db.flush()
+            continue
+        with distributed_lock("treatment-deck-create"):
+            deck = db.exec(
+                select(TreatmentDeck)
+                .where(TreatmentDeck.status == "active")
+                .order_by(TreatmentDeck.deck_index)
+                .limit(1)
+            ).first()
+            if deck:
+                continue
+            next_deck_index = max(
+                max_positive_deck_index(db, TreatmentDeck),
+                max_positive_root_sequence(db),
+            ) + 1
+            return create_treatment_deck(db, next_deck_index)
+
+
+def treatment_deck_is_runtime_compatible(db: Session, deck: TreatmentDeck) -> bool:
+    invalid_key = db.exec(
+        select(TreatmentDeckCard.id)
+        .where(
+            TreatmentDeckCard.deck_id == deck.id,
+            TreatmentDeckCard.treatment_key.notin_(TREATMENT_KEYS),
+        )
+        .limit(1)
+    ).first()
+    if invalid_key is not None:
+        return False
+
+    missing_legacy_series = db.exec(
+        select(TreatmentDeckCard.id)
+        .where(
+            TreatmentDeckCard.deck_id == deck.id,
+            TreatmentDeckCard.legacy_series_id == None,  # noqa: E711
+        )
+        .limit(1)
+    ).first()
+    if missing_legacy_series is not None:
+        return False
+
+    mismatched_series = db.exec(
+        select(TreatmentDeckCard.id)
+        .select_from(TreatmentDeckCard)
+        .outerjoin(Series, Series.id == TreatmentDeckCard.legacy_series_id)
+        .where(TreatmentDeckCard.deck_id == deck.id)
+        .where(
+            or_(
+                Series.id == None,  # noqa: E711
+                Series.treatment_key != TreatmentDeckCard.treatment_key,
+            )
+        )
+        .limit(1)
+    ).first()
+    return mismatched_series is None
 
 
 def next_result_treatment_cycle_index(db: Session, *, treatment_key: str) -> int:
