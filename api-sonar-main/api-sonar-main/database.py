@@ -1,4 +1,4 @@
-from sqlalchemy import text
+from sqlalchemy import event, text
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, create_engine
 
@@ -50,6 +50,14 @@ else:
 engine_kwargs["connect_args"] = connect_args
 
 engine = create_engine(settings.database_url, **engine_kwargs)
+
+
+if settings.database_is_sqlite:
+    @event.listens_for(engine, "connect")
+    def _sqlite_enable_foreign_keys(dbapi_connection, _connection_record) -> None:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 def get_session():

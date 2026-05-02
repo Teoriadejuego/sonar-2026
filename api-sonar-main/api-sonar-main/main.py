@@ -2563,8 +2563,13 @@ def wait_for_locked_card_release() -> None:
     time.sleep(0.005)
 
 
+def mark_deck_card_assigned(card: Any, *, session_id: str) -> None:
+    card.assigned_session_id = session_id
+    card.assigned_at = utcnow()
+
+
 def assign_next_treatment_card(
-    db: Session, *, session_id: str
+    db: Session, *, session_id: str, assign_immediately: bool = True
 ) -> tuple[TreatmentDeck, TreatmentDeckCard, Series]:
     while True:
         deck = get_active_treatment_deck(db)
@@ -2614,9 +2619,9 @@ def assign_next_treatment_card(
                     )
                     db.flush()
             continue
-        card.assigned_session_id = session_id
-        card.assigned_at = utcnow()
-        db.add(card)
+        if assign_immediately:
+            mark_deck_card_assigned(card, session_id=session_id)
+            db.add(card)
         if legacy_series.position_counter != 1:
             legacy_series.position_counter = 1
             db.add(legacy_series)
@@ -2624,7 +2629,11 @@ def assign_next_treatment_card(
 
 
 def assign_next_result_card(
-    db: Session, *, session_id: str, treatment_key: str
+    db: Session,
+    *,
+    session_id: str,
+    treatment_key: str,
+    assign_immediately: bool = True,
 ) -> tuple[ResultDeck, ResultDeckCard]:
     while True:
         deck = get_active_result_deck(db, treatment_key=treatment_key)
@@ -2652,14 +2661,14 @@ def assign_next_result_card(
                 close_result_deck(db, deck)
                 db.flush()
             continue
-        card.assigned_session_id = session_id
-        card.assigned_at = utcnow()
-        db.add(card)
+        if assign_immediately:
+            mark_deck_card_assigned(card, session_id=session_id)
+            db.add(card)
         return deck, card
 
 
 def assign_next_payment_card(
-    db: Session, *, session_id: str
+    db: Session, *, session_id: str, assign_immediately: bool = True
 ) -> tuple[PaymentDeck, PaymentDeckCard]:
     while True:
         deck = get_active_payment_deck(db)
@@ -2687,14 +2696,18 @@ def assign_next_payment_card(
                 close_payment_deck(db, deck)
                 db.flush()
             continue
-        card.assigned_session_id = session_id
-        card.assigned_at = utcnow()
-        db.add(card)
+        if assign_immediately:
+            mark_deck_card_assigned(card, session_id=session_id)
+            db.add(card)
         return deck, card
 
 
 def assign_demo_cards(
-    db: Session, *, bracelet_id: str, session_id: str
+    db: Session,
+    *,
+    bracelet_id: str,
+    session_id: str,
+    assign_immediately: bool = True,
 ) -> tuple[TreatmentDeck, TreatmentDeckCard, Series, ResultDeck, ResultDeckCard, PaymentDeck, PaymentDeckCard]:
     override = demo_override(bracelet_id)
     if not override:
@@ -2710,9 +2723,9 @@ def assign_demo_cards(
     ).first()
     if not treatment_card:
         raise HTTPException(status_code=500, detail="Carta demo de tratamiento inexistente")
-    treatment_card.assigned_session_id = session_id
-    treatment_card.assigned_at = utcnow()
-    db.add(treatment_card)
+    if assign_immediately:
+        mark_deck_card_assigned(treatment_card, session_id=session_id)
+        db.add(treatment_card)
     legacy_series = db.get(Series, treatment_card.legacy_series_id)
     if not legacy_series:
         raise HTTPException(status_code=500, detail="Serie demo inexistente")
@@ -2730,9 +2743,9 @@ def assign_demo_cards(
     ).first()
     if not result_card:
         raise HTTPException(status_code=500, detail="Carta demo de resultado inexistente")
-    result_card.assigned_session_id = session_id
-    result_card.assigned_at = utcnow()
-    db.add(result_card)
+    if assign_immediately:
+        mark_deck_card_assigned(result_card, session_id=session_id)
+        db.add(result_card)
 
     payment_deck = ensure_demo_payment_deck(
         db,
@@ -2744,9 +2757,9 @@ def assign_demo_cards(
     ).first()
     if not payment_card:
         raise HTTPException(status_code=500, detail="Carta demo de pago inexistente")
-    payment_card.assigned_session_id = session_id
-    payment_card.assigned_at = utcnow()
-    db.add(payment_card)
+    if assign_immediately:
+        mark_deck_card_assigned(payment_card, session_id=session_id)
+        db.add(payment_card)
 
     return (
         treatment_deck,
@@ -3717,108 +3730,129 @@ def ensure_user_and_session(
         experiment_state = get_or_create_experiment_state(db, for_update=True)
         phase_key = experiment_state.current_phase
         session_id = make_uuid()
-        override = demo_override(bracelet_id)
-        if override:
-            stage = "assign_demo_cards"
-            (
-                treatment_deck,
-                treatment_card,
-                legacy_series,
-                result_deck,
-                result_card,
-                payment_deck,
-                payment_card,
-            ) = assign_demo_cards(db, bracelet_id=bracelet_id, session_id=session_id)
-            phase_activation_status = "demo_override"
-        else:
-            stage = "assign_treatment_card"
-            (
-                treatment_deck,
-                treatment_card,
-                legacy_series,
-            ) = assign_next_treatment_card(db, session_id=session_id)
-            stage = "assign_result_card"
-            result_deck, result_card = assign_next_result_card(
-                db,
-                session_id=session_id,
-                treatment_key=treatment_card.treatment_key,
-            )
-            stage = "assign_payment_card"
-            payment_deck, payment_card = assign_next_payment_card(
-                db, session_id=session_id
-            )
-            phase_activation_status = current_phase_activation_status(phase_key)
+        # PostgreSQL enforces the deck-card -> session FK immediately. Keep the deck
+        # card assignments pending until the session row exists, then flush both
+        # together in dependency order.
+        with db.no_autoflush:
+            override = demo_override(bracelet_id)
+            if override:
+                stage = "assign_demo_cards"
+                (
+                    treatment_deck,
+                    treatment_card,
+                    legacy_series,
+                    result_deck,
+                    result_card,
+                    payment_deck,
+                    payment_card,
+                ) = assign_demo_cards(
+                    db,
+                    bracelet_id=bracelet_id,
+                    session_id=session_id,
+                    assign_immediately=False,
+                )
+                phase_activation_status = "demo_override"
+            else:
+                stage = "assign_treatment_card"
+                (
+                    treatment_deck,
+                    treatment_card,
+                    legacy_series,
+                ) = assign_next_treatment_card(
+                    db,
+                    session_id=session_id,
+                    assign_immediately=False,
+                )
+                stage = "assign_result_card"
+                result_deck, result_card = assign_next_result_card(
+                    db,
+                    session_id=session_id,
+                    treatment_key=treatment_card.treatment_key,
+                    assign_immediately=False,
+                )
+                stage = "assign_payment_card"
+                payment_deck, payment_card = assign_next_payment_card(
+                    db,
+                    session_id=session_id,
+                    assign_immediately=False,
+                )
+                phase_activation_status = current_phase_activation_status(phase_key)
 
-        stage = "build_session_record"
-        root = db.get(SeriesRoot, treatment_deck.legacy_root_id) if treatment_deck.legacy_root_id else None
-        treatment = treatment_config(phase_key, treatment_card.treatment_key)
-        position_index = treatment_card.card_position
-        root_id = root.id if root else legacy_series.root_id
-        session_record = SessionRecord(
-        id=session_id,
-        user_id=user.id,
-        root_id=legacy_series.root_id,
-        series_id=legacy_series.id,
-        referral_code=referral_code(f"{user.id}:{root_id}:{position_index}"),
-        invited_by_referral_code=resolved_referral_code,
-        referral_source=resolved_referral_source,
-        referral_medium=resolved_referral_medium,
-        referral_campaign=resolved_referral_campaign,
-        referral_link_id=referral_link_id,
-        qr_entry_code=qr_entry_code,
-        referral_landing_path=referral_path,
-        referral_arrived_at=now if resolved_referral_code else None,
-        operational_note_id=active_operational_note.id if active_operational_note else None,
-        operational_note_text=active_operational_note.note_text if active_operational_note else None,
-        experiment_version=EXPERIMENT_VERSION,
-        experiment_phase=phase_key,
-        phase_version=phase_version_for_phase(phase_key),
-        phase_activation_status=phase_activation_status,
-        ui_version=UI_VERSION,
-        consent_version=CONSENT_VERSION,
-        treatment_version=treatment_version_for_phase(phase_key),
-        treatment_text_version=displayed_message_version_for_phase(phase_key),
-        allocation_version=allocation_version_for_phase(phase_key),
-        deck_version=DECK_VERSION,
-        payment_version=PAYMENT_VERSION,
-        telemetry_version=TELEMETRY_VERSION,
-        lexicon_version=LEXICON_VERSION,
-        treatment_key=treatment_card.treatment_key,
-        treatment_type=str(treatment["treatment_type"]),
-        treatment_family=str(treatment["treatment_family"]),
-        norm_target_value=treatment["norm_target_value"],
-        displayed_count_target=treatment["displayed_count_target"],
-        displayed_denominator=treatment["displayed_denominator"],
-        treatment_deck_id=treatment_deck.id,
-        treatment_card_position=treatment_card.card_position,
-        result_deck_id=result_deck.id,
-        result_card_position=result_card.card_position,
-        payment_deck_id=payment_deck.id,
-        payment_card_position=payment_card.card_position,
-        language_at_access=language,
-        language_at_claim=language,
-        language_changed_during_session=False,
-        deployment_context=DEPLOYMENT_CONTEXT,
-        site_code=SITE_CODE,
-        campaign_code=CAMPAIGN_CODE,
-        environment_label=ENVIRONMENT_LABEL,
-        position_index=position_index,
-        state="assigned",
-        screen_cursor="instructions",
-        consent_accepted=consent_accepted,
-        consent_age_confirmed=consent_age_confirmed,
-        consent_info_accepted=consent_info_accepted,
-        consent_data_accepted=consent_data_accepted,
-        consent_accepted_at=now,
-        max_attempts=MAX_ATTEMPTS,
-        selected_for_payment=payment_card.payout_eligible,
-        client_installation_id=client_installation_id,
-        device_hash=device_hash,
-        ip_hash=ip_hash,
-        user_agent_hash=user_agent_hash,
-        created_at=now,
-        last_seen_at=now,
-        )
+            stage = "build_session_record"
+            root = (
+                db.get(SeriesRoot, treatment_deck.legacy_root_id)
+                if treatment_deck.legacy_root_id
+                else None
+            )
+            treatment = treatment_config(phase_key, treatment_card.treatment_key)
+            position_index = treatment_card.card_position
+            root_id = root.id if root else legacy_series.root_id
+            session_record = SessionRecord(
+                id=session_id,
+                user_id=user.id,
+                root_id=legacy_series.root_id,
+                series_id=legacy_series.id,
+                referral_code=referral_code(f"{user.id}:{root_id}:{position_index}"),
+                invited_by_referral_code=resolved_referral_code,
+                referral_source=resolved_referral_source,
+                referral_medium=resolved_referral_medium,
+                referral_campaign=resolved_referral_campaign,
+                referral_link_id=referral_link_id,
+                qr_entry_code=qr_entry_code,
+                referral_landing_path=referral_path,
+                referral_arrived_at=now if resolved_referral_code else None,
+                operational_note_id=active_operational_note.id if active_operational_note else None,
+                operational_note_text=active_operational_note.note_text if active_operational_note else None,
+                experiment_version=EXPERIMENT_VERSION,
+                experiment_phase=phase_key,
+                phase_version=phase_version_for_phase(phase_key),
+                phase_activation_status=phase_activation_status,
+                ui_version=UI_VERSION,
+                consent_version=CONSENT_VERSION,
+                treatment_version=treatment_version_for_phase(phase_key),
+                treatment_text_version=displayed_message_version_for_phase(phase_key),
+                allocation_version=allocation_version_for_phase(phase_key),
+                deck_version=DECK_VERSION,
+                payment_version=PAYMENT_VERSION,
+                telemetry_version=TELEMETRY_VERSION,
+                lexicon_version=LEXICON_VERSION,
+                treatment_key=treatment_card.treatment_key,
+                treatment_type=str(treatment["treatment_type"]),
+                treatment_family=str(treatment["treatment_family"]),
+                norm_target_value=treatment["norm_target_value"],
+                displayed_count_target=treatment["displayed_count_target"],
+                displayed_denominator=treatment["displayed_denominator"],
+                treatment_deck_id=treatment_deck.id,
+                treatment_card_position=treatment_card.card_position,
+                result_deck_id=result_deck.id,
+                result_card_position=result_card.card_position,
+                payment_deck_id=payment_deck.id,
+                payment_card_position=payment_card.card_position,
+                language_at_access=language,
+                language_at_claim=language,
+                language_changed_during_session=False,
+                deployment_context=DEPLOYMENT_CONTEXT,
+                site_code=SITE_CODE,
+                campaign_code=CAMPAIGN_CODE,
+                environment_label=ENVIRONMENT_LABEL,
+                position_index=position_index,
+                state="assigned",
+                screen_cursor="instructions",
+                consent_accepted=consent_accepted,
+                consent_age_confirmed=consent_age_confirmed,
+                consent_info_accepted=consent_info_accepted,
+                consent_data_accepted=consent_data_accepted,
+                consent_accepted_at=now,
+                max_attempts=MAX_ATTEMPTS,
+                selected_for_payment=payment_card.payout_eligible,
+                client_installation_id=client_installation_id,
+                device_hash=device_hash,
+                ip_hash=ip_hash,
+                user_agent_hash=user_agent_hash,
+                created_at=now,
+                last_seen_at=now,
+            )
+            db.add(session_record)
         created_now = True
         referral_attached = False
         if resolved_referral_code and resolved_referral_code != session_record.referral_code:
@@ -3830,6 +3864,14 @@ def ensure_user_and_session(
         db.add(legacy_series)
         db.add(session_record)
         stage = "flush_session_record"
+        db.flush()
+        stage = "bind_reserved_cards"
+        mark_deck_card_assigned(treatment_card, session_id=session_record.id)
+        mark_deck_card_assigned(result_card, session_id=session_record.id)
+        mark_deck_card_assigned(payment_card, session_id=session_record.id)
+        db.add(treatment_card)
+        db.add(result_card)
+        db.add(payment_card)
         db.flush()
         stage = "create_consent_record"
         db.add(
@@ -4937,8 +4979,6 @@ def access_session(
                 detail={
                     "message": "No se pudo inicializar la sesion",
                     "stage": failure_stage,
-                    "error_type": type(exc).__name__,
-                    "error": str(exc),
                 },
             ) from exc
         if created_now:

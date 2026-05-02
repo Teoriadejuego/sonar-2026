@@ -77,6 +77,11 @@ class RuntimeHardeningTests(unittest.TestCase):
         self.assertEqual(response.status_code, 409, response.text)
         self.assertIn("Pantalla invalida", response.text)
 
+    def test_access_creates_new_session_with_foreign_keys_enforced(self) -> None:
+        session = self.access_session(bracelet_code(99), "install-fk-safe")
+        self.assertEqual(session["screen"], "instructions")
+        self.assertIn(session["treatment_key"], {"control"} | {f"norm_{count}" for count in range(61)})
+
     def test_same_bracelet_cannot_resume_from_other_installation(self) -> None:
         bracelet_id = bracelet_code(2)
         self.access_session(bracelet_id, "install-a")
