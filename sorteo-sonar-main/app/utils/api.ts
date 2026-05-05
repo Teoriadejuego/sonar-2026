@@ -368,7 +368,7 @@ export const DEFAULT_PUBLIC_CONFIG: PublicConfig = {
     },
     instructions: {
       eyebrow: "Como funciona",
-      title: "Gracias por participar!",
+      title: "¡Comenzamos!",
       intro:
         "En la primera pantalla veras los premios del juego y despues pasaras al dado.",
       body: "La pregunta posterior siempre se refiere al primer numero.",

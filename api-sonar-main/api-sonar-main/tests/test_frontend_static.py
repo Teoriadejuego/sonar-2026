@@ -96,7 +96,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("NORM0001", api_text)
         self.assertIn("design_62_treatments_v1", api_text)
         self.assertIn("{count} out of {denominator} earlier participants said they got a {target}.", lexicon)
-        self.assertIn("¡Gracias por participar!", lexicon)
+        self.assertIn("¡Comenzamos!", lexicon)
         self.assertIn("Premios", lexicon)
         self.assertIn("Lanza el dado", lexicon)
         self.assertIn("Marca tu primer número", lexicon)

@@ -563,7 +563,7 @@ const es = withServerErrors({
     ],
   },
   instructions: {
-    title: "¡Gracias por participar!",
+    title: "¡Comenzamos!",
     subtitle:
       "Solo por participar entras en un sorteo para una entrada del SONAR 2027.",
     listLabel: "Instrucciones:",
@@ -831,7 +831,7 @@ const ca = withServerErrors({
     ],
   },
   instructions: {
-    title: "Gràcies per participar!",
+    title: "Comencem!",
     subtitle:
       "Només per participar entres en un sorteig per a una entrada del SONAR 2027.",
     listLabel: "Instruccions:",
@@ -1100,7 +1100,7 @@ const en = withServerErrors({
     ],
   },
   instructions: {
-    title: "Thanks for taking part!",
+    title: "Let's begin!",
     subtitle:
       "Just for taking part, you enter a draw for a SONAR 2027 ticket.",
     listLabel: "Instructions:",
@@ -1369,7 +1369,7 @@ const fr = withServerErrors({
     ],
   },
   instructions: {
-    title: "Merci de participer !",
+    title: "On commence !",
     subtitle:
       "Rien qu’en participant, vous entrez dans un tirage au sort pour un billet SONAR 2027.",
     listLabel: "Instructions :",
@@ -1638,7 +1638,7 @@ const pt = withServerErrors({
     ],
   },
   instructions: {
-    title: "Obrigado por participares!",
+    title: "Vamos começar!",
     subtitle:
       "Só por participares, entras num sorteio para um bilhete do SONAR 2027.",
     listLabel: "Instruções:",
@@ -1907,7 +1907,7 @@ const it = withServerErrors({
   },
   instructions: {
     ...en.instructions,
-    title: "Grazie per aver partecipato!",
+    title: "Cominciamo!",
     subtitle:
       "Solo per aver partecipato entri in un sorteggio per un biglietto SONAR 2027.",
     listLabel: "Istruzioni:",
@@ -2167,4 +2167,3 @@ export function formatCopy(
 export function translateServerError(message: string, copy: UiCopy) {
   return copy.serverErrors[message] ?? message;
 }
-
