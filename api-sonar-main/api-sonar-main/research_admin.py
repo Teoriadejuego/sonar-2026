@@ -1339,23 +1339,44 @@ def build_export_bundle(db: Session, bundle_name: str) -> bytes:
     dataset_names = bundle_datasets(bundle_name)
     file_payloads: dict[str, bytes] = {}
     manifest_tables: list[dict[str, Any]] = []
+    skipped_datasets: list[dict[str, str]] = []
 
     for dataset_name in dataset_names:
-        rows = dataset_rows(db, dataset_name)
-        csv_bytes = rows_to_csv_bytes(rows)
         filename = f"{dataset_name}.csv"
+        error_message: str | None = None
+        try:
+            rows = dataset_rows(db, dataset_name)
+            csv_bytes = rows_to_csv_bytes(rows)
+        except Exception as exc:
+            rows = []
+            csv_bytes = rows_to_csv_bytes(rows)
+            error_message = export_error_summary(exc)
+            skipped_datasets.append({"dataset": dataset_name, "error": error_message})
+            logger.error(
+                "admin_export_bundle_dataset_failed",
+                extra={
+                    "structured_payload": {
+                        "bundle_name": bundle_name,
+                        "dataset": dataset_name,
+                        "error": error_message,
+                    }
+                },
+            )
+
         file_payloads[filename] = csv_bytes
-        manifest_tables.append(
-            {
-                "dataset": dataset_name,
-                "filename": filename,
-                "records": len(rows),
-                "category": DATASET_DESCRIPTIONS[dataset_name]["category"],
-                "sensitivity": DATASET_DESCRIPTIONS[dataset_name]["sensitivity"],
-                "description": DATASET_DESCRIPTIONS[dataset_name]["description"],
-                "sha256": hashlib.sha256(csv_bytes).hexdigest(),
-            }
-        )
+        manifest_entry = {
+            "dataset": dataset_name,
+            "filename": filename,
+            "records": len(rows),
+            "category": DATASET_DESCRIPTIONS[dataset_name]["category"],
+            "sensitivity": DATASET_DESCRIPTIONS[dataset_name]["sensitivity"],
+            "description": DATASET_DESCRIPTIONS[dataset_name]["description"],
+            "sha256": hashlib.sha256(csv_bytes).hexdigest(),
+            "status": "error" if error_message else "ok",
+        }
+        if error_message:
+            manifest_entry["error"] = error_message
+        manifest_tables.append(manifest_entry)
 
     readme_text = export_readme_content(bundle_name, dataset_names)
     codebook_text = read_doc_or_default(
@@ -1371,6 +1392,7 @@ def build_export_bundle(db: Session, bundle_name: str) -> bytes:
         "content_hash_sha256": content_hash,
         "versions": current_versions_payload(db),
         "tables": manifest_tables,
+        "skipped_datasets": skipped_datasets,
     }
 
     buffer = io.BytesIO()

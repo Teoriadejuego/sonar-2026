@@ -264,6 +264,27 @@ class ResearchExportsTests(unittest.TestCase):
         self.assertEqual(archive.read("screen_events.csv"), b"")
         self.assertEqual(archive.read("client_contexts.csv"), b"")
 
+    def test_all_bundle_survives_missing_administrative_table(self) -> None:
+        self.complete_session(bracelet_code(71))
+        self.drop_table("payout_requests")
+
+        response = self.client.get("/admin/export/bundle/all.zip")
+        self.assertEqual(response.status_code, 200, response.text)
+        archive = zipfile.ZipFile(io.BytesIO(response.content))
+        names = set(archive.namelist())
+        self.assertIn("payments_admin.csv", names)
+        self.assertIn("manifest.json", names)
+
+        manifest = json.loads(archive.read("manifest.json").decode("utf-8"))
+        skipped = {item["dataset"]: item["error"] for item in manifest["skipped_datasets"]}
+        self.assertIn("payments_admin", skipped)
+
+        payments_admin_entry = next(
+            item for item in manifest["tables"] if item["dataset"] == "payments_admin"
+        )
+        self.assertEqual(payments_admin_entry["status"], "error")
+        self.assertIn("Tabla legacy no disponible", payments_admin_entry["error"])
+
 
 if __name__ == "__main__":
     unittest.main()
