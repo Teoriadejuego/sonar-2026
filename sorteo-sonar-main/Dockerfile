@@ -1,6 +1,6 @@
 FROM node:20-alpine AS base
 WORKDIR /app
-RUN corepack enable
+RUN npm install -g pnpm@10.33.0
 
 FROM base AS dependencies
 COPY package.json pnpm-lock.yaml ./
