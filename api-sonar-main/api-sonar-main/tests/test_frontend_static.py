@@ -65,8 +65,12 @@ class FrontendStaticTests(unittest.TestCase):
 
     def test_winner_flow_uses_separate_payout_page_after_finish(self) -> None:
         exit_screen = self.read("components", "ExitScreen.tsx")
+        share_utils = self.read("utils", "whatsappShare.ts")
         self.assertIn('to={payoutPageLink}', exit_screen)
-        self.assertIn("https://wa.me/?text=", exit_screen)
+        self.assertIn("openWhatsAppShare", exit_screen)
+        self.assertIn("whatsapp://send?text=", share_utils)
+        self.assertIn("https://api.whatsapp.com/send?text=", share_utils)
+        self.assertIn("https://web.whatsapp.com/send?text=", share_utils)
         self.assertIn("winner_payout_page", exit_screen)
 
     def test_ui_lexicon_contains_payment_page_in_all_languages(self) -> None:

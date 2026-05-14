@@ -14,6 +14,7 @@ import {
   formatCopy,
   translateServerError,
 } from "../utils/uiLexicon";
+import { openWhatsAppShare } from "../utils/whatsappShare";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -284,10 +285,6 @@ export default function PayoutRoute() {
       role: "button",
       ctaKind: "secondary",
     });
-    const popup =
-      typeof window === "undefined"
-        ? null
-        : window.open("about:blank", "_blank", "noopener,noreferrer");
     const fallbackInviteLink =
       typeof window === "undefined" ? "" : `${window.location.origin}/`;
     try {
@@ -300,27 +297,17 @@ export default function PayoutRoute() {
             targetPath: "/",
           })
         : fallbackInviteLink;
-      const whatsappLink = `https://wa.me/?text=${encodeURIComponent(
+      await openWhatsAppShare(
         formatCopy(paymentCopy.successShareMessageTemplate, {
           link: shareUrl,
         }),
-      )}`;
-      if (popup) {
-        popup.location.href = whatsappLink;
-      } else if (typeof window !== "undefined") {
-        window.open(whatsappLink, "_blank", "noopener,noreferrer");
-      }
+      );
     } catch {
-      const fallbackWhatsappLink = `https://wa.me/?text=${encodeURIComponent(
+      await openWhatsAppShare(
         formatCopy(paymentCopy.successShareMessageTemplate, {
           link: fallbackInviteLink,
         }),
-      )}`;
-      if (popup) {
-        popup.location.href = fallbackWhatsappLink;
-      } else if (typeof window !== "undefined") {
-        window.open(fallbackWhatsappLink, "_blank", "noopener,noreferrer");
-      }
+      );
     }
   };
 

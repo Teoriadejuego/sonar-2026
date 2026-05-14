@@ -9,17 +9,10 @@ import {
   useSessionRuntime,
 } from "../utils/SessionContext";
 import { formatCopy } from "../utils/uiLexicon";
+import { openWhatsAppShare } from "../utils/whatsappShare";
 
 interface ExitScreenProps {
   onContinueToFinal: () => void;
-}
-
-function sanitizeWhatsappPhone(rawPhone: string) {
-  const digitsOnly = rawPhone.replace(/\D/g, "");
-  if (digitsOnly.startsWith("00")) {
-    return digitsOnly.slice(2);
-  }
-  return digitsOnly;
 }
 
 export const ExitScreen = memo(function ExitScreen({
@@ -60,10 +53,6 @@ export const ExitScreen = memo(function ExitScreen({
         bonusPredictionStored: true,
       },
     });
-    const popup =
-      typeof window === "undefined"
-        ? null
-        : window.open("about:blank", "_blank", "noopener,noreferrer");
     try {
       const shareUrl = await createReferralInviteLink({
         channel: "whatsapp",
@@ -72,23 +61,13 @@ export const ExitScreen = memo(function ExitScreen({
         campaignCode: "festival_invite_exit",
         targetPath: window.location.pathname,
       });
-      const whatsappLink = `https://wa.me/?text=${encodeURIComponent(
+      await openWhatsAppShare(
         formatCopy(loserCopy.shareMessageTemplate, { link: shareUrl }),
-      )}`;
-      if (popup) {
-        popup.location.href = whatsappLink;
-      } else if (typeof window !== "undefined") {
-        window.open(whatsappLink, "_blank", "noopener,noreferrer");
-      }
+      );
     } catch {
-      const fallbackWhatsappLink = `https://wa.me/?text=${encodeURIComponent(
+      await openWhatsAppShare(
         formatCopy(loserCopy.shareMessageTemplate, { link: fallbackInviteLink }),
-      )}`;
-      if (popup) {
-        popup.location.href = fallbackWhatsappLink;
-      } else if (typeof window !== "undefined") {
-        window.open(fallbackWhatsappLink, "_blank", "noopener,noreferrer");
-      }
+      );
     }
   };
 
