@@ -89,17 +89,24 @@ from experiment import (
     TREATMENT_DECK_SIZE,
 )
 from research_admin import (
+    ANALYSIS_READY_DATASET_NAME,
+    ANALYSIS_READY_DATASET_VERSION,
+    ANALYSIS_READY_EXTENDED_DATASET_NAME,
+    ANALYSIS_READY_EXTENDED_DATASET_VERSION,
+    analysis_ready_export_filename,
     DATASET_DESCRIPTIONS,
     admin_payments_page_html,
     admin_payments_payload,
     build_export_bundle,
     dashboard_page_html,
+    dataset_csv_fieldnames,
     dataset_export_stats,
     dataset_rows,
     export_filename,
     exports_page_html,
     live_dashboard_payload,
     live_dashboard_page_html_v3,
+    participant_analysis_export_filename,
     rows_to_csv_bytes,
 )
 from models import (
@@ -7022,21 +7029,49 @@ def admin_live() -> HTMLResponse:
     return HTMLResponse(live_dashboard_page_html_v3())
 
 
+def export_dataset_csv_response(
+    dataset_name: str,
+    db: Session,
+) -> Response:
+    rows = dataset_rows(db, dataset_name)
+    csv_bytes = rows_to_csv_bytes(rows, fieldnames=dataset_csv_fieldnames(dataset_name))
+    filename = (
+        analysis_ready_export_filename()
+        if dataset_name == ANALYSIS_READY_DATASET_NAME
+        else participant_analysis_export_filename()
+        if dataset_name == ANALYSIS_READY_EXTENDED_DATASET_NAME
+        else export_filename(dataset_name, "csv")
+    )
+    response_headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+    }
+    if dataset_name == ANALYSIS_READY_DATASET_NAME:
+        response_headers["X-Dataset-Version"] = ANALYSIS_READY_DATASET_VERSION
+    if dataset_name == ANALYSIS_READY_EXTENDED_DATASET_NAME:
+        response_headers["X-Dataset-Version"] = ANALYSIS_READY_EXTENDED_DATASET_VERSION
+    return Response(
+        content=csv_bytes,
+        media_type="text/csv; charset=utf-8",
+        headers=response_headers,
+    )
+
+
+@app.get("/admin/export/analysis-ready.csv")
+def admin_export_analysis_ready_csv(db: Session = Depends(get_session)) -> Response:
+    return export_dataset_csv_response(ANALYSIS_READY_DATASET_NAME, db)
+
+
+@app.get("/admin/export/participant-analysis.csv")
+def admin_export_participant_analysis_csv(db: Session = Depends(get_session)) -> Response:
+    return export_dataset_csv_response(ANALYSIS_READY_EXTENDED_DATASET_NAME, db)
+
+
 @app.get("/admin/export/{dataset_name}.csv")
 def admin_export_dataset_csv(
     dataset_name: str,
     db: Session = Depends(get_session),
 ) -> Response:
-    rows = dataset_rows(db, dataset_name)
-    csv_bytes = rows_to_csv_bytes(rows)
-    filename = export_filename(dataset_name, "csv")
-    return Response(
-        content=csv_bytes,
-        media_type="text/csv; charset=utf-8",
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
-        },
-    )
+    return export_dataset_csv_response(dataset_name, db)
 
 
 @app.get("/admin/export/bundle/{bundle_name}.zip")

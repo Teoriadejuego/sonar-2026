@@ -134,6 +134,8 @@ class ResearchExportsTests(unittest.TestCase):
         exports_response = self.client.get("/admin/exports")
         self.assertEqual(exports_response.status_code, 200)
         self.assertIn("Data Exports", exports_response.text)
+        self.assertIn("Download analysis-ready CSV", exports_response.text)
+        self.assertIn("Download participant-analysis CSV", exports_response.text)
         self.assertIn("Exportar dataset analitico completo", exports_response.text)
         self.assertIn("Exportar telemetria completa", exports_response.text)
 
@@ -177,6 +179,7 @@ class ResearchExportsTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.text)
         archive = zipfile.ZipFile(io.BytesIO(response.content))
         names = set(archive.namelist())
+        self.assertIn("analysis_ready_extended.csv", names)
         self.assertIn("sessions.csv", names)
         self.assertIn("throws.csv", names)
         self.assertIn("claims.csv", names)
@@ -186,6 +189,7 @@ class ResearchExportsTests(unittest.TestCase):
         self.assertIn("manifest.json", names)
         self.assertIn("README_EXPORT.md", names)
         self.assertIn("DATASETS_CODEBOOK.md", names)
+        self.assertIn("ANALYSIS_READY_EXTENDED_CODEBOOK.csv", names)
         self.assertNotIn("payments_admin.csv", names)
 
         claims_rows = self.parse_csv(archive.read("claims.csv"))
@@ -195,7 +199,10 @@ class ResearchExportsTests(unittest.TestCase):
         self.assertEqual(claims_rows[0]["crowd_prediction_value"], "3")
 
         manifest = json.loads(archive.read("manifest.json").decode("utf-8"))
+        self.assertIn("data_status_label", manifest)
+        self.assertIn("deployment_commit_sha", manifest)
         exported_datasets = {item["dataset"] for item in manifest["tables"]}
+        self.assertIn("analysis_ready_extended", exported_datasets)
         self.assertIn("sessions", exported_datasets)
         self.assertIn("treatment_deck_cards", exported_datasets)
         self.assertIn("result_deck_cards", exported_datasets)
@@ -284,6 +291,99 @@ class ResearchExportsTests(unittest.TestCase):
         )
         self.assertEqual(payments_admin_entry["status"], "error")
         self.assertIn("Tabla legacy no disponible", payments_admin_entry["error"])
+
+    def test_analysis_ready_csv_matches_preregistered_schema(self) -> None:
+        self.complete_session(bracelet_code(8))
+
+        response = self.client.get("/admin/export/analysis-ready.csv")
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.headers.get("x-dataset-version"), "v1_analysis_ready")
+        self.assertIn(
+            "synthetic_or_real_app_data_analysis_ready_",
+            response.headers.get("content-disposition", ""),
+        )
+
+        decoded = response.content.decode("utf-8")
+        header = decoded.splitlines()[0].split(",")
+        self.assertEqual(
+            header,
+            [
+                "participant_id",
+                "condition",
+                "treated_i",
+                "k_i",
+                "x_i",
+                "true_die_i",
+                "reported_value_i",
+                "Report6_i",
+                "Report5_i",
+                "time_block",
+                "qr_entry_point",
+                "time_to_first_click",
+                "time_to_report",
+                "total_time_on_screen",
+                "interactions_count",
+                "belief_about_others_i",
+                "memory_correct_i",
+                "completion_flag",
+                "validity_flag",
+            ],
+        )
+
+        rows = self.parse_csv(response.content)
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        self.assertEqual(row["completion_flag"], "1")
+        self.assertEqual(row["validity_flag"], "1")
+        self.assertIn(row["condition"], {"control"} | {f"norm_{i}" for i in range(61)})
+        self.assertIn(row["treated_i"], {"0", "1"})
+        self.assertGreaterEqual(float(row["x_i"]), 0.0)
+        self.assertLessEqual(float(row["x_i"]), 1.0)
+        self.assertEqual(row["Report6_i"], "1" if row["reported_value_i"] == "6" else "0")
+        self.assertEqual(row["Report5_i"], "1" if row["reported_value_i"] == "5" else "0")
+        self.assertIn(row["time_block"], {"morning", "midday", "afternoon", "evening"})
+        self.assertIn(row["qr_entry_point"], {"qr_1", "qr_2", "qr_3", "qr_4"})
+        self.assertEqual(len({item["participant_id"] for item in rows}), len(rows))
+
+    def test_participant_analysis_csv_contains_behavior_memory_referral_and_throws(self) -> None:
+        self.complete_session(bracelet_code(9))
+
+        response = self.client.get("/admin/export/participant-analysis.csv")
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.headers.get("x-dataset-version"), "v1_analysis_ready_extended")
+        self.assertIn(
+            "sonar_participant_analysis_",
+            response.headers.get("content-disposition", ""),
+        )
+
+        rows = self.parse_csv(response.content)
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        for column in [
+            "true_die_i",
+            "reported_value_i",
+            "Report6_i",
+            "prediction_value",
+            "social_recall_count",
+            "memory_correct_i",
+            "invited_by_whatsapp",
+            "entered_from_whatsapp",
+            "shared_whatsapp_link_i",
+            "referral_link_id",
+            "referral_landing_path",
+            "qr_entry_code",
+            "throws_vector",
+            "throws_count",
+            "reroll_count",
+            "reported_matches_any_seen",
+        ]:
+            self.assertIn(column, row)
+        self.assertEqual(row["prediction_value"], "3.0")
+        self.assertEqual(row["memory_correct_i"], "1")
+        self.assertEqual(row["throws_vector"].startswith("["), True)
+        self.assertGreaterEqual(int(row["throws_count"]), 1)
+        self.assertNotIn("requested_phone", row)
+        self.assertNotIn("payout_reference_shown", row)
 
 
 if __name__ == "__main__":

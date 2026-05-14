@@ -4,10 +4,12 @@ from html import escape
 import io
 import json
 import logging
+import os
 import zipfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
+from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
@@ -66,8 +68,78 @@ from settings import settings
 
 logger = logging.getLogger("sonar")
 
+ANALYSIS_READY_DATASET_NAME = "analysis_ready_v1"
+ANALYSIS_READY_DATASET_VERSION = "v1_analysis_ready"
+ANALYSIS_READY_EXPORT_PREFIX = "synthetic_or_real_app_data_analysis_ready"
+ANALYSIS_READY_EXTENDED_DATASET_NAME = "analysis_ready_extended"
+ANALYSIS_READY_EXTENDED_DATASET_VERSION = "v1_analysis_ready_extended"
+PARTICIPANT_ANALYSIS_EXPORT_PREFIX = "sonar_participant_analysis"
+ANALYSIS_READY_TIMEZONE = ZoneInfo("Europe/Madrid")
+ANALYSIS_READY_COLUMNS = [
+    "participant_id",
+    "condition",
+    "treated_i",
+    "k_i",
+    "x_i",
+    "true_die_i",
+    "reported_value_i",
+    "Report6_i",
+    "Report5_i",
+    "time_block",
+    "qr_entry_point",
+    "time_to_first_click",
+    "time_to_report",
+    "total_time_on_screen",
+    "interactions_count",
+    "belief_about_others_i",
+    "memory_correct_i",
+    "completion_flag",
+    "validity_flag",
+]
+ANALYSIS_READY_EXTENDED_COLUMNS = [
+    "participant_id",
+    "condition",
+    "treated_i",
+    "k_i",
+    "x_i",
+    "true_die_i",
+    "reported_value_i",
+    "Report6_i",
+    "Report5_i",
+    "prediction_value",
+    "belief_about_others_i",
+    "social_recall_count",
+    "memory_correct_i",
+    "invited_by_whatsapp",
+    "entered_from_whatsapp",
+    "shared_whatsapp_link_i",
+    "whatsapp_invite_clicks",
+    "referral_source",
+    "referral_medium",
+    "referral_campaign",
+    "referral_link_id",
+    "referral_landing_path",
+    "qr_entry_code",
+    "qr_entry_point",
+    "invited_by_session_id",
+    "invited_by_referral_code",
+    "throws_vector",
+    "throws_count",
+    "reroll_count",
+    "reported_matches_any_seen",
+    "time_block",
+    "time_to_first_click",
+    "time_to_report",
+    "total_time_on_screen",
+    "interactions_count",
+    "completion_flag",
+    "validity_flag",
+]
+
 OPTIONAL_EXPORT_MODEL_TABLES = frozenset(
     {
+        getattr(ReferralLink, "__tablename__", "referral_links"),
+        getattr(ReferralClick, "__tablename__", "referral_clicks"),
         getattr(ScreenSpell, "__tablename__", "screen_spells"),
         getattr(SessionClientContext, "__tablename__", "session_client_contexts"),
         getattr(TelemetryEvent, "__tablename__", "telemetry_events"),
@@ -79,6 +151,16 @@ OPTIONAL_EXPORT_MODEL_TABLES = frozenset(
 
 
 DATASET_DESCRIPTIONS: dict[str, dict[str, str]] = {
+    ANALYSIS_READY_DATASET_NAME: {
+        "category": "analytic",
+        "description": "CSV listo para analisis principal, alineado exactamente con el preregistro y los pipelines Python/R/Stata.",
+        "sensitivity": "baja",
+    },
+    ANALYSIS_READY_EXTENDED_DATASET_NAME: {
+        "category": "analytic",
+        "description": "CSV humano por participante con tratamiento, dado real, reporte final, prediccion, memoria, procedencia, WhatsApp y vector de tiradas.",
+        "sensitivity": "baja",
+    },
     "sessions": {
         "category": "analytic",
         "description": "Sesion analitica derivada con tratamiento, resultado y pago reconstruibles sin ambiguedad.",
@@ -197,9 +279,13 @@ def project_root() -> Path:
 
 
 def read_doc_or_default(filename: str, default_content: str) -> str:
-    path = project_root() / filename
-    if path.exists():
-        return path.read_text(encoding="utf-8")
+    for path in (
+        project_root() / filename,
+        project_root() / "research" / filename,
+        project_root() / "app" / "docs" / filename,
+    ):
+        if path.exists():
+            return path.read_text(encoding="utf-8")
     return default_content
 
 
@@ -237,6 +323,83 @@ def parse_json_dict(raw_value: Optional[str]) -> dict[str, Any]:
         return parsed if isinstance(parsed, dict) else {}
     except json.JSONDecodeError:
         return {}
+
+
+def analysis_ready_time_block(raw_created_at: Optional[str]) -> Optional[str]:
+    if not raw_created_at:
+        return None
+    try:
+        parsed = datetime.fromisoformat(raw_created_at)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    local_dt = parsed.astimezone(ANALYSIS_READY_TIMEZONE)
+    hour = local_dt.hour
+    if 12 <= hour < 15:
+        return "morning"
+    if 15 <= hour < 18:
+        return "midday"
+    if 18 <= hour < 21:
+        return "afternoon"
+    return "evening"
+
+
+def analysis_ready_qr_entry_point(raw_qr_entry_code: Optional[str]) -> Optional[str]:
+    if not raw_qr_entry_code:
+        return "qr_1"
+    normalized = raw_qr_entry_code.strip().lower()
+    if normalized.startswith("poster-entrada"):
+        return "qr_1"
+    if normalized.startswith("zona-a"):
+        return "qr_2"
+    if normalized.startswith("zona-b"):
+        return "qr_3"
+    if normalized.startswith("vip-"):
+        return "qr_4"
+    fallback_bucket = (int(hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:8], 16) % 4) + 1
+    return f"qr_{fallback_bucket}"
+
+
+def boolish_to_int(value: Any) -> Optional[int]:
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, (int, float)):
+        return int(bool(value))
+    normalized = str(value).strip().lower()
+    if normalized in {"true", "1", "yes", "y"}:
+        return 1
+    if normalized in {"false", "0", "no", "n"}:
+        return 0
+    return None
+
+
+def contains_whatsapp_marker(*values: Any) -> int:
+    for value in values:
+        if value is None:
+            continue
+        if "whatsapp" in str(value).strip().lower():
+            return 1
+    return 0
+
+
+def data_status_label() -> str:
+    return getattr(settings, "sonar_data_status", None) or "unclassified"
+
+
+def deployment_commit_sha() -> Optional[str]:
+    for variable_name in (
+        "RAILWAY_GIT_COMMIT_SHA",
+        "GIT_COMMIT_SHA",
+        "COMMIT_SHA",
+        "SOURCE_VERSION",
+    ):
+        value = os.getenv(variable_name)
+        if value:
+            return value
+    return None
 
 
 def is_missing_relation_error(exc: Exception) -> bool:
@@ -555,8 +718,11 @@ def analytic_sessions_rows(db: Session) -> list[dict[str, Any]]:
                 "referral_campaign": record.referral_campaign,
                 "referral_link_id": record.referral_link_id,
                 "qr_entry_code": record.qr_entry_code,
+                "referral_landing_path": record.referral_landing_path,
                 "referral_arrived_at": isoformat_or_none(record.referral_arrived_at),
                 "referral_depth": referral_depths.get(record.id, 0),
+                "throws_vector": json.dumps(seen_values, separators=(",", ":")),
+                "throws_count": len(seen_values),
                 "operational_note_id": record.operational_note_id,
                 "operational_note_text": record.operational_note_text,
                 "browser_family": client_context.browser_family if client_context else None,
@@ -605,6 +771,236 @@ def analytic_sessions_rows(db: Session) -> list[dict[str, Any]]:
             }
         )
     return rows
+
+
+def validate_analysis_ready_rows(
+    rows: list[dict[str, Any]],
+    *,
+    expected_count: int,
+) -> None:
+    if len(rows) != expected_count:
+        raise RuntimeError(
+            f"analysis_ready_count_mismatch expected={expected_count} got={len(rows)}"
+        )
+
+    participant_ids = [str(row["participant_id"]) for row in rows]
+    if len(participant_ids) != len(set(participant_ids)):
+        raise RuntimeError("analysis_ready_duplicate_participant_id")
+
+    for row in rows:
+        condition = row["condition"]
+        treated_i = int(row["treated_i"])
+        k_i = int(row["k_i"])
+        x_i = float(row["x_i"])
+        reported_value_i = int(row["reported_value_i"])
+        report6_i = int(row["Report6_i"])
+        report5_i = int(row["Report5_i"])
+
+        expected_treated = 0 if condition == CONTROL_TREATMENT_KEY else 1
+        if treated_i != expected_treated:
+            raise RuntimeError(
+                f"analysis_ready_treated_mismatch participant_id={row['participant_id']}"
+            )
+        if not (0.0 <= x_i <= 1.0):
+            raise RuntimeError(
+                f"analysis_ready_x_out_of_bounds participant_id={row['participant_id']}"
+            )
+        expected_x = 0.0 if expected_treated == 0 else (k_i / 60.0)
+        if abs(x_i - expected_x) > 1e-9:
+            raise RuntimeError(
+                f"analysis_ready_x_mismatch participant_id={row['participant_id']}"
+            )
+        if report6_i != int(reported_value_i == 6):
+            raise RuntimeError(
+                f"analysis_ready_report6_mismatch participant_id={row['participant_id']}"
+            )
+        if report5_i != int(reported_value_i == 5):
+            raise RuntimeError(
+                f"analysis_ready_report5_mismatch participant_id={row['participant_id']}"
+            )
+
+
+def analysis_ready_rows(db: Session) -> list[dict[str, Any]]:
+    session_rows = analytic_sessions_rows(db)
+    exported_rows: list[dict[str, Any]] = []
+    expected_count = 0
+
+    for source_row in session_rows:
+        completion_flag = int(
+            bool(source_row.get("completed_at"))
+            and str(source_row.get("state") or "").startswith("completed")
+        )
+        validity_flag = int(bool(source_row.get("is_valid_completed")))
+        reported_value_raw = source_row.get("reported_value")
+        try:
+            reported_value_i = int(reported_value_raw) if reported_value_raw is not None else None
+        except (TypeError, ValueError):
+            reported_value_i = None
+        if completion_flag == 1 and validity_flag == 1 and reported_value_i is not None:
+            expected_count += 1
+        else:
+            continue
+
+        condition = str(source_row.get("treatment_key") or CONTROL_TREATMENT_KEY)
+        treated_i = 0 if condition == CONTROL_TREATMENT_KEY else 1
+        raw_k_i = source_row.get("displayed_count_target")
+        try:
+            normalized_k_i = int(raw_k_i) if raw_k_i is not None else 0
+        except (TypeError, ValueError):
+            normalized_k_i = 0
+        k_i = normalized_k_i if treated_i == 1 else 0
+        x_i = 0.0 if treated_i == 0 else (k_i / 60.0)
+        true_die_i = int(source_row["true_first_result"])
+        belief_value = source_row.get("crowd_prediction_value")
+        memory_value = boolish_to_int(source_row.get("social_recall_correct"))
+
+        row = {
+            "participant_id": source_row["session_id"],
+            "condition": condition,
+            "treated_i": treated_i,
+            "k_i": k_i,
+            "x_i": x_i,
+            "true_die_i": true_die_i,
+            "reported_value_i": reported_value_i,
+            "Report6_i": int(reported_value_i == 6),
+            "Report5_i": int(reported_value_i == 5),
+            "time_block": analysis_ready_time_block(source_row.get("created_at")),
+            "qr_entry_point": analysis_ready_qr_entry_point(source_row.get("qr_entry_code")),
+            "time_to_first_click": source_row.get("landing_to_start_ms"),
+            "time_to_report": source_row.get("report_rt_ms"),
+            "total_time_on_screen": source_row.get("total_session_ms"),
+            "interactions_count": source_row.get("click_count_total"),
+            "belief_about_others_i": float(belief_value) if belief_value is not None else None,
+            "memory_correct_i": memory_value,
+            "completion_flag": completion_flag,
+            "validity_flag": validity_flag,
+        }
+        exported_rows.append({column: row.get(column) for column in ANALYSIS_READY_COLUMNS})
+
+    validate_analysis_ready_rows(exported_rows, expected_count=expected_count)
+    return exported_rows
+
+
+def analysis_ready_extended_rows(db: Session) -> list[dict[str, Any]]:
+    session_rows = analytic_sessions_rows(db)
+    referral_links = load_model_rows(
+        db,
+        ReferralLink,
+        order_by=ReferralLink.created_at,
+        missing_ok=True,
+        export_name=ANALYSIS_READY_EXTENDED_DATASET_NAME,
+    )
+    links_by_inviter: dict[str, list[ReferralLink]] = {}
+    for link in referral_links:
+        links_by_inviter.setdefault(link.inviter_session_id, []).append(link)
+
+    exported_rows: list[dict[str, Any]] = []
+    compact_rows_for_validation: list[dict[str, Any]] = []
+    expected_count = 0
+
+    for source_row in session_rows:
+        completion_flag = int(
+            bool(source_row.get("completed_at"))
+            and str(source_row.get("state") or "").startswith("completed")
+        )
+        validity_flag = int(bool(source_row.get("is_valid_completed")))
+        reported_value_raw = source_row.get("reported_value")
+        try:
+            reported_value_i = int(reported_value_raw) if reported_value_raw is not None else None
+        except (TypeError, ValueError):
+            reported_value_i = None
+        if completion_flag == 1 and validity_flag == 1 and reported_value_i is not None:
+            expected_count += 1
+        else:
+            continue
+
+        condition = str(source_row.get("treatment_key") or CONTROL_TREATMENT_KEY)
+        treated_i = 0 if condition == CONTROL_TREATMENT_KEY else 1
+        raw_k_i = source_row.get("displayed_count_target")
+        try:
+            normalized_k_i = int(raw_k_i) if raw_k_i is not None else 0
+        except (TypeError, ValueError):
+            normalized_k_i = 0
+        k_i = normalized_k_i if treated_i == 1 else 0
+        x_i = 0.0 if treated_i == 0 else (k_i / 60.0)
+        true_die_i = int(source_row["true_first_result"])
+        prediction_value = source_row.get("crowd_prediction_value")
+        memory_value = boolish_to_int(source_row.get("social_recall_correct"))
+        session_id = str(source_row["session_id"])
+        session_links = links_by_inviter.get(session_id, [])
+        whatsapp_links = [
+            link
+            for link in session_links
+            if contains_whatsapp_marker(link.channel, link.traffic_source, link.traffic_medium)
+        ]
+        entered_from_whatsapp = contains_whatsapp_marker(
+            source_row.get("referral_source"),
+            source_row.get("referral_medium"),
+            source_row.get("referral_campaign"),
+            source_row.get("referral_link_id"),
+            source_row.get("referral_landing_path"),
+        )
+        invited_by_whatsapp = int(
+            entered_from_whatsapp == 1
+            and bool(
+                source_row.get("invited_by_session_id")
+                or source_row.get("invited_by_referral_code")
+                or source_row.get("referral_link_id")
+            )
+        )
+
+        row = {
+            "participant_id": session_id,
+            "condition": condition,
+            "treated_i": treated_i,
+            "k_i": k_i,
+            "x_i": x_i,
+            "true_die_i": true_die_i,
+            "reported_value_i": reported_value_i,
+            "Report6_i": int(reported_value_i == 6),
+            "Report5_i": int(reported_value_i == 5),
+            "prediction_value": (
+                float(prediction_value) if prediction_value is not None else None
+            ),
+            "belief_about_others_i": (
+                float(prediction_value) if prediction_value is not None else None
+            ),
+            "social_recall_count": source_row.get("social_recall_count"),
+            "memory_correct_i": memory_value,
+            "invited_by_whatsapp": invited_by_whatsapp,
+            "entered_from_whatsapp": entered_from_whatsapp,
+            "shared_whatsapp_link_i": int(bool(whatsapp_links)),
+            "whatsapp_invite_clicks": sum(int(link.click_count or 0) for link in whatsapp_links),
+            "referral_source": source_row.get("referral_source"),
+            "referral_medium": source_row.get("referral_medium"),
+            "referral_campaign": source_row.get("referral_campaign"),
+            "referral_link_id": source_row.get("referral_link_id"),
+            "referral_landing_path": source_row.get("referral_landing_path"),
+            "qr_entry_code": source_row.get("qr_entry_code"),
+            "qr_entry_point": analysis_ready_qr_entry_point(source_row.get("qr_entry_code")),
+            "invited_by_session_id": source_row.get("invited_by_session_id"),
+            "invited_by_referral_code": source_row.get("invited_by_referral_code"),
+            "throws_vector": source_row.get("throws_vector") or "[]",
+            "throws_count": source_row.get("throws_count"),
+            "reroll_count": source_row.get("reroll_count"),
+            "reported_matches_any_seen": source_row.get("reported_matches_any_seen"),
+            "time_block": analysis_ready_time_block(source_row.get("created_at")),
+            "time_to_first_click": source_row.get("landing_to_start_ms"),
+            "time_to_report": source_row.get("report_rt_ms"),
+            "total_time_on_screen": source_row.get("total_session_ms"),
+            "interactions_count": source_row.get("click_count_total"),
+            "completion_flag": completion_flag,
+            "validity_flag": validity_flag,
+        }
+        exported_rows.append(
+            {column: row.get(column) for column in ANALYSIS_READY_EXTENDED_COLUMNS}
+        )
+        compact_rows_for_validation.append(
+            {column: row.get(column) for column in ANALYSIS_READY_COLUMNS}
+        )
+
+    validate_analysis_ready_rows(compact_rows_for_validation, expected_count=expected_count)
+    return exported_rows
 
 
 def throws_rows(db: Session) -> list[dict[str, Any]]:
@@ -1179,6 +1575,8 @@ def audit_events_rows(db: Session) -> list[dict[str, Any]]:
 
 
 DATASET_BUILDERS = {
+    ANALYSIS_READY_DATASET_NAME: analysis_ready_rows,
+    ANALYSIS_READY_EXTENDED_DATASET_NAME: analysis_ready_extended_rows,
     "sessions": analytic_sessions_rows,
     "throws": throws_rows,
     "claims": claims_rows,
@@ -1204,16 +1602,29 @@ DATASET_BUILDERS = {
 }
 
 
-def rows_to_csv_bytes(rows: list[dict[str, Any]]) -> bytes:
-    if not rows:
-        return b""
-    columns: list[str] = []
-    for row in rows:
-        for key in row.keys():
-            if key not in columns:
-                columns.append(key)
+def dataset_csv_fieldnames(dataset_name: str) -> Optional[list[str]]:
+    if dataset_name == ANALYSIS_READY_DATASET_NAME:
+        return list(ANALYSIS_READY_COLUMNS)
+    if dataset_name == ANALYSIS_READY_EXTENDED_DATASET_NAME:
+        return list(ANALYSIS_READY_EXTENDED_COLUMNS)
+    return None
+
+
+def rows_to_csv_bytes(
+    rows: list[dict[str, Any]],
+    *,
+    fieldnames: Optional[list[str]] = None,
+) -> bytes:
+    columns = list(fieldnames or [])
+    if not columns:
+        if not rows:
+            return b""
+        for row in rows:
+            for key in row.keys():
+                if key not in columns:
+                    columns.append(key)
     buffer = io.StringIO()
-    writer = csv.DictWriter(buffer, fieldnames=columns)
+    writer = csv.DictWriter(buffer, fieldnames=columns, extrasaction="ignore")
     writer.writeheader()
     for row in rows:
         writer.writerow(row)
@@ -1229,6 +1640,8 @@ def dataset_rows(db: Session, dataset_name: str) -> list[dict[str, Any]]:
 def bundle_datasets(bundle_name: str) -> list[str]:
     if bundle_name == "analytic":
         return [
+            ANALYSIS_READY_DATASET_NAME,
+            ANALYSIS_READY_EXTENDED_DATASET_NAME,
             "sessions",
             "throws",
             "claims",
@@ -1346,10 +1759,16 @@ def build_export_bundle(db: Session, bundle_name: str) -> bytes:
         error_message: str | None = None
         try:
             rows = dataset_rows(db, dataset_name)
-            csv_bytes = rows_to_csv_bytes(rows)
+            csv_bytes = rows_to_csv_bytes(
+                rows,
+                fieldnames=dataset_csv_fieldnames(dataset_name),
+            )
         except Exception as exc:
             rows = []
-            csv_bytes = rows_to_csv_bytes(rows)
+            csv_bytes = rows_to_csv_bytes(
+                rows,
+                fieldnames=dataset_csv_fieldnames(dataset_name),
+            )
             error_message = export_error_summary(exc)
             skipped_datasets.append({"dataset": dataset_name, "error": error_message})
             logger.error(
@@ -1383,12 +1802,18 @@ def build_export_bundle(db: Session, bundle_name: str) -> bytes:
         "DATASETS_CODEBOOK.md",
         "# DATASETS_CODEBOOK\n\nCodebook basico no encontrado en disco.",
     )
+    extended_codebook_csv = read_doc_or_default(
+        "ANALYSIS_READY_EXTENDED_CODEBOOK.csv",
+        "variable,definition,source,notes\n",
+    )
     content_hash = hashlib.sha256(
         "".join(item["sha256"] for item in manifest_tables).encode("utf-8")
     ).hexdigest()
     manifest = {
         "generated_at": datetime.now(UTC).isoformat(),
         "bundle_name": bundle_name,
+        "data_status_label": data_status_label(),
+        "deployment_commit_sha": deployment_commit_sha(),
         "content_hash_sha256": content_hash,
         "versions": current_versions_payload(db),
         "tables": manifest_tables,
@@ -1402,6 +1827,7 @@ def build_export_bundle(db: Session, bundle_name: str) -> bytes:
         archive.writestr("manifest.json", json.dumps(manifest, indent=2))
         archive.writestr("README_EXPORT.md", readme_text)
         archive.writestr("DATASETS_CODEBOOK.md", codebook_text)
+        archive.writestr("ANALYSIS_READY_EXTENDED_CODEBOOK.csv", extended_codebook_csv)
     return buffer.getvalue()
 
 
@@ -1423,7 +1849,13 @@ def exports_page_html(
         export_html = (
             "<span class=\"warn\">No disponible</span>"
             if error_message
-            else f'<a href="/admin/export/{dataset_name}.csv">CSV</a>'
+            else (
+                '<a href="/admin/export/analysis-ready.csv">CSV</a>'
+                if dataset_name == ANALYSIS_READY_DATASET_NAME
+                else '<a href="/admin/export/participant-analysis.csv">CSV</a>'
+                if dataset_name == ANALYSIS_READY_EXTENDED_DATASET_NAME
+                else f'<a href="/admin/export/{dataset_name}.csv">CSV</a>'
+            )
         )
         rows_html.append(
             f"""
@@ -1465,6 +1897,16 @@ def exports_page_html(
       <h1>Data Exports</h1>
       <p>Diseno actual: <strong>{state.current_phase}</strong> | Estado: <strong>{state.experiment_status}</strong> | Validos completados: <strong>{state.valid_completed_count}</strong> / {state.phase_transition_threshold} | Ganadores: <strong>{prize_stats.get('winner_count', 0)}</strong> | Total comprometido: <strong>{prize_stats.get('total_prize_amount_eur', 0)} EUR</strong> | Registros administrativos: <strong>{payments_admin_stats.get('records', 0)}</strong></p>
       <div class="grid">
+        <div class="card">
+          <h2>Analysis-ready</h2>
+          <p>CSV limpio, deterministico y alineado con el preregistro para Python, R y Stata.</p>
+          <a class="button" href="/admin/export/analysis-ready.csv">Download analysis-ready CSV</a>
+        </div>
+        <div class="card">
+          <h2>Participant analysis</h2>
+          <p>Una fila por participante con dado real, reporte, prediccion, memoria, WhatsApp, link de entrada y vector de tiradas.</p>
+          <a class="button" href="/admin/export/participant-analysis.csv">Download participant-analysis CSV</a>
+        </div>
         <div class="card">
           <h2>Analitico</h2>
           <p>Sessions, claims, tiradas, referidos y mazos balanceados.</p>
@@ -3527,13 +3969,21 @@ def export_filename(prefix: str, extension: str) -> str:
     return f"{prefix}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.{extension}"
 
 
+def analysis_ready_export_filename() -> str:
+    return f"{ANALYSIS_READY_EXPORT_PREFIX}_{datetime.now(UTC).strftime('%Y%m%d')}.csv"
+
+
+def participant_analysis_export_filename() -> str:
+    return f"{PARTICIPANT_ANALYSIS_EXPORT_PREFIX}_{datetime.now(UTC).strftime('%Y%m%d')}.csv"
+
+
 def dataset_export_stats(db: Session) -> dict[str, dict[str, Any]]:
     generated_at = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     stats: dict[str, dict[str, Any]] = {}
     for dataset_name in DATASET_DESCRIPTIONS:
         try:
             rows = dataset_rows(db, dataset_name)
-            csv_bytes = rows_to_csv_bytes(rows)
+            csv_bytes = rows_to_csv_bytes(rows, fieldnames=dataset_csv_fieldnames(dataset_name))
             size_bytes = len(csv_bytes)
             if size_bytes < 1024:
                 size_label = f"{size_bytes} B"

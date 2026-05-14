@@ -4,7 +4,7 @@ Repositorio principal de la app experimental SONAR 2026.
 
 SONAR 2026 es una infraestructura full-stack para ejecutar, monitorizar y documentar un experimento mobile-first sobre honestidad y normas descriptivas en un contexto cultural real.
 
-Actualizado: `2026-05-02`
+Actualizado: `2026-05-14`
 
 ## Diseno experimental vigente
 
@@ -37,9 +37,10 @@ Frase canonica:
 
 - App principal: [https://dice.sonar2026.es](https://dice.sonar2026.es)
 - App Railway: [https://app-production-4b8d.up.railway.app](https://app-production-4b8d.up.railway.app)
-- API Railway actual: [https://api-production-9fe7b.up.railway.app](https://api-production-9fe7b.up.railway.app)
-- Health live: [https://api-production-9fe7b.up.railway.app/health/live](https://api-production-9fe7b.up.railway.app/health/live)
-- Health ready: [https://api-production-9fe7b.up.railway.app/health/ready](https://api-production-9fe7b.up.railway.app/health/ready)
+- API Railway actual: [https://api-production-9151.up.railway.app](https://api-production-9151.up.railway.app)
+- Health live: [https://api-production-9151.up.railway.app/health/live](https://api-production-9151.up.railway.app/health/live)
+- Health ready: [https://api-production-9151.up.railway.app/health/ready](https://api-production-9151.up.railway.app/health/ready)
+- Dataset analitico humano: [https://api-production-9151.up.railway.app/admin/export/participant-analysis.csv](https://api-production-9151.up.railway.app/admin/export/participant-analysis.csv)
 
 ## Flujo participante
 

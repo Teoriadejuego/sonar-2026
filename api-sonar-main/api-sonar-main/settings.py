@@ -167,6 +167,7 @@ class Settings:
     site_code_override: str | None = os.getenv("SITE_CODE")
     campaign_code_override: str | None = os.getenv("CAMPAIGN_CODE")
     environment_label_override: str | None = os.getenv("ENVIRONMENT_LABEL")
+    sonar_data_status: str = os.getenv("SONAR_DATA_STATUS", "unclassified")
     instance_name: str = os.getenv("INSTANCE_NAME") or socket.gethostname()
 
     @property

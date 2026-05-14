@@ -24,6 +24,36 @@ Interpretacion:
 - `true_first_result` identifica la primera tirada real asignada desde el mazo de resultados.
 - `payout_eligible` identifica si esa sesion ocupa la carta ganadora del mazo de pagos.
 
+## analysis_ready_v1
+Una fila por participante valido y completado, con el esquema compacto usado por el analisis principal preregistrado.
+
+Columnas clave:
+- `participant_id`, `condition`, `treated_i`, `k_i`, `x_i`
+- `true_die_i`, `reported_value_i`, `Report6_i`, `Report5_i`
+- `time_block`, `qr_entry_point`
+- `belief_about_others_i`, `memory_correct_i`
+- `completion_flag`, `validity_flag`
+
+Interpretacion:
+- `Report6_i` es el outcome principal del paper.
+- `Report5_i` es un outcome secundario exploratorio.
+- `control` y `norm_0` se mantienen separados: ambos tienen `x_i = 0`, pero solo `norm_0` muestra informacion social.
+
+## analysis_ready_extended
+Una fila por participante valido y completado, pensada para auditoria cientifica rapida y coautoria.
+
+Columnas clave:
+- resultado y reporte: `true_die_i`, `reported_value_i`, `Report6_i`, `Report5_i`
+- comprension: `prediction_value`, `social_recall_count`, `memory_correct_i`
+- procedencia: `referral_source`, `referral_medium`, `referral_link_id`, `referral_landing_path`, `qr_entry_code`
+- WhatsApp: `invited_by_whatsapp`, `entered_from_whatsapp`, `shared_whatsapp_link_i`, `whatsapp_invite_clicks`
+- tiradas: `throws_vector`, `throws_count`, `reroll_count`, `reported_matches_any_seen`
+
+Interpretacion:
+- `throws_vector` es un array JSON con todas las tiradas servidas por backend en orden; su primer elemento coincide con `true_die_i`.
+- `prediction_value` y `memory_correct_i` son medidas post-reporte y no deben usarse como controles del modelo principal.
+- El dataset no incluye telefono, codigos de cobro ni referencias administrativas de pago.
+
 ## throws
 Una fila por tirada servida por backend.
 
