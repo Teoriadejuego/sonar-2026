@@ -1,5 +1,7 @@
 type ShareResult = "opened" | "cancelled";
 
+const WHATSAPP_APP_FALLBACK_DELAY_MS = 900;
+
 function isProbablyMobileDevice() {
   if (typeof window === "undefined") {
     return false;
@@ -58,7 +60,7 @@ function openMobileWhatsapp(appUrl: string, universalUrl: string) {
     if (!appOpened && document.visibilityState === "visible") {
       window.location.assign(universalUrl);
     }
-  }, 900);
+  }, WHATSAPP_APP_FALLBACK_DELAY_MS);
 
   document.addEventListener("visibilitychange", handleVisibilityChange);
   window.addEventListener("pagehide", handlePageHide);
